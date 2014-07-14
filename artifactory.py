@@ -4,7 +4,7 @@
 #
 # ==================================================================
 #
-# Copyright (c) 2005-2006 Parallels Software International, Inc.
+# Copyright (c) 2005-2014 Parallels Software International, Inc.
 # All Rights Reserved; http://www.parallels.com
 #
 # ==================================================================
