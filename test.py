@@ -51,6 +51,8 @@ class ArtifactoryFlavorTest(unittest.TestCase):
               ('artifactory.local/artifactory', '/foo/', 'bar'))
         check("http://artifactory.local/artifactory/foo/bar",
               ('http://artifactory.local/artifactory', '/foo/', 'bar'))
+        check("https://artifactory.a.b.c.d/artifactory/foo/bar",
+              ('https://artifactory.a.b.c.d/artifactory', '/foo/', 'bar'))
 
     def test_parse_parts(self):
         check = self._check_parse_parts

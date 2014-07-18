@@ -267,11 +267,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             is_dir = True
 
         children = None
-
         if 'children' in jsn:
-            children = []
-            for child in jsn['children']:
-                children.append(child['uri'][1:])
+            children = [child['uri'][1:] for child in jsn['children']]
 
         stat = ArtifactoryFileStat(
             ctime=dateutil.parser.parse(jsn['created']),
@@ -701,10 +698,3 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         Upload the given file object to this path
         """
         return self._accessor.deploy(self, fobj)
-
-
-def main():
-    pass
-
-if __name__ == '__main__':
-    main()
