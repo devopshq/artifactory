@@ -1,24 +1,33 @@
 #!/usr/bin/env python
 
-import seqno
-
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
 
-requires = ['pathlib', 'dateutil']
-
 setup(
     name='artifactory',
     version='0.1',
-    description='Artifactory interface library',
+    py_modules=['artifactory'],
+    license='MIT License',
+    description='Artifactory interface library with pathlib-like structure',
     long_description=open('README.md').read(),
     author='Konstantin Nazarov',
     author_email='knazarov@parallels.com',
-    url='http://parallels.com/',
-    packages=[],
-    install_requires=requires,
-    license=open('LICENSE').read(),
+    classifiers=[
+        'Development Status :: 3 - Alpha',
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: MIT License',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.2',
+        'Programming Language :: Python :: 3.3',
+        'Topic :: Software Development :: Libraries',
+        'Topic :: System :: Filesystems',
+    ],
+    url='http://github.com/parallels/artifactory',
+    download_url='http://github.com/parallels/artifactory',
+    install_requires=['pathlib', 'dateutil'],
     zip_safe=False
 )
