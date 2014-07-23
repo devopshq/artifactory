@@ -5,7 +5,7 @@
 # ==================================================================
 #
 # Copyright (c) 2005-2014 Parallels Software International, Inc.
-# All Rights Reserved; http://www.parallels.com
+# Released under the terms of MIT license (see LICENSE for details)
 #
 # ==================================================================
 #
