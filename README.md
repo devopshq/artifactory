@@ -1,4 +1,6 @@
-# artifactory: a Python interface library for Jfrog Artifactory #
+# Python interface library for Jfrog Artifactory #
+
+[![Build Status](https://travis-ci.org/Parallels/artifactory.svg?branch=master)](https://travis-ci.org/Parallels/artifactory)
 
 This module is intended to serve as a logical descendant of [pathlib](https://docs.python.org/3/library/pathlib.html), a Python 3 module for object-oriented path manipulations. As such, it implements everything as closely as possible to the origin with few exceptions, such as stat().
 
