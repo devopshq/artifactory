@@ -28,6 +28,6 @@ setup(
     ],
     url='http://github.com/parallels/artifactory',
     download_url='http://github.com/parallels/artifactory',
-    install_requires=['pathlib', 'dateutil'],
+    install_requires=['pathlib', 'python-dateutil'],
     zip_safe=False
 )
