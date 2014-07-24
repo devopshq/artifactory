@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import os
+
 try:
     from setuptools import setup
 except ImportError:
@@ -11,7 +13,7 @@ def read(fname):
 
 setup(
     name='artifactory',
-    version='0.1',
+    version='0.1.1',
     py_modules=['artifactory'],
     license='MIT License',
     description='A Python to Artifactory interface',
