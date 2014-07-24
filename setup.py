@@ -10,7 +10,7 @@ setup(
     version='0.1',
     py_modules=['artifactory'],
     license='MIT License',
-    description='Artifactory interface library with pathlib-like structure',
+    description='A Python to Artifactory interface',
     long_description=open('README.md').read(),
     author='Konstantin Nazarov',
     author_email='knazarov@parallels.com',
