@@ -5,13 +5,17 @@ try:
 except ImportError:
     from distutils.core import setup
 
+# Utility function to read the README file.
+def read(fname):
+    return open(os.path.join(os.path.dirname(__file__), fname)).read()
+
 setup(
     name='artifactory',
     version='0.1',
     py_modules=['artifactory'],
     license='MIT License',
     description='A Python to Artifactory interface',
-    long_description=open('README.md').read(),
+    long_description=read('README.md'),
     author='Konstantin Nazarov',
     author_email='knazarov@parallels.com',
     classifiers=[
