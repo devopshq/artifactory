@@ -13,7 +13,7 @@ def read(fname):
 
 setup(
     name='artifactory',
-    version='0.1.1',
+    version='0.1.2',
     py_modules=['artifactory'],
     license='MIT License',
     description='A Python to Artifactory interface',
@@ -35,5 +35,6 @@ setup(
     url='http://github.com/parallels/artifactory',
     download_url='http://github.com/parallels/artifactory',
     install_requires=['pathlib', 'requests', 'python-dateutil'],
-    zip_safe=False
+    zip_safe=False,
+    package_data = {'artifactory': ['README.md']}
 )
