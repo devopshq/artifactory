@@ -2,6 +2,7 @@
 
 import os
 import sys
+import StringIO
 
 import unittest
 import multiprocessing
@@ -13,6 +14,23 @@ import datetime
 import dateutil
 
 from mock import MagicMock as MM
+
+
+class UtilTest(unittest.TestCase):
+    def test_matrix_encode(self):
+        params = {"foo": "bar",
+                  "qux": "asdf"}
+
+        s = artifactory.encode_matrix_parameters(params)
+
+        self.assertEqual(s, "foo=bar;qux=asdf")
+
+        params = {'baz': ['bar', 'quux'], 'foo': 'asdf'}
+
+        s = artifactory.encode_matrix_parameters(params)
+
+        self.assertEqual(s, "baz=bar,quux;foo=asdf")
+
 
 class ArtifactoryFlavorTest(unittest.TestCase):
     flavour = artifactory._artifactory_flavour
@@ -75,6 +93,7 @@ class ArtifactoryFlavorTest(unittest.TestCase):
         check(['http://example.com/artifactory/foo/bar/artifactory'],
               ('http://example.com/artifactory', '/foo/',
                ['http://example.com/artifactory/foo/', 'bar', 'artifactory']))
+
 
 class PureArtifactoryPathTest(unittest.TestCase):
     cls = artifactory.PureArtifactoryPath
@@ -207,6 +226,25 @@ class ArtifactoryAccessorTest(unittest.TestCase):
 
     def test_mkdir(self):
         pass
+
+    def test_deploy(self):
+        a = self.cls()
+        P = artifactory.ArtifactoryPath
+
+        p = P("http://b/artifactory/c/d")
+
+        params = {'foo': 'bar', 'baz': 'quux'}
+
+        a.rest_put_stream = MM(return_value=('OK', 200))
+
+        f = StringIO.StringIO()
+
+        a.deploy(p, f, params)
+
+        url = "http://b/artifactory/c/d;baz=quux;foo=bar"
+
+        a.rest_put_stream.assert_called_with(url, f, auth=None)
+
 
 class ArtifactoryPathTest(unittest.TestCase):
     """ Test the filesystem-accessing fuctionality """

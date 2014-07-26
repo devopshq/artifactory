@@ -155,6 +155,29 @@ class ArtifactoryPathTest(unittest.TestCase):
         p2.unlink()
 
 
+    def test_deploy_file(self):
+        P = self.cls
+
+        p = P(art_uri + '/artifactory/to-delete/foo', auth=art_auth)
+
+        if p.exists():
+            p.unlink()
+
+        tf = tempfile.NamedTemporaryFile()
+
+        tf.write("Some test string")
+        tf.flush()
+
+        p.deploy_file(tf.name)
+        tf.close()
+
+        with p.open() as fd:
+            result = fd.read()
+
+        self.assertEqual(result, "Some test string")
+
+        p.unlink()
+
     def test_open(self):
         P = self.cls
 

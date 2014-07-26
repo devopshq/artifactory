@@ -72,6 +72,25 @@ class HTTPResponseWrapper(object):
         return int(self.getheader('content-length'))
 
 
+def encode_matrix_parameters(parameters):
+    """
+    Performs encoding of url matrix parameters from dictionary to
+    a string.
+    See http://www.w3.org/DesignIssues/MatrixURIs.html for specs.
+    """
+    result = []
+
+    for param in iter(sorted(parameters)):
+        if isinstance(parameters[param], (list, tuple)):
+            value = ','.join(parameters[param])
+        else:
+            value = parameters[param]
+
+        result.append("%s=%s" % (param, value))
+
+    return ';'.join(result)
+
+
 class _ArtifactoryFlavour(pathlib._Flavour):
     """
     Implements Artifactory-specific pure path manipulations.
@@ -425,7 +444,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         return raw
 
-    def deploy(self, pathobj, fobj):
+    def deploy(self, pathobj, fobj, parameters):
         """
         Uploads a given file-like object
         HTTP chunked encoding will be attempted
@@ -434,6 +453,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             fobj = HTTPResponseWrapper(fobj)
 
         url = str(pathobj)
+
+        if parameters:
+            url += ";%s" % encode_matrix_parameters(parameters)
 
         text, code = self.rest_put_stream(url, fobj, auth=pathobj.auth)
 
@@ -693,8 +715,33 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         raise NotImplementedError()
 
-    def deploy(self, fobj):
+    def deploy(self, fobj, parameters={}):
         """
         Upload the given file object to this path
         """
-        return self._accessor.deploy(self, fobj)
+        return self._accessor.deploy(self, fobj, parameters)
+
+    def deploy_file(self, file_name, parameters={}):
+        """
+        Upload the given file to this path
+        """
+        with open(file_name) as fobj:
+            self.deploy(fobj, parameters)
+
+    def deploy_deb(self, file_name, distribution, component, architecture):
+        """
+        Convenience method to deploy .deb packages
+
+        Keyword arguments:
+        file_name -- full path to local file that will be deployed
+        distribution -- debian distribution (e.g. 'wheezy')
+        component -- repository component (e.g. 'main')
+        architecture -- package architecture (e.g. 'i386')
+        """
+        params = {
+            'deb.distribution': distribution,
+            'deb.component': component,
+            'deb.architecture': architecture
+        }
+
+        self.deploy_file(file_name, params)
