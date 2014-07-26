@@ -2,7 +2,7 @@
 
 import os
 import sys
-import StringIO
+import io
 
 import unittest
 import multiprocessing
@@ -237,7 +237,7 @@ class ArtifactoryAccessorTest(unittest.TestCase):
 
         a.rest_put_stream = MM(return_value=('OK', 200))
 
-        f = StringIO.StringIO()
+        f = io.StringIO()
 
         a.deploy(p, f, params)
 
