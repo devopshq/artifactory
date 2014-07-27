@@ -238,11 +238,18 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         res = requests.get(url, headers=headers, auth=auth)
         return res.text, res.status_code
 
-    def rest_put(self, url, headers=None, auth=None):
+    def rest_put(self, url, params=None, headers=None, auth=None):
         """
         Perform a PUT request to url with optional authentication
         """
-        res = requests.put(url, headers=headers, auth=auth)
+        res = requests.put(url, params=params, headers=headers, auth=auth)
+        return res.text, res.status_code
+
+    def rest_post(self, url, params=None, headers=None, auth=None):
+        """
+        Perform a PUT request to url with optional authentication
+        """
+        res = requests.post(url, params=params, headers=headers, auth=auth)
         return res.text, res.status_code
 
     def rest_del(self, url, auth=None):
@@ -491,6 +498,23 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                                           fobj,
                                           headers=headers,
                                           auth=pathobj.auth)
+
+        if code not in [200, 201]:
+            raise RuntimeError("%s" % text)
+
+    def copy(self, src, dst):
+        """
+        Copy artifact from src to dst
+        """
+        url = '/'.join([src.drive,
+                        'api/copy',
+                        str(src.relative_to(src.drive)).rstrip('/')])
+
+        params = {'to': str(dst.relative_to(dst.drive)).rstrip('/')}
+
+        text, code = self.rest_post(url,
+                                    params=params,
+                                    auth=src.auth)
 
         if code not in [200, 201]:
             raise RuntimeError("%s" % text)
@@ -786,4 +810,16 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             'deb.architecture': architecture
         }
 
-        self.deploy_file(file_name, params)
+        self.deploy_file(file_name, parameters=params)
+
+    def copy(self, dst):
+        """
+        Copy artifact from this path to destinaiton.
+        If files are on the same instance of artifactory, lightweight (local)
+        copying will be attempted.
+        """
+        if self.drive == dst.drive:
+            self._accessor.copy(self, dst)
+        else:
+            with self.open() as fobj:
+                dst.deploy(fobj)
