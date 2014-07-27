@@ -31,7 +31,30 @@ import collections
 import requests
 import json
 import dateutil.parser
+import hashlib
 import requests.packages.urllib3 as urllib3
+
+
+def md5sum(filename):
+    """
+    Calculates md5 hash of a file
+    """
+    md5 = hashlib.md5()
+    with open(filename, 'rb') as f:
+        for chunk in iter(lambda: f.read(128 * md5.block_size), b''):
+            md5.update(chunk)
+    return md5.hexdigest()
+
+
+def sha1sum(filename):
+    """
+    Calculates md5 hash of a file
+    """
+    sha1 = hashlib.sha1()
+    with open(filename, 'rb') as f:
+        for chunk in iter(lambda: f.read(128 * sha1.block_size), b''):
+            sha1.update(chunk)
+    return sha1.hexdigest()
 
 
 class HTTPResponseWrapper(object):
@@ -208,18 +231,18 @@ class _ArtifactoryAccessor(pathlib._Accessor):
     """
     Implements operations with Artifactory REST API
     """
-    def rest_get(self, url, auth=None):
+    def rest_get(self, url, headers=None, auth=None):
         """
         Perform a GET request to url with optional authentication
         """
-        res = requests.get(url, auth=auth)
+        res = requests.get(url, headers=headers, auth=auth)
         return res.text, res.status_code
 
-    def rest_put(self, url, auth=None):
+    def rest_put(self, url, headers=None, auth=None):
         """
         Perform a PUT request to url with optional authentication
         """
-        res = requests.put(url, auth=auth)
+        res = requests.put(url, headers=headers, auth=auth)
         return res.text, res.status_code
 
     def rest_del(self, url, auth=None):
@@ -229,12 +252,12 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         res = requests.delete(url, auth=auth)
         return res.text, res.status_code
 
-    def rest_put_stream(self, url, stream, auth=None):
+    def rest_put_stream(self, url, stream, headers=None, auth=None):
         """
         Perform a chunked PUT request to url with optional authentication
         This is specifically to upload files.
         """
-        res = requests.put(url, auth=auth, data=stream)
+        res = requests.put(url, headers=headers, auth=auth, data=stream)
         return res.text, res.status_code
 
     def rest_get_stream(self, url, auth=None):
@@ -254,7 +277,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                         'api/storage',
                         str(pathobj.relative_to(pathobj.drive)).strip('/')])
 
-        text, code = self.rest_get(url, pathobj.auth)
+        text, code = self.rest_get(url, auth=pathobj.auth)
         if code == 404 and "Unable to find item" in text:
             raise OSError(2, "No such file or directory: '%s'" % url)
         if code != 200:
@@ -444,7 +467,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         return raw
 
-    def deploy(self, pathobj, fobj, parameters):
+    def deploy(self, pathobj, fobj, md5=None, sha1=None, parameters=None):
         """
         Uploads a given file-like object
         HTTP chunked encoding will be attempted
@@ -457,7 +480,17 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if parameters:
             url += ";%s" % encode_matrix_parameters(parameters)
 
-        text, code = self.rest_put_stream(url, fobj, auth=pathobj.auth)
+        headers = {}
+
+        if md5:
+            headers['X-Checksum-Md5'] = md5
+        if sha1:
+            headers['X-Checksum-Sha1'] = sha1
+
+        text, code = self.rest_put_stream(url,
+                                          fobj,
+                                          headers=headers,
+                                          auth=pathobj.auth)
 
         if code not in [200, 201]:
             raise RuntimeError("%s" % text)
@@ -715,18 +748,27 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         raise NotImplementedError()
 
-    def deploy(self, fobj, parameters={}):
+    def deploy(self, fobj, md5=None, sha1=None, parameters={}):
         """
         Upload the given file object to this path
         """
-        return self._accessor.deploy(self, fobj, parameters)
+        return self._accessor.deploy(self, fobj, md5, sha1, parameters)
 
-    def deploy_file(self, file_name, parameters={}):
+    def deploy_file(self,
+                    file_name,
+                    calc_md5=True,
+                    calc_sha1=True,
+                    parameters={}):
         """
         Upload the given file to this path
         """
+        if calc_md5:
+            md5 = md5sum(file_name)
+        if calc_sha1:
+            sha1 = sha1sum(file_name)
+
         with open(file_name) as fobj:
-            self.deploy(fobj, parameters)
+            self.deploy(fobj, md5, sha1, parameters)
 
     def deploy_deb(self, file_name, distribution, component, architecture):
         """

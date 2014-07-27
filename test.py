@@ -239,11 +239,11 @@ class ArtifactoryAccessorTest(unittest.TestCase):
 
         f = io.StringIO()
 
-        a.deploy(p, f, params)
+        a.deploy(p, f, parameters=params)
 
         url = "http://b/artifactory/c/d;baz=quux;foo=bar"
 
-        a.rest_put_stream.assert_called_with(url, f, auth=None)
+        a.rest_put_stream.assert_called_with(url, f, headers={}, auth=None)
 
 
 class ArtifactoryPathTest(unittest.TestCase):
