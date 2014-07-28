@@ -791,8 +791,13 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         if calc_sha1:
             sha1 = sha1sum(file_name)
 
+        target = self
+
+        if self.is_dir():
+            target = self / pathlib.Path(file_name).name
+
         with open(file_name) as fobj:
-            self.deploy(fobj, md5, sha1, parameters)
+            target.deploy(fobj, md5, sha1, parameters)
 
     def deploy_deb(self, file_name, distribution, component, architecture):
         """
