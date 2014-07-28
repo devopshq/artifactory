@@ -48,7 +48,7 @@ def md5sum(filename):
 
 def sha1sum(filename):
     """
-    Calculates md5 hash of a file
+    Calculates sha1 hash of a file
     """
     sha1 = hashlib.sha1()
     with open(filename, 'rb') as f:
