@@ -519,6 +519,23 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if code not in [200, 201]:
             raise RuntimeError("%s" % text)
 
+    def move(self, src, dst):
+        """
+        Move artifact from src to dst
+        """
+        url = '/'.join([src.drive,
+                        'api/move',
+                        str(src.relative_to(src.drive)).rstrip('/')])
+
+        params = {'to': str(dst.relative_to(dst.drive)).rstrip('/')}
+
+        text, code = self.rest_post(url,
+                                    params=params,
+                                    auth=src.auth)
+
+        if code not in [200, 201]:
+            raise RuntimeError("%s" % text)
+
 
 _artifactory_accessor = _ArtifactoryAccessor()
 
@@ -828,3 +845,13 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         else:
             with self.open() as fobj:
                 dst.deploy(fobj)
+
+    def move(self, dst):
+        """
+        Move artifact from this path to destinaiton.
+        """
+        if self.drive != dst.drive:
+            raise NotImplementedError(
+                "Moving between instances is not implemented yet")
+
+        self._accessor.move(self, dst)
