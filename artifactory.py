@@ -823,3 +823,20 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         else:
             with self.open() as fobj:
                 dst.deploy(fobj)
+
+    def walk(self, top):
+        """
+        os.walk like function to traverse the URI like a file system.
+        """
+        names = self._accessor.listdir(top)
+        dirs, nondirs = [], []
+        for name in names:
+            if self._accessor.is_dir(top.joinpath(top, name)):
+                dirs.append(name)
+            else:
+                nondirs.append(name)
+        yield top, dirs, nondirs
+        for name in dirs:
+            new_path = top.joinpath(top, name)
+            yield from self.walk(new_path)
+
