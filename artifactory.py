@@ -838,5 +838,6 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         yield top, dirs, nondirs
         for name in dirs:
             new_path = top.joinpath(top, name)
-            yield from self.walk(new_path)
+            for x in self.walk(new_path):
+                yield x 
 
