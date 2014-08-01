@@ -706,6 +706,12 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         return self._accessor.is_file(self)
 
+    def listdir(self):
+        """
+        Returns a list of immediate sub-directories and files in path
+        """
+        return self._accessor.listdir(self)
+
     def is_symlink(self):
         """
         Whether this path is a symlink.
@@ -823,3 +829,23 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         else:
             with self.open() as fobj:
                 dst.deploy(fobj)
+
+    def walk(self, topdown=True):
+        """
+        os.walk like function to traverse the URI like a file system.
+        """
+        names = self.listdir()
+        dirs, nondirs = [], []
+        for name in names:
+            if self._accessor.is_dir(self.joinpath(name)):
+                dirs.append(name)
+            else:
+                nondirs.append(name)
+        if topdown:
+            yield self, dirs, nondirs
+        for name in dirs:
+            new_path = self.joinpath(name)
+            for x in new_path.walk():
+                yield x
+        if not topdown:
+            yield self, dirs, nondirs
