@@ -33,7 +33,6 @@ import json
 import dateutil.parser
 import hashlib
 import requests.packages.urllib3 as urllib3
-import fnmatch
 
 
 def md5sum(filename):
@@ -56,15 +55,6 @@ def sha1sum(filename):
         for chunk in iter(lambda: f.read(128 * sha1.block_size), b''):
             sha1.update(chunk)
     return sha1.hexdigest()
-
-
-def pattern_match(text, patterns):
-    if not patterns:
-        return False
-    for p in patterns.split(';'):
-        if fnmatch.fnmatch(text, p):
-            return True
-    return False
 
 
 class HTTPResponseWrapper(object):
@@ -859,19 +849,3 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                 yield x
         if not topdown:
             yield self, dirs, nondirs
-
-    def walkfilter(self, pattern='*', folder_include_pattern='*', folder_exclude_pattern=None, yield_files=True, yield_folders=False):
-        """
-        Generator for walking the repo and filtering the results.
-        """
-        for path, dirs, nondirs in self.walk():
-            # Filters
-            nondirs[:] = [i for i in nondirs if pattern_match(i, pattern)]
-            dirs[:] = [i for i in dirs if pattern_match(i, folder_include_pattern) and not pattern_match(i, folder_exclude_pattern)]
-            # Yields
-            if yield_files:
-                for f in nondirs:
-                    yield path.joinpath(f)
-            if yield_folders:
-                for d in (i for i in dirs if pattern_match(i, pattern)):
-                    yield path.joinpath(d)
