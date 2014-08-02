@@ -231,11 +231,11 @@ class _ArtifactoryAccessor(pathlib._Accessor):
     """
     Implements operations with Artifactory REST API
     """
-    def rest_get(self, url, headers=None, auth=None):
+    def rest_get(self, url, params=None, headers=None, auth=None):
         """
         Perform a GET request to url with optional authentication
         """
-        res = requests.get(url, headers=headers, auth=auth)
+        res = requests.get(url, params=params, headers=headers, auth=auth)
         return res.text, res.status_code
 
     def rest_put(self, url, params=None, headers=None, auth=None):
@@ -519,6 +519,43 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if code not in [200, 201]:
             raise RuntimeError("%s" % text)
 
+    def move(self, src, dst):
+        """
+        Move artifact from src to dst
+        """
+        url = '/'.join([src.drive,
+                        'api/move',
+                        str(src.relative_to(src.drive)).rstrip('/')])
+
+        params = {'to': str(dst.relative_to(dst.drive)).rstrip('/')}
+
+        text, code = self.rest_post(url,
+                                    params=params,
+                                    auth=src.auth)
+
+        if code not in [200, 201]:
+            raise RuntimeError("%s" % text)
+
+    def get_properties(self, pathobj):
+        """
+        Get artifact properties and return them as a dictionary.
+        """
+        url = '/'.join([pathobj.drive,
+                        'api/storage',
+                        str(pathobj.relative_to(pathobj.drive)).strip('/')])
+
+        params = 'properties'
+
+        text, code = self.rest_get(url,
+                                   params=params,
+                                   auth=pathobj.auth)
+
+        if code == 404 and "Unable to find item" in text:
+            raise OSError(2, "No such file or directory: '%s'" % url)
+        if code != 200:
+            raise RuntimeError(text)
+
+        return json.loads(text)['properties']
 
 _artifactory_accessor = _ArtifactoryAccessor()
 
@@ -797,8 +834,13 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         if calc_sha1:
             sha1 = sha1sum(file_name)
 
+        target = self
+
+        if self.is_dir():
+            target = self / pathlib.Path(file_name).name
+
         with open(file_name) as fobj:
-            self.deploy(fobj, md5, sha1, parameters)
+            target.deploy(fobj, md5, sha1, parameters)
 
     def deploy_deb(self, file_name, distribution, component, architecture):
         """
@@ -830,6 +872,25 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             with self.open() as fobj:
                 dst.deploy(fobj)
 
+    def move(self, dst):
+        """
+        Move artifact from this path to destinaiton.
+        """
+        if self.drive != dst.drive:
+            raise NotImplementedError(
+                "Moving between instances is not implemented yet")
+
+        self._accessor.move(self, dst)
+
+    @property
+    def properties(self):
+        """
+        Fetch artifact properties
+
+        TODO: implement setting properties
+        """
+        return self._accessor.get_properties(self)
+
     def walk(self, topdown=True):
         """
         os.walk like function to traverse the URI like a file system.
@@ -849,3 +910,4 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                 yield x
         if not topdown:
             yield self, dirs, nondirs
+
