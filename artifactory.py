@@ -702,6 +702,16 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.auth = self.auth
         return obj
 
+    def __iter__(self):
+        """Iterate over the files in this directory.  Does not yield any
+        result for the special paths '.' and '..'.
+        """
+        for name in self._accessor.listdir(self):
+            if name in {'.', '..'}:
+                # Yielding a path object for these makes little sense
+                continue
+            yield self._make_child_relpath(name)
+
     def open(self, mode='r', buffering=-1, encoding=None,
              errors=None, newline=None):
         """
@@ -742,12 +752,6 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         Whether this path is a regular file.
         """
         return self._accessor.is_file(self)
-
-    def listdir(self):
-        """
-        Returns a list of immediate sub-directories and files in path
-        """
-        return self._accessor.listdir(self)
 
     def is_symlink(self):
         """
@@ -891,23 +895,25 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         return self._accessor.get_properties(self)
 
-    def walk(self, topdown=True):
-        """
-        os.walk like function to traverse the URI like a file system.
-        """
-        names = self.listdir()
-        dirs, nondirs = [], []
-        for name in names:
-            if self._accessor.is_dir(self.joinpath(name)):
-                dirs.append(name)
-            else:
-                nondirs.append(name)
-        if topdown:
-            yield self, dirs, nondirs
-        for name in dirs:
-            new_path = self.joinpath(name)
-            for x in new_path.walk():
-                yield x
-        if not topdown:
-            yield self, dirs, nondirs
+
+def walk(pathobj, topdown=True):
+    """
+    os.walk like function to traverse the URI like a file system.
+
+    The only difference is that this function takes and returns Path objects
+    in places where original implementation will return strings
+    """
+    dirs, nondirs = [], []
+    for child in pathobj.iterdir():
+        if child.is_dir():
+            dirs.append(child)
+        else:
+            nondirs.append(child)
+    if topdown:
+        yield pathobj, dirs, nondirs
+    for dir in dirs:
+        for result in walk(dir):
+            yield result
+    if not topdown:
+        yield pathobj, dirs, nondirs
 
