@@ -13,7 +13,7 @@ def read(fname):
 
 setup(
     name='artifactory',
-    version='0.1.5',
+    version='0.1.6',
     py_modules=['artifactory'],
     license='MIT License',
     description='A Python to Artifactory interface',
