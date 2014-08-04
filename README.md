@@ -6,14 +6,17 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
 
 # Usage Examples #
 
+## Walking Directory Tree ##
+
 Getting directory listing:
 
 ```python
 from artifactory import ArtifactoryPath
 path = ArtifactoryPath("http://repo.jfrog.org/artifactory/gradle-ivy-local")
-for p in path.iterdir():
+for p in path:
     print p
 ```
+
 Find all .gz files in current dir, recursively:
 
 ```python
@@ -23,6 +26,8 @@ path = ArtifactoryPath("http://repo.jfrog.org/artifactory/distributions/org/")
 for p in path.glob("**/*.gz"):
     print p
 ```
+
+## Downloading Artifacts ##
 
 Download artifact to a local filesystem:
 
@@ -34,3 +39,16 @@ with path.open() as fd:
     with open("tomcat.tar.gz", "w") as out:
         out.write(fd.read())
 ```
+
+## Uploading Artifacts ##
+
+Deploy a regular file ```myapp-1.0.tar.gz```
+
+```python
+from artifactory import ArtifactoryPath
+path = ArtifactoryPath("http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0")
+path.mkdir()
+
+path.deploy_file('./myapp-1.0.tar.gz')
+```
+
