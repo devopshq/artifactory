@@ -51,4 +51,10 @@ path.mkdir()
 
 path.deploy_file('./myapp-1.0.tar.gz')
 ```
+Deploy a debian package ```myapp-1.0.deb```
 
+```python
+from artifactory import ArtifactoryPath
+path = ArtifactoryPath("http://my-artifactory/artifactory/ubuntu-local/pool")
+path.deploy_deb('./myapp-1.0.deb', distribution='trusty', component='main', architecture='amd64')
+```
