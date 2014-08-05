@@ -904,15 +904,20 @@ def walk(pathobj, topdown=True):
     in places where original implementation will return strings
     """
     dirs, nondirs = [], []
-    for child in pathobj.iterdir():
+    for child in pathobj:
+        relpath = str(child.relative_to(str(pathobj)))
+        if relpath.startswith('/'):
+            relpath = relpath[1:]
+        if relpath.endswith('/'):
+            relpath = relpath[:-1]
         if child.is_dir():
-            dirs.append(child)
+            dirs.append(relpath)
         else:
-            nondirs.append(child)
+            nondirs.append(relpath)
     if topdown:
         yield pathobj, dirs, nondirs
     for dir in dirs:
-        for result in walk(dir):
+        for result in walk(pathobj / dir):
             yield result
     if not topdown:
         yield pathobj, dirs, nondirs
