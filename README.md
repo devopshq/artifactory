@@ -36,7 +36,7 @@ from artifactory import ArtifactoryPath
 path = ArtifactoryPath("http://repo.jfrog.org/artifactory/distributions/org/apache/tomcat/apache-tomcat-7.0.11.tar.gz")
     
 with path.open() as fd:
-    with open("tomcat.tar.gz", "w") as out:
+    with open("tomcat.tar.gz", "wb") as out:
         out.write(fd.read())
 ```
 
