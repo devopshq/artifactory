@@ -36,7 +36,7 @@ from artifactory import ArtifactoryPath
 path = ArtifactoryPath("http://repo.jfrog.org/artifactory/distributions/org/apache/tomcat/apache-tomcat-7.0.11.tar.gz")
     
 with path.open() as fd:
-    with open("tomcat.tar.gz", "w") as out:
+    with open("tomcat.tar.gz", "wb") as out:
         out.write(fd.read())
 ```
 
@@ -51,4 +51,10 @@ path.mkdir()
 
 path.deploy_file('./myapp-1.0.tar.gz')
 ```
+Deploy a debian package ```myapp-1.0.deb```
 
+```python
+from artifactory import ArtifactoryPath
+path = ArtifactoryPath("http://my-artifactory/artifactory/ubuntu-local/pool")
+path.deploy_deb('./myapp-1.0.deb', distribution='trusty', component='main', architecture='amd64')
+```

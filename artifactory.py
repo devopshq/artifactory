@@ -843,7 +843,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         if self.is_dir():
             target = self / pathlib.Path(file_name).name
 
-        with open(file_name) as fobj:
+        with open(file_name, 'rb') as fobj:
             target.deploy(fobj, md5, sha1, parameters)
 
     def deploy_deb(self, file_name, distribution, component, architecture):
