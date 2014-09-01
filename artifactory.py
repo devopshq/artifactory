@@ -619,7 +619,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
     """
     # Pathlib limits what members can be present in 'Path' class,
     # so authentication information has to be added via __slots__
-    __slots__ = ('auth', 'cert', 'verify')
+    __slots__ = ('auth', 'cert', 'verify', 'urllib3_warn')
 
     def __new__(cls, *args, **kwargs):
         """
@@ -634,7 +634,9 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.auth = kwargs.get('auth', None)
         obj.verify = kwargs.get('verify', True)
         obj.cert = kwargs.get('cert', None)
-
+        obj.urllib3_warn = kwargs.get('urllib3_warn', True)
+        if not obj.urllib3_warn:
+            urllib3.disable_warnings()
         return obj
 
     def _init(self, *args, **kwargs):
