@@ -58,3 +58,34 @@ from artifactory import ArtifactoryPath
 path = ArtifactoryPath("http://my-artifactory/artifactory/ubuntu-local/pool")
 path.deploy_deb('./myapp-1.0.deb', distribution='trusty', component='main', architecture='amd64')
 ```
+
+## SSL Cert Verification Options ##
+See [Requests - SSL verification](http://docs.python-requests.org/en/latest/user/advanced/#ssl-cert-verification) for more details.  
+
+```python
+from artifactory import ArtifactoryPath
+path = ArtifactoryPath("http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0")
+```
+... is the same as
+```python
+from artifactory import ArtifactoryPath
+path = ArtifactoryPath("http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0", verify=True)
+```
+Specify a local cert to use as client side certificate
+
+```python
+from artifactory import ArtifactoryPath
+path = ArtifactoryPath("http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0", cert="/path_to_file/server.pem")
+```
+Disable host cert verification 
+
+```python
+from artifactory import ArtifactoryPath
+path = ArtifactoryPath("http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0", verify=False)
+```
+
+Disable host cert verification and suppress [urllib3 security warnings](https://urllib3.readthedocs.org/en/latest/security.html#insecurerequestwarning)
+```python
+from artifactory import ArtifactoryPath
+path = ArtifactoryPath("http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0", verify=False, urllib3_warn=False)
+```
