@@ -621,18 +621,10 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         only then add auth information.
         """
         obj = pathlib.Path.__new__(cls, *args, **kwargs)
-
-        obj.auth = None
-        if 'auth' in kwargs:
-            obj.auth = kwargs['auth']
-
-        obj.verify = None
-        if 'verify' in kwargs:
-            obj.verify = kwargs['verify']
-
-        obj.cert = None
-        if 'cert' in kwargs:
-            obj.cert = kwargs['cert']
+        
+        obj.auth = kwargs.get('auth', None)
+        obj.verify = kwargs.get('verify', None)
+        obj.cert = kwargs.get('cert', None)
 
         return obj
 
