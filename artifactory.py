@@ -623,7 +623,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj = pathlib.Path.__new__(cls, *args, **kwargs)
         
         obj.auth = kwargs.get('auth', None)
-        obj.verify = kwargs.get('verify', None)
+        obj.verify = kwargs.get('verify', True)
         obj.cert = kwargs.get('cert', None)
 
         return obj
