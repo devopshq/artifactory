@@ -212,7 +212,6 @@ class _ArtifactoryFlavour(pathlib._Flavour):
 
 _artifactory_flavour = _ArtifactoryFlavour()
 
-
 ArtifactoryFileStat = collections.namedtuple(
     'ArtifactoryFileStat',
     ['ctime',
@@ -231,48 +230,51 @@ class _ArtifactoryAccessor(pathlib._Accessor):
     """
     Implements operations with Artifactory REST API
     """
-    def rest_get(self, url, params=None, headers=None, auth=None):
+    def rest_get(self, url, params=None, headers=None, auth=None, verify=True, cert=None):
         """
         Perform a GET request to url with optional authentication
         """
-        res = requests.get(url, params=params, headers=headers, auth=auth)
+        res = requests.get(url, params=params, headers=headers, auth=auth, verify=verify,
+                           cert=cert)
         return res.text, res.status_code
 
-    def rest_put(self, url, params=None, headers=None, auth=None):
+    def rest_put(self, url, params=None, headers=None, auth=None, verify=True, cert=None):
         """
         Perform a PUT request to url with optional authentication
         """
-        res = requests.put(url, params=params, headers=headers, auth=auth)
+        res = requests.put(url, params=params, headers=headers, auth=auth, verify=verify,
+                           cert=cert)
         return res.text, res.status_code
 
-    def rest_post(self, url, params=None, headers=None, auth=None):
+    def rest_post(self, url, params=None, headers=None, auth=None, verify=True, cert=None):
         """
         Perform a PUT request to url with optional authentication
         """
-        res = requests.post(url, params=params, headers=headers, auth=auth)
+        res = requests.post(url, params=params, headers=headers, auth=auth, verify=verify,
+                            cert=cert)
         return res.text, res.status_code
 
-    def rest_del(self, url, auth=None):
+    def rest_del(self, url, auth=None, verify=True, cert=None):
         """
         Perform a DELETE request to url with optional authentication
         """
-        res = requests.delete(url, auth=auth)
+        res = requests.delete(url, auth=auth, verify=verify, cert=cert)
         return res.text, res.status_code
 
-    def rest_put_stream(self, url, stream, headers=None, auth=None):
+    def rest_put_stream(self, url, stream, headers=None, auth=None, verify=True, cert=None):
         """
         Perform a chunked PUT request to url with optional authentication
         This is specifically to upload files.
         """
-        res = requests.put(url, headers=headers, auth=auth, data=stream)
+        res = requests.put(url, headers=headers, auth=auth, data=stream, verify=verify, cert=cert)
         return res.text, res.status_code
 
-    def rest_get_stream(self, url, auth=None):
+    def rest_get_stream(self, url, auth=None, verify=True, cert=None):
         """
         Perform a chunked GET request to url with optional authentication
         This is specifically to download files.
         """
-        res = requests.get(url, auth=auth, stream=True)
+        res = requests.get(url, auth=auth, stream=True, verify=verify, cert=cert)
         return res.raw, res.status_code
 
     def get_stat_json(self, pathobj):
@@ -284,7 +286,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                         'api/storage',
                         str(pathobj.relative_to(pathobj.drive)).strip('/')])
 
-        text, code = self.rest_get(url, auth=pathobj.auth)
+        text, code = self.rest_get(url, auth=pathobj.auth, verify=pathobj.verify,
+                                   cert=pathobj.cert)
         if code == 404 and "Unable to find item" in text:
             raise OSError(2, "No such file or directory: '%s'" % url)
         if code != 200:
@@ -382,7 +385,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             raise OSError(17, "File exists: '%s'" % str(pathobj))
 
         url = str(pathobj) + '/'
-        text, code = self.rest_put(url, auth=pathobj.auth)
+        text, code = self.rest_put(url, auth=pathobj.auth, verify=pathobj.verify,
+                                   cert=pathobj.cert)
 
         if not code == 201:
             raise RuntimeError("%s %d" % (text, code))
@@ -398,7 +402,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         url = str(pathobj) + '/'
 
-        text, code = self.rest_del(url, auth=pathobj.auth)
+        text, code = self.rest_del(url, auth=pathobj.auth, verify=pathobj.verify,
+                                   cert=pathobj.cert)
 
         if code not in [200, 202, 204]:
             raise RuntimeError("Failed to delete directory: '%s'" % text)
@@ -413,7 +418,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             raise OSError(1, "Operation not permitted: '%s'" % str(pathobj))
 
         url = str(pathobj)
-        text, code = self.rest_del(url, auth=pathobj.auth)
+        text, code = self.rest_del(url, auth=pathobj.auth, verify=pathobj.verify,
+                                   cert=pathobj.cert)
 
         if code not in [200, 202, 204]:
             raise RuntimeError("Failed to delete file: %d '%s'" % (code, text))
@@ -429,7 +435,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             return
 
         url = str(pathobj)
-        text, code = self.rest_put(url, auth=pathobj.auth)
+        text, code = self.rest_put(url, auth=pathobj.auth, verify=pathobj.verify,
+                                   cert=pathobj.cert)
 
         if not code == 201:
             raise RuntimeError("%s %d" % (text, code))
@@ -467,7 +474,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         seek()
         """
         url = str(pathobj)
-        raw, code = self.rest_get_stream(url, auth=pathobj.auth)
+        raw, code = self.rest_get_stream(url, auth=pathobj.auth, verify=pathobj.verify,
+                                         cert=pathobj.cert)
 
         if not code == 200:
             raise RuntimeError("%d" % code)
@@ -497,7 +505,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         text, code = self.rest_put_stream(url,
                                           fobj,
                                           headers=headers,
-                                          auth=pathobj.auth)
+                                          auth=pathobj.auth,
+                                          verify=pathobj.verify,
+                                          cert=pathobj.cert)
 
         if code not in [200, 201]:
             raise RuntimeError("%s" % text)
@@ -514,7 +524,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         text, code = self.rest_post(url,
                                     params=params,
-                                    auth=src.auth)
+                                    auth=src.auth,
+                                    verify=src.verify,
+                                    cert=src.cert)
 
         if code not in [200, 201]:
             raise RuntimeError("%s" % text)
@@ -531,7 +543,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         text, code = self.rest_post(url,
                                     params=params,
-                                    auth=src.auth)
+                                    auth=src.auth,
+                                    verify=src.verify,
+                                    cert=src.cert)
 
         if code not in [200, 201]:
             raise RuntimeError("%s" % text)
@@ -548,7 +562,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         text, code = self.rest_get(url,
                                    params=params,
-                                   auth=pathobj.auth)
+                                   auth=pathobj.auth,
+                                   verify=pathobj.verify,
+                                   cert=pathobj.cert)
 
         if code == 404 and "Unable to find item" in text:
             raise OSError(2, "No such file or directory: '%s'" % url)
@@ -556,6 +572,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             raise RuntimeError(text)
 
         return json.loads(text)['properties']
+
 
 _artifactory_accessor = _ArtifactoryAccessor()
 
@@ -602,7 +619,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
     """
     # Pathlib limits what members can be present in 'Path' class,
     # so authentication information has to be added via __slots__
-    __slots__ = ('auth')
+    __slots__ = ('auth', 'verify', 'cert')
 
     def __new__(cls, *args, **kwargs):
         """
@@ -614,10 +631,9 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         obj = pathlib.Path.__new__(cls, *args, **kwargs)
 
-        obj.auth = None
-        if 'auth' in kwargs:
-            obj.auth = kwargs['auth']
-
+        obj.auth = kwargs.get('auth', None)
+        obj.verify = kwargs.get('verify', True)
+        obj.cert = kwargs.get('cert', None)
         return obj
 
     def _init(self, *args, **kwargs):
@@ -633,6 +649,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         obj = super(ArtifactoryPath, self).parent
         obj.auth = self.auth
+        obj.verify = self.verify
+        obj.cert = self.cert
         return obj
 
     def with_name(self, name):
@@ -641,6 +659,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         obj = super(ArtifactoryPath, self).with_name(name)
         obj.auth = self.auth
+        obj.verify = self.verify
+        obj.cert = self.cert
         return obj
 
     def with_suffix(self, suffix):
@@ -649,6 +669,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         obj = super(ArtifactoryPath, self).with_suffix(suffix)
         obj.auth = self.auth
+        obj.verify = self.verify
+        obj.cert = self.cert
         return obj
 
     def relative_to(self, *other):
@@ -659,6 +681,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         obj = super(ArtifactoryPath, self).relative_to(*other)
         obj.auth = self.auth
+        obj.verify = self.verify
+        obj.cert = self.cert
         return obj
 
     def joinpath(self, *args):
@@ -670,6 +694,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         obj = super(ArtifactoryPath, self).joinpath(*args)
         obj.auth = self.auth
+        obj.verify = self.verify
+        obj.cert = self.cert
         return obj
 
     def __truediv__(self, key):
@@ -678,6 +704,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         obj = super(ArtifactoryPath, self).__truediv__(key)
         obj.auth = self.auth
+        obj.verify = self.verify
+        obj.cert = self.cert
         return obj
 
     def __rtruediv__(self, key):
@@ -686,6 +714,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         obj = super(ArtifactoryPath, self).__truediv__(key)
         obj.auth = self.auth
+        obj.verify = self.verify
+        obj.cert = self.cert
         return obj
 
     if sys.version_info < (3,):
@@ -695,11 +725,15 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
     def _make_child(self, args):
         obj = super(ArtifactoryPath, self)._make_child(args)
         obj.auth = self.auth
+        obj.verify = self.verify
+        obj.cert = self.cert
         return obj
 
     def _make_child_relpath(self, args):
         obj = super(ArtifactoryPath, self)._make_child_relpath(args)
         obj.auth = self.auth
+        obj.verify = self.verify
+        obj.cert = self.cert
         return obj
 
     def __iter__(self):
