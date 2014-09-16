@@ -297,7 +297,7 @@ class TestArtifactoryConfig(unittest.TestCase):
               "username=foo\n" + \
               "password=bar\n"
 
-        with tempfile.NamedTemporaryFile() as tf:
+        with tempfile.NamedTemporaryFile(mode='w+') as tf:
             tf.write(cfg)
             tf.flush()
             cfg = artifactory.read_config(tf.name)
