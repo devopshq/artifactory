@@ -123,6 +123,9 @@ def get_config_entry(config, url):
     config - result of read_config() or read_global_config()
     url - artifactory url to search the config for
     """
+    if not config:
+        return None
+
     # First, try to search for the best match
     if url in config:
         return config[url]
