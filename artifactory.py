@@ -24,15 +24,123 @@ to manipulate artifactory paths. See pathlib docs for details how
 pure paths can be used.
 """
 
+import os
 import sys
 import errno
 import pathlib
 import collections
 import requests
+import re
 import json
 import dateutil.parser
 import hashlib
 import requests.packages.urllib3 as urllib3
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
+
+
+default_config_path = '~/.artifactory_python.cfg'
+global_config = None
+
+
+def read_config(config_path=default_config_path):
+    """
+    Read configuration file and produce a dictionary of the following structure:
+
+      {'<instance1>': {'username': '<user>', 'password': '<pass>',
+                       'verify': <True/False>, 'cert': '<path-to-cert>'}
+       '<instance2>': {...},
+       ...}
+
+    Format of the file:
+      [https://artifactory-instance.local/artifactory]
+      username = foo
+      password = @dmin
+      verify = false
+      cert = ~/path-to-cert
+
+    config-path - specifies where to read the config from
+    """
+    config_path = os.path.expanduser(config_path)
+    if not os.path.isfile(config_path):
+        raise OSError(errno.ENOENT,
+                      "Artifactory configuration file not found: '%s'" %
+                      config_path)
+
+    p = configparser.ConfigParser({'username': None,
+                                   'password': None,
+                                   'verify': 'true',
+                                   'cert': None})
+    p.read(config_path)
+
+    result = {}
+
+    for section in p.sections():
+        result[section] = {'username': p.get(section, 'username'),
+                           'password': p.get(section, 'password'),
+                           'verify': p.getboolean(section, 'verify'),
+                           'cert': p.get(section, 'cert')}
+        # certificate path may contain '~', and we'd better expand it properly
+        if result[section]['cert']:
+            result[section]['cert'] = \
+                os.path.expanduser(result[section]['cert'])
+    return result
+
+
+def read_global_config(config_path=default_config_path):
+    """
+    Attempt to read global configuration file and store the result in
+    'global_config' variable.
+
+    config_path - specifies where to read the config from
+    """
+    global global_config
+
+    if global_config is None:
+        try:
+            global_config = read_config(config_path)
+        except OSError:
+            pass
+
+
+def without_http_prefix(url):
+    """
+    Returns a URL without the http:// or https:// prefixes
+    """
+    if url.startswith('http://'):
+        return url[7:]
+    elif url.startswith('https://'):
+        return url[8:]
+    return url
+
+
+def get_config_entry(config, url):
+    """
+    Look through config and try to find best matching entry for 'url'
+
+    config - result of read_config() or read_global_config()
+    url - artifactory url to search the config for
+    """
+    # First, try to search for the best match
+    if url in config:
+        return config[url]
+
+    # Then search for indirect match
+    for item in config:
+        if without_http_prefix(item) == without_http_prefix(url):
+            return config[item]
+
+
+def get_global_config_entry(url):
+    """
+    Look through global config and try to find best matching entry for 'url'
+
+    url - artifactory url to search the config for
+    """
+    read_global_config()
+    return get_config_entry(global_config, url)
 
 
 def md5sum(filename):
@@ -631,9 +739,23 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         obj = pathlib.Path.__new__(cls, *args, **kwargs)
 
+        cfg_entry = get_global_config_entry(obj.drive)
         obj.auth = kwargs.get('auth', None)
-        obj.verify = kwargs.get('verify', True)
         obj.cert = kwargs.get('cert', None)
+
+        if obj.auth is None and cfg_entry:
+            obj.auth = (cfg_entry['username'], cfg_entry['password'])
+
+        if obj.cert is None and cfg_entry:
+            obj.cert = cfg_entry['cert']
+
+        if 'verify' in kwargs:
+            obj.verify = kwargs.get('verify')
+        elif cfg_entry:
+            obj.verify = cfg_entry['verify']
+        else:
+            obj.verify = True
+
         return obj
 
     def _init(self, *args, **kwargs):
@@ -955,4 +1077,3 @@ def walk(pathobj, topdown=True):
             yield result
     if not topdown:
         yield pathobj, dirs, nondirs
-

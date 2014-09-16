@@ -286,5 +286,42 @@ class ArtifactoryPathTest(unittest.TestCase):
         self.assertEqual(c.auth, ('foo', 'bar'))
 
 
+class TestArtifactoryConfig(unittest.TestCase):
+    def test_artifactory_config(self):
+        cfg = "[foo.net/artifactory]\n" + \
+              "username=admin\n" + \
+              "password=ilikerandompasswords\n" + \
+              "verify=False\n" + \
+              "cert=~/path-to-cert\n" + \
+              "[http://bar.net/artifactory]\n" + \
+              "username=foo\n" + \
+              "password=bar\n"
+
+        with tempfile.NamedTemporaryFile() as tf:
+            tf.write(cfg)
+            tf.flush()
+            cfg = artifactory.read_config(tf.name)
+
+            c = artifactory.get_config_entry(cfg, 'foo.net/artifactory')
+            self.assertEquals(c['username'], 'admin')
+            self.assertEquals(c['password'], 'ilikerandompasswords')
+            self.assertEquals(c['verify'], False)
+            self.assertEquals(c['cert'],
+                              os.path.expanduser('~/path-to-cert'))
+
+            c = artifactory.get_config_entry(cfg, 'http://bar.net/artifactory')
+            self.assertEquals(c['username'], 'foo')
+            self.assertEquals(c['password'], 'bar')
+            self.assertEquals(c['verify'], True)
+
+            c = artifactory.get_config_entry(cfg, 'bar.net/artifactory')
+            self.assertEquals(c['username'], 'foo')
+            self.assertEquals(c['password'], 'bar')
+
+            c = artifactory.get_config_entry(cfg, 'https://bar.net/artifactory')
+            self.assertEquals(c['username'], 'foo')
+            self.assertEquals(c['password'], 'bar')
+
+
 if __name__ == '__main__':
     unittest.main()
