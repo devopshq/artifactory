@@ -67,6 +67,18 @@ path.deploy_deb('./myapp-1.0.deb',
                 architecture='amd64')
 ```
 
+## Authentication ##
+
+To provide username and password to access restricted resources, you can pass ```auth``` parameter to ArtifactoryPath:
+
+```python
+from artifactory import ArtifactoryPath
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/myrepo/restricted-path",
+    auth=('admin', 'ilikerandompasswords'))
+path.touch()
+```
+
 ## SSL Cert Verification Options ##
 See [Requests - SSL verification](http://docs.python-requests.org/en/latest/user/advanced/#ssl-cert-verification) for more details.  
 
@@ -105,3 +117,23 @@ To disable these warning, one needs to call urllib3.disable_warnings().
 import requests.packages.urllib3 as urllib3
 urllib3.disable_warnings()
 ```
+
+## Global Configuration File ##
+
+Artifactory Python module also has a way to specify all connection-related settings in a central file, ```~/.artifactory_python.cfg``` that is read upon the creation of first ```ArtifactoryPath``` object and is stored globally. For instance, you can specify per-instance settings of authentication tokens, so that you won't need to explicitly pass ```auth``` parameter to ```ArtifactoryPath```.
+
+Example:
+
+```ini
+[http://artifactory-instance.com/artifactory]
+username = deployer
+password = ilikerandompasswords
+verify = false
+
+[another-artifactory-instance.com/artifactory]
+username = foo
+password = @dmin
+cert = ~/mycert
+```
+
+Whether or not you specify ```http://``` or ```https://``` prefix is not essential. The module will first try to locate the best match and then try to match URLs without prefixes. So if in the config you specify ```https://my-instance.local``` and call ```ArtifactoryPath``` with ```http://my-instance.local```, it will still do the right thing. 
