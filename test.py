@@ -29,7 +29,7 @@ class UtilTest(unittest.TestCase):
 
         s = artifactory.encode_matrix_parameters(params)
 
-        self.assertEqual(s, "baz=bar,quux;foo=asdf")
+        self.assertEqual(s, "baz=bar;baz=quux;foo=asdf")
 
 
 class ArtifactoryFlavorTest(unittest.TestCase):
