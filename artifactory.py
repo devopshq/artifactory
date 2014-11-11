@@ -216,7 +216,7 @@ def encode_matrix_parameters(parameters):
 
     for param in iter(sorted(parameters)):
         if isinstance(parameters[param], (list, tuple)):
-            value = ','.join(parameters[param])
+            value = (';%s=' % (param)).join(parameters[param])
         else:
             value = parameters[param]
 
