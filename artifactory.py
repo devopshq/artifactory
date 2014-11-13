@@ -735,6 +735,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if code != 204:
             raise RuntimeError(text)
 
+        return text, code
+
 
     def del_properties(self, pathobj, props, recursive):
         """
@@ -744,7 +746,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                         'api/storage',
                         str(pathobj.relative_to(pathobj.drive)).strip('/')])
 
-        params = { 'properties': ','.join(props) }
+        params = { 'properties': ','.join(sorted(props)) }
         if recursive:
             params['recursive'] = '1'
 
@@ -759,6 +761,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if code != 204:
             raise RuntimeError(text)
 
+        return text, code
 
 _artifactory_accessor = _ArtifactoryAccessor()
 

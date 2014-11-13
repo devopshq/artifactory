@@ -46,6 +46,66 @@ class UtilTest(unittest.TestCase):
         self.assertEqual(s, "baz=ba\\r,qu\|ux|foo=a\,s\=df")
 
 
+class ArtifactorySetPropertiesTest(unittest.TestCase):
+    def setUp(self):
+        def custom_requests_put(url, params, headers, auth, verify, cert):
+            req = requests.Request("PUT", url=url, headers=headers, params=params, auth=auth)
+            resp = requests.Response()
+            resp._content = req.prepare().path_url
+            resp.status_code = 204
+            return resp
+
+        self.original_requests_put = requests.put
+        requests.put = custom_requests_put
+
+        self.path = artifactory.ArtifactoryPath('http://localhost/artifactory/debian-local')
+        self.props = { 'deb.distribution': ['wheezy','jessie'],
+                       'deb.architecture': ['amd64','i386'],
+                       'custom1': '1\\2|3,4=5',
+                       'custom2': 'something' }
+
+    def tearDown(self):
+        requests.put = self.original_requests_put
+
+    def test_set_properties(self):
+        text, code = self.path.set_properties(self.props)
+        self.assertEqual(text, '/artifactory/api/storage/debian-local?properties=custom1%3D1%5C2%5C%7C3%5C%2C4%5C%3D5%7Ccustom2%3Dsomething%7Cdeb.architecture%3Damd64%2Ci386%7Cdeb.distribution%3Dwheezy%2Cjessie')
+
+    def test_set_properties_recursive(self):
+        text, code = self.path.set_properties(self.props, recursive=True)
+        self.assertEqual(text, '/artifactory/api/storage/debian-local?properties=custom1%3D1%5C2%5C%7C3%5C%2C4%5C%3D5%7Ccustom2%3Dsomething%7Cdeb.architecture%3Damd64%2Ci386%7Cdeb.distribution%3Dwheezy%2Cjessie&recursive=1')
+
+
+class ArtifactoryDelPropertiesTest(unittest.TestCase):
+    def setUp(self):
+        def custom_requests_del(url, params, auth, verify, cert):
+            req = requests.Request("DELETE", url=url, params=params, auth=auth)
+            resp = requests.Response()
+            resp._content = req.prepare().path_url
+            resp.status_code = 204
+            return resp
+
+        self.original_requests_del = requests.delete
+        requests.delete = custom_requests_del
+
+        self.path = artifactory.ArtifactoryPath('http://localhost/artifactory/debian-local')
+        self.props = { 'deb.distribution': ['wheezy','jessie'],
+                       'deb.architecture': ['amd64','i386'],
+                       'custom1': '1\\2|3,4=5',
+                       'custom2': 'something' }
+
+    def tearDown(self):
+        requests.delete = self.original_requests_del
+
+    def test_del_properties(self):
+        text, code = self.path.del_properties(self.props)
+        self.assertEqual(text, '/artifactory/api/storage/debian-local?properties=custom1%2Ccustom2%2Cdeb.architecture%2Cdeb.distribution')
+
+    def test_del_properties_recursive(self):
+        text, code = self.path.del_properties(self.props, recursive=True)
+        self.assertEqual(text, '/artifactory/api/storage/debian-local?properties=custom1%2Ccustom2%2Cdeb.architecture%2Cdeb.distribution&recursive=1')
+
+
 class ArtifactoryFlavorTest(unittest.TestCase):
     flavour = artifactory._artifactory_flavour
 
