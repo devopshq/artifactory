@@ -706,6 +706,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         if code == 404 and "Unable to find item" in text:
             raise OSError(2, "No such file or directory: '%s'" % url)
+        if code == 404 and "No properties could be found" in text:
+            return {}
         if code != 200:
             raise RuntimeError(text)
 
@@ -765,6 +767,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             raise RuntimeError(text)
 
         return text, code
+
 
 _artifactory_accessor = _ArtifactoryAccessor()
 
@@ -1133,6 +1136,15 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         return self._accessor.get_properties(self)
 
+    @properties.setter
+    def properties(self, properties):
+        self.del_properties(self.properties)
+        self.set_properties(properties)
+
+    @properties.deleter
+    def properties(self):
+        self.del_properties(self.properties)
+
     def set_properties(self, properties, recursive=False):
         """
         Set artifact properties
@@ -1141,6 +1153,9 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                 Property values can be a list or tuple to set multiple values
                 for a key.
         """
+        if properties is None or len(properties) <= 0:
+            return 204, ''
+
         return self._accessor.set_properties(self, properties, recursive)
 
     def del_properties(self, properties, recursive=False):
