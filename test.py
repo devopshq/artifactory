@@ -71,9 +71,17 @@ class ArtifactorySetPropertiesTest(unittest.TestCase):
         text, code = self.path.set_properties(self.props)
         self.assertEqual(text, '/artifactory/api/storage/debian-local?properties=custom1%3D1%5C2%5C%7C3%5C%2C4%5C%3D5%7Ccustom2%3Dsomething%7Cdeb.architecture%3Damd64%2Ci386%7Cdeb.distribution%3Dwheezy%2Cjessie')
 
-    def test_set_properties_recursive(self):
+    def test_set_properties_recursive_false(self):
+        text, code = self.path.set_properties(self.props, recursive=False)
+        outputs = ['/artifactory/api/storage/debian-local?recursive=0&properties=custom1%3D1%5C2%5C%7C3%5C%2C4%5C%3D5%7Ccustom2%3Dsomething%7Cdeb.architecture%3Damd64%2Ci386%7Cdeb.distribution%3Dwheezy%2Cjessie',
+                   '/artifactory/api/storage/debian-local?properties=custom1%3D1%5C2%5C%7C3%5C%2C4%5C%3D5%7Ccustom2%3Dsomething%7Cdeb.architecture%3Damd64%2Ci386%7Cdeb.distribution%3Dwheezy%2Cjessie&recursive=0']
+        self.assertTrue(text in outputs)
+
+    def test_set_properties_recursive_true(self):
         text, code = self.path.set_properties(self.props, recursive=True)
-        self.assertEqual(text, '/artifactory/api/storage/debian-local?properties=custom1%3D1%5C2%5C%7C3%5C%2C4%5C%3D5%7Ccustom2%3Dsomething%7Cdeb.architecture%3Damd64%2Ci386%7Cdeb.distribution%3Dwheezy%2Cjessie&recursive=1')
+        outputs = ['/artifactory/api/storage/debian-local?recursive=1&properties=custom1%3D1%5C2%5C%7C3%5C%2C4%5C%3D5%7Ccustom2%3Dsomething%7Cdeb.architecture%3Damd64%2Ci386%7Cdeb.distribution%3Dwheezy%2Cjessie',
+                   '/artifactory/api/storage/debian-local?properties=custom1%3D1%5C2%5C%7C3%5C%2C4%5C%3D5%7Ccustom2%3Dsomething%7Cdeb.architecture%3Damd64%2Ci386%7Cdeb.distribution%3Dwheezy%2Cjessie&recursive=1']
+        self.assertTrue(text in outputs)
 
 
 class ArtifactoryDelPropertiesTest(unittest.TestCase):
@@ -105,9 +113,17 @@ class ArtifactoryDelPropertiesTest(unittest.TestCase):
         text, code = self.path.del_properties(self.props)
         self.assertEqual(text, '/artifactory/api/storage/debian-local?properties=abc%2Ccustom1%2Ccustom2%2Cdeb.architecture%2Cdeb.distribution')
 
-    def test_del_properties_recursive(self):
+    def test_del_properties_recursive_false(self):
+        text, code = self.path.del_properties(self.props, recursive=False)
+        outputs = [ '/artifactory/api/storage/debian-local?properties=abc%2Ccustom1%2Ccustom2%2Cdeb.architecture%2Cdeb.distribution&recursive=0',
+                    '/artifactory/api/storage/debian-local?recursive=0&properties=abc%2Ccustom1%2Ccustom2%2Cdeb.architecture%2Cdeb.distribution' ]
+        self.assertTrue(text in outputs)
+
+    def test_del_properties_recursive_true(self):
         text, code = self.path.del_properties(self.props, recursive=True)
-        self.assertEqual(text, '/artifactory/api/storage/debian-local?properties=abc%2Ccustom1%2Ccustom2%2Cdeb.architecture%2Cdeb.distribution&recursive=1')
+        outputs = [ '/artifactory/api/storage/debian-local?properties=abc%2Ccustom1%2Ccustom2%2Cdeb.architecture%2Cdeb.distribution&recursive=1',
+                    '/artifactory/api/storage/debian-local?recursive=1&properties=abc%2Ccustom1%2Ccustom2%2Cdeb.architecture%2Cdeb.distribution' ]
+        self.assertTrue(text in outputs)
 
 
 class ArtifactoryFlavorTest(unittest.TestCase):

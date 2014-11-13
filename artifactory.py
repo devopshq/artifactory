@@ -723,8 +723,10 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                         str(pathobj.relative_to(pathobj.drive)).strip('/')])
 
         params = { 'properties': encode_properties(props) }
-        if recursive:
+        if recursive == True:
             params['recursive'] = '1'
+        elif recursive == False:
+            params['recursive'] = '0'
 
         text, code = self.rest_put(url,
                                    params=params,
@@ -752,8 +754,10 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                         str(pathobj.relative_to(pathobj.drive)).strip('/')])
 
         params = { 'properties': ','.join(sorted(props)) }
-        if recursive:
+        if recursive == True:
             params['recursive'] = '1'
+        elif recursive == False:
+            params['recursive'] = '0'
 
         text, code = self.rest_del(url,
                                    params=params,
@@ -1138,14 +1142,14 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     @properties.setter
     def properties(self, properties):
-        self.del_properties(self.properties)
+        self.del_properties(self.properties, recursive=False)
         self.set_properties(properties)
 
     @properties.deleter
     def properties(self):
-        self.del_properties(self.properties)
+        self.del_properties(self.properties, recursive=False)
 
-    def set_properties(self, properties, recursive=False):
+    def set_properties(self, properties, recursive=None):
         """
         Set artifact properties
 
@@ -1153,12 +1157,12 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                 Property values can be a list or tuple to set multiple values
                 for a key.
         """
-        if properties is None or len(properties) <= 0:
+        if properties is None or len(properties) == 0:
             return 204, ''
 
         return self._accessor.set_properties(self, properties, recursive)
 
-    def del_properties(self, properties, recursive=False):
+    def del_properties(self, properties, recursive=None):
         """
         Delete artifact properties
 
