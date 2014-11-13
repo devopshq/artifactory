@@ -51,7 +51,7 @@ class ArtifactorySetPropertiesTest(unittest.TestCase):
         def custom_requests_put(url, params, headers, auth, verify, cert):
             req = requests.Request("PUT", url=url, headers=headers, params=params, auth=auth)
             resp = requests.Response()
-            resp._content = req.prepare().path_url
+            resp._content = req.prepare().path_url.encode('utf-8')
             resp.status_code = 204
             return resp
 
@@ -81,7 +81,7 @@ class ArtifactoryDelPropertiesTest(unittest.TestCase):
         def custom_requests_del(url, params, auth, verify, cert):
             req = requests.Request("DELETE", url=url, params=params, auth=auth)
             resp = requests.Response()
-            resp._content = req.prepare().path_url
+            resp._content = req.prepare().path_url.encode('utf-8')
             resp.status_code = 204
             return resp
 
