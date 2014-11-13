@@ -92,18 +92,22 @@ class ArtifactoryDelPropertiesTest(unittest.TestCase):
         self.props = { 'deb.distribution': ['wheezy','jessie'],
                        'deb.architecture': ['amd64','i386'],
                        'custom1': '1\\2|3,4=5',
-                       'custom2': 'something' }
+                       'custom2': 'something', 'abc': '1' }
 
     def tearDown(self):
         requests.delete = self.original_requests_del
 
+    def test_del_properties_str(self):
+        text, code = self.path.del_properties(sorted(self.props.keys())[0])
+        self.assertEqual(text, '/artifactory/api/storage/debian-local?properties=abc')
+
     def test_del_properties(self):
         text, code = self.path.del_properties(self.props)
-        self.assertEqual(text, '/artifactory/api/storage/debian-local?properties=custom1%2Ccustom2%2Cdeb.architecture%2Cdeb.distribution')
+        self.assertEqual(text, '/artifactory/api/storage/debian-local?properties=abc%2Ccustom1%2Ccustom2%2Cdeb.architecture%2Cdeb.distribution')
 
     def test_del_properties_recursive(self):
         text, code = self.path.del_properties(self.props, recursive=True)
-        self.assertEqual(text, '/artifactory/api/storage/debian-local?properties=custom1%2Ccustom2%2Cdeb.architecture%2Cdeb.distribution&recursive=1')
+        self.assertEqual(text, '/artifactory/api/storage/debian-local?properties=abc%2Ccustom1%2Ccustom2%2Cdeb.architecture%2Cdeb.distribution&recursive=1')
 
 
 class ArtifactoryFlavorTest(unittest.TestCase):

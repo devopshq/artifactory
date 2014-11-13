@@ -742,6 +742,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         """
         Delete artifact properties
         """
+        if isinstance(props, str):
+            props = (props,)
+
         url = '/'.join([pathobj.drive,
                         'api/storage',
                         str(pathobj.relative_to(pathobj.drive)).strip('/')])
@@ -1144,7 +1147,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         Delete artifact properties
 
-        props - iterable contains the property names to delete
+        props - iterable contains the property names to delete. If it is an
+                str it will be casted to tuple.
         """
         return self._accessor.del_properties(self, properties, recursive)
 
