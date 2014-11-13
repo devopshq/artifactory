@@ -623,7 +623,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if code not in [200, 201]:
             raise RuntimeError("%s" % text)
 
-    def copy(self, src, dst):
+    def copy(self, src, dst, suppress_layouts=0):
         """
         Copy artifact from src to dst
         """
@@ -631,7 +631,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                         'api/copy',
                         str(src.relative_to(src.drive)).rstrip('/')])
 
-        params = {'to': str(dst.relative_to(dst.drive)).rstrip('/')}
+        params = {'to': str(dst.relative_to(dst.drive)).rstrip('/'),
+                  'suppressLayouts': suppress_layouts}
 
         text, code = self.rest_post(url,
                                     params=params,
@@ -1023,14 +1024,14 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         self.deploy_file(file_name, parameters=params)
 
-    def copy(self, dst):
+    def copy(self, dst, suppress_layouts=0):
         """
         Copy artifact from this path to destinaiton.
         If files are on the same instance of artifactory, lightweight (local)
         copying will be attempted.
         """
         if self.drive == dst.drive:
-            self._accessor.copy(self, dst)
+            self._accessor.copy(self, dst, suppress_layouts=suppress_layouts)
         else:
             with self.open() as fobj:
                 dst.deploy(fobj)
