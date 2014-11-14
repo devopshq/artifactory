@@ -623,7 +623,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if code not in [200, 201]:
             raise RuntimeError("%s" % text)
 
-    def copy(self, src, dst):
+    def copy(self, src, dst, suppress_layouts=False):
         """
         Copy artifact from src to dst
         """
@@ -631,7 +631,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                         'api/copy',
                         str(src.relative_to(src.drive)).rstrip('/')])
 
-        params = {'to': str(dst.relative_to(dst.drive)).rstrip('/')}
+        params = {'to': str(dst.relative_to(dst.drive)).rstrip('/'),
+                  'suppressLayouts': int(suppress_layouts)}
 
         text, code = self.rest_post(url,
                                     params=params,
@@ -1023,14 +1024,55 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         self.deploy_file(file_name, parameters=params)
 
-    def copy(self, dst):
+    def copy(self, dst, suppress_layouts=False):
         """
         Copy artifact from this path to destinaiton.
         If files are on the same instance of artifactory, lightweight (local)
         copying will be attempted.
+
+        The suppress_layouts parameter, when set to True, will allow artifacts
+        from one path to be copied directly into another path without enforcing
+        repository layouts. The default behaviour is to copy to the repository
+        root, but remap the [org], [module], [baseVer], etc. structure to the
+        target repository.
+
+        For example, if we have a builds repository using the default maven2
+        repository where we publish our builds. We also have a published
+        repository where a directory for production and a directory for
+        staging environments should hold the current promoted builds. How do
+        we copy the contents of a build over to the production folder?
+
+        >>> from artifactory import ArtifactoryPath
+        >>> source = ArtifactoryPath("http://example.com/artifactory/builds/product/product/1.0.0/")
+        >>> dest = ArtifactoryPath("http://example.com/artifactory/published/production/")
+
+        Using copy with the default, suppress_layouts=False, the artifacts inside
+        builds/product/product/1.0.0/ will not end up in the published/production
+        path as we intended, but rather the entire structure product/product/1.0.0
+        is placed in the destination repo.
+
+        >>> source.copy(dest)
+        >>> for p in dest: print p
+        http://example.com/artifactory/published/production/foo-0.0.1.gz
+        http://example.com/artifactory/published/production/foo-0.0.1.pom
+
+        >>> for p in ArtifactoryPath("http://example.com/artifactory/published/product/product/1.0.0.tar"):
+        ...   print p
+        http://example.com/artifactory/published/product/product/1.0.0/product-1.0.0.tar.gz
+        http://example.com/artifactory/published/product/product/1.0.0/product-1.0.0.tar.pom
+
+        Using copy with suppress_layouts=True, the contents inside our source are copied
+        directly inside our dest as we intended.
+
+        >>> source.copy(dest, suppress_layouts=True)
+        >>> for p in dest: print p
+        http://example.com/artifactory/published/production/foo-0.0.1.gz
+        http://example.com/artifactory/published/production/foo-0.0.1.pom
+        http://example.com/artifactory/published/production/product-1.0.0.tar.gz
+        http://example.com/artifactory/published/production/product-1.0.0.tar.pom
         """
         if self.drive == dst.drive:
-            self._accessor.copy(self, dst)
+            self._accessor.copy(self, dst, suppress_layouts=suppress_layouts)
         else:
             with self.open() as fobj:
                 dst.deploy(fobj)
