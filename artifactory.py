@@ -723,9 +723,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                         str(pathobj.relative_to(pathobj.drive)).strip('/')])
 
         params = { 'properties': encode_properties(props) }
-        if recursive == True:
-            params['recursive'] = '1'
-        elif recursive == False:
+
+        if not recursive:
             params['recursive'] = '0'
 
         text, code = self.rest_put(url,
@@ -752,9 +751,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                         str(pathobj.relative_to(pathobj.drive)).strip('/')])
 
         params = { 'properties': ','.join(sorted(props)) }
-        if recursive == True:
-            params['recursive'] = '1'
-        elif recursive == False:
+
+        if not recursive:
             params['recursive'] = '0'
 
         text, code = self.rest_del(url,
@@ -1139,13 +1137,13 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
     @properties.setter
     def properties(self, properties):
         self.del_properties(self.properties, recursive=False)
-        self.set_properties(properties)
+        self.set_properties(properties, recursive=False)
 
     @properties.deleter
     def properties(self):
         self.del_properties(self.properties, recursive=False)
 
-    def set_properties(self, properties, recursive=None):
+    def set_properties(self, properties, recursive=True):
         """
         Adds new or modifies existing properties listed in properties
 
