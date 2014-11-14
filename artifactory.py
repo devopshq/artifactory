@@ -739,8 +739,6 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if code != 204:
             raise RuntimeError(text)
 
-        return text, code
-
 
     def del_properties(self, pathobj, props, recursive):
         """
@@ -769,8 +767,6 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             raise OSError(2, "No such file or directory: '%s'" % url)
         if code != 204:
             raise RuntimeError(text)
-
-        return text, code
 
 
 _artifactory_accessor = _ArtifactoryAccessor()
@@ -1151,23 +1147,27 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     def set_properties(self, properties, recursive=None):
         """
-        Set artifact properties
+        Adds new or modifies existing properties listed in properties
 
-        props - is a dict which contains the property names and values to set.
-                Property values can be a list or tuple to set multiple values
-                for a key.
+        properties - is a dict which contains the property names and values to set.
+                     Property values can be a list or tuple to set multiple values
+                     for a key.
+        recursive  - on folders property attachment is recursive by default. It is
+                     possible to force recursive behavior.
         """
-        if properties is None or len(properties) == 0:
+        if not properties:
             return 204, ''
 
         return self._accessor.set_properties(self, properties, recursive)
 
     def del_properties(self, properties, recursive=None):
         """
-        Delete artifact properties
+        Delete properties listed in properties
 
-        props - iterable contains the property names to delete. If it is an
-                str it will be casted to tuple.
+        properties - iterable contains the property names to delete. If it is an
+                     str it will be casted to tuple.
+        recursive  - on folders property attachment is recursive by default. It is
+                     possible to force recursive behavior.
         """
         return self._accessor.del_properties(self, properties, recursive)
 
