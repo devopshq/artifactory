@@ -225,6 +225,33 @@ def encode_matrix_parameters(parameters):
     return ';'.join(result)
 
 
+def escape_chars(s):
+    """
+    Performs character escaping of comma, pipe and equals characters
+    """
+    return "".join(['\\' + ch if ch in '=|,' else ch for ch in s])
+
+
+def encode_properties(parameters):
+    """
+    Performs encoding of url parameters from dictionary to a string. It does 
+    not escape backslash because it is not needed.
+
+    See: http://www.jfrog.com/confluence/display/RTF/Artifactory+REST+API#ArtifactoryRESTAPI-SetItemProperties
+    """
+    result = []
+
+    for param in iter(sorted(parameters)):
+        if isinstance(parameters[param], (list, tuple)):
+            value = ','.join([escape_chars(x) for x in parameters[param]])
+        else:
+            value = escape_chars(parameters[param])
+
+        result.append("%s=%s" % (param, value))
+
+    return '|'.join(result)
+
+
 class _ArtifactoryFlavour(pathlib._Flavour):
     """
     Implements Artifactory-specific pure path manipulations.
@@ -365,11 +392,11 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                             cert=cert)
         return res.text, res.status_code
 
-    def rest_del(self, url, auth=None, verify=True, cert=None):
+    def rest_del(self, url, params=None, auth=None, verify=True, cert=None):
         """
         Perform a DELETE request to url with optional authentication
         """
-        res = requests.delete(url, auth=auth, verify=verify, cert=cert)
+        res = requests.delete(url, params=params, auth=auth, verify=verify, cert=cert)
         return res.text, res.status_code
 
     def rest_put_stream(self, url, stream, headers=None, auth=None, verify=True, cert=None):
@@ -680,10 +707,65 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         if code == 404 and "Unable to find item" in text:
             raise OSError(2, "No such file or directory: '%s'" % url)
+        if code == 404 and "No properties could be found" in text:
+            return {}
         if code != 200:
             raise RuntimeError(text)
 
         return json.loads(text)['properties']
+
+
+    def set_properties(self, pathobj, props, recursive):
+        """
+        Set artifact properties
+        """
+        url = '/'.join([pathobj.drive,
+                        'api/storage',
+                        str(pathobj.relative_to(pathobj.drive)).strip('/')])
+
+        params = { 'properties': encode_properties(props) }
+
+        if not recursive:
+            params['recursive'] = '0'
+
+        text, code = self.rest_put(url,
+                                   params=params,
+                                   auth=pathobj.auth,
+                                   verify=pathobj.verify,
+                                   cert=pathobj.cert)
+
+        if code == 404 and "Unable to find item" in text:
+            raise OSError(2, "No such file or directory: '%s'" % url)
+        if code != 204:
+            raise RuntimeError(text)
+
+
+    def del_properties(self, pathobj, props, recursive):
+        """
+        Delete artifact properties
+        """
+        if isinstance(props, str):
+            props = (props,)
+
+        url = '/'.join([pathobj.drive,
+                        'api/storage',
+                        str(pathobj.relative_to(pathobj.drive)).strip('/')])
+
+        params = { 'properties': ','.join(sorted(props)) }
+
+        if not recursive:
+            params['recursive'] = '0'
+
+        text, code = self.rest_del(url,
+                                   params=params,
+                                   auth=pathobj.auth,
+                                   verify=pathobj.verify,
+                                   cert=pathobj.cert)
+
+        if code == 404 and "Unable to find item" in text:
+            raise OSError(2, "No such file or directory: '%s'" % url)
+        if code != 204:
+            raise RuntimeError(text)
 
 
 _artifactory_accessor = _ArtifactoryAccessor()
@@ -1091,10 +1173,43 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
     def properties(self):
         """
         Fetch artifact properties
-
-        TODO: implement setting properties
         """
         return self._accessor.get_properties(self)
+
+    @properties.setter
+    def properties(self, properties):
+        self.del_properties(self.properties, recursive=False)
+        self.set_properties(properties, recursive=False)
+
+    @properties.deleter
+    def properties(self):
+        self.del_properties(self.properties, recursive=False)
+
+    def set_properties(self, properties, recursive=True):
+        """
+        Adds new or modifies existing properties listed in properties
+
+        properties - is a dict which contains the property names and values to set.
+                     Property values can be a list or tuple to set multiple values
+                     for a key.
+        recursive  - on folders property attachment is recursive by default. It is
+                     possible to force recursive behavior.
+        """
+        if not properties:
+            return
+
+        return self._accessor.set_properties(self, properties, recursive)
+
+    def del_properties(self, properties, recursive=None):
+        """
+        Delete properties listed in properties
+
+        properties - iterable contains the property names to delete. If it is an
+                     str it will be casted to tuple.
+        recursive  - on folders property attachment is recursive by default. It is
+                     possible to force recursive behavior.
+        """
+        return self._accessor.del_properties(self, properties, recursive)
 
 
 def walk(pathobj, topdown=True):

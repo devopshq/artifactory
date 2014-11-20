@@ -31,6 +31,20 @@ class UtilTest(unittest.TestCase):
 
         self.assertEqual(s, "baz=bar;baz=quux;foo=asdf")
 
+    def test_escape_chars(self):
+        s = artifactory.escape_chars('a,b|c=d')
+        self.assertEqual(s, "a\,b\|c\=d")
+
+    def test_properties_encode(self):
+        params = {"foo": "bar,baz", "qux": "as=df"}
+        s = artifactory.encode_properties(params)
+        self.assertEqual(s, "foo=bar\\,baz|qux=as\\=df")
+
+    def test_properties_encode_multi(self):
+        params = {'baz': ['ba\\r', 'qu|ux'], 'foo': 'a,s=df'}
+        s = artifactory.encode_properties(params)
+        self.assertEqual(s, "baz=ba\\r,qu\|ux|foo=a\,s\=df")
+
 
 class ArtifactoryFlavorTest(unittest.TestCase):
     flavour = artifactory._artifactory_flavour
@@ -303,24 +317,24 @@ class TestArtifactoryConfig(unittest.TestCase):
             cfg = artifactory.read_config(tf.name)
 
             c = artifactory.get_config_entry(cfg, 'foo.net/artifactory')
-            self.assertEquals(c['username'], 'admin')
-            self.assertEquals(c['password'], 'ilikerandompasswords')
-            self.assertEquals(c['verify'], False)
-            self.assertEquals(c['cert'],
+            self.assertEqual(c['username'], 'admin')
+            self.assertEqual(c['password'], 'ilikerandompasswords')
+            self.assertEqual(c['verify'], False)
+            self.assertEqual(c['cert'],
                               os.path.expanduser('~/path-to-cert'))
 
             c = artifactory.get_config_entry(cfg, 'http://bar.net/artifactory')
-            self.assertEquals(c['username'], 'foo')
-            self.assertEquals(c['password'], 'bar')
-            self.assertEquals(c['verify'], True)
+            self.assertEqual(c['username'], 'foo')
+            self.assertEqual(c['password'], 'bar')
+            self.assertEqual(c['verify'], True)
 
             c = artifactory.get_config_entry(cfg, 'bar.net/artifactory')
-            self.assertEquals(c['username'], 'foo')
-            self.assertEquals(c['password'], 'bar')
+            self.assertEqual(c['username'], 'foo')
+            self.assertEqual(c['password'], 'bar')
 
             c = artifactory.get_config_entry(cfg, 'https://bar.net/artifactory')
-            self.assertEquals(c['username'], 'foo')
-            self.assertEquals(c['password'], 'bar')
+            self.assertEqual(c['username'], 'foo')
+            self.assertEqual(c['password'], 'bar')
 
 
 if __name__ == '__main__':
