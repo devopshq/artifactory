@@ -1154,7 +1154,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                      possible to force recursive behavior.
         """
         if not properties:
-            return 204, ''
+            return
 
         return self._accessor.set_properties(self, properties, recursive)
 
