@@ -8,8 +8,17 @@ except ImportError:
     from distutils.core import setup
 
 # Utility function to read the README file.
-def read(fname):
-    return open(os.path.join(os.path.dirname(__file__), fname)).read()
+# To upload to PyPi, you need to have 'pypandoc'.
+# Otherwise the readme will be clumsy.
+try:
+    from pypandoc import convert
+    read_md = lambda fname: convert(os.path.join(os.path.dirname(__file__),
+                                                 fname), 'rst')
+except ImportError:
+    print("warning: pypandoc module not found," +
+          " could not convert Markdown to RST")
+    read_md = lambda fname: open(os.path.join(os.path.dirname(__file__),
+                                              fname), 'r').read()
 
 setup(
     name='artifactory',
@@ -17,7 +26,7 @@ setup(
     py_modules=['artifactory'],
     license='MIT License',
     description='A Python to Artifactory interface',
-    long_description=read('README.md'),
+    long_description=read_md('README.md'),
     author='Konstantin Nazarov',
     author_email='knazarov@parallels.com',
     classifiers=[
@@ -36,5 +45,5 @@ setup(
     download_url='http://github.com/parallels/artifactory',
     install_requires=['pathlib', 'requests', 'python-dateutil'],
     zip_safe=False,
-    package_data = {'': ['README.md']}
+    package_data={'': ['README.md']}
 )
