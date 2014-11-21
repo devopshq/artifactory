@@ -1,19 +1,25 @@
 #!/usr/bin/env python
 
 import os
+import re
 
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
 
+# PyPi RST variant doesn't understand the 'code' tag. so replacing it
+# with a regular quote
+def rst_strip_code_tag(string):
+    return re.sub('^\\.\\. code:: .*', '::', string, flags=re.MULTILINE)
+
 # Utility function to read the README file.
 # To upload to PyPi, you need to have 'pypandoc'.
 # Otherwise the readme will be clumsy.
 try:
     from pypandoc import convert
-    read_md = lambda fname: convert(os.path.join(os.path.dirname(__file__),
-                                                 fname), 'rst')
+    read_md = lambda fname: rst_strip_code_tag(
+        convert(os.path.join(os.path.dirname(__file__), fname), 'rst'))
 except ImportError:
     print("warning: pypandoc module not found," +
           " could not convert Markdown to RST")
@@ -22,7 +28,7 @@ except ImportError:
 
 setup(
     name='artifactory',
-    version='0.1.10',
+    version='0.1.11',
     py_modules=['artifactory'],
     license='MIT License',
     description='A Python to Artifactory interface',
