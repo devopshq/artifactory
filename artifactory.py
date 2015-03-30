@@ -234,7 +234,7 @@ def escape_chars(s):
 
 def encode_properties(parameters):
     """
-    Performs encoding of url parameters from dictionary to a string. It does 
+    Performs encoding of url parameters from dictionary to a string. It does
     not escape backslash because it is not needed.
 
     See: http://www.jfrog.com/confluence/display/RTF/Artifactory+REST+API#ArtifactoryRESTAPI-SetItemProperties
@@ -1088,7 +1088,12 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         with open(file_name, 'rb') as fobj:
             target.deploy(fobj, md5, sha1, parameters)
 
-    def deploy_deb(self, file_name, distribution, component, architecture):
+    def deploy_deb(self,
+                   file_name,
+                   distribution,
+                   component,
+                   architecture,
+                   parameters={}):
         """
         Convenience method to deploy .deb packages
 
@@ -1097,12 +1102,14 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         distribution -- debian distribution (e.g. 'wheezy')
         component -- repository component (e.g. 'main')
         architecture -- package architecture (e.g. 'i386')
+        parameters -- attach any additional metadata
         """
         params = {
             'deb.distribution': distribution,
             'deb.component': component,
             'deb.architecture': architecture
         }
+        params.update(parameters)
 
         self.deploy_file(file_name, parameters=params)
 
