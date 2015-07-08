@@ -34,7 +34,10 @@ import re
 import json
 import dateutil.parser
 import hashlib
-import requests.packages.urllib3 as urllib3
+try:
+    import requests.packages.urllib3 as urllib3
+except ImportError:
+    import urllib3
 try:
     import configparser
 except ImportError:
