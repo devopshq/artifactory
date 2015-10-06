@@ -72,19 +72,22 @@ def read_config(config_path=default_config_path):
                       "Artifactory configuration file not found: '%s'" %
                       config_path)
 
-    p = configparser.ConfigParser({'username': None,
-                                   'password': None,
-                                   'verify': 'true',
-                                   'cert': None})
+    p = configparser.ConfigParser()
     p.read(config_path)
 
     result = {}
 
     for section in p.sections():
-        result[section] = {'username': p.get(section, 'username'),
-                           'password': p.get(section, 'password'),
-                           'verify': p.getboolean(section, 'verify'),
-                           'cert': p.get(section, 'cert')}
+        username = p.get(section, 'username') if p.has_option(section, 'username') else None
+        password = p.get(section, 'password') if p.has_option(section, 'password') else None
+        verify = p.getboolean(section, 'verify') if p.has_option(section, 'verify') else True
+        cert = p.get(section, 'cert') if p.has_option(section, 'cert') else None
+
+
+        result[section] = {'username': username,
+                           'password': password,
+                           'verify': verify,
+                           'cert': cert}
         # certificate path may contain '~', and we'd better expand it properly
         if result[section]['cert']:
             result[section]['cert'] = \
@@ -952,7 +955,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         result for the special paths '.' and '..'.
         """
         for name in self._accessor.listdir(self):
-            if name in {'.', '..'}:
+            if name in ['.', '..']:
                 # Yielding a path object for these makes little sense
                 continue
             yield self._make_child_relpath(name)
