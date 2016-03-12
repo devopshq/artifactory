@@ -28,7 +28,7 @@ except ImportError:
 
 setup(
     name='artifactory',
-    version='0.1.15',
+    version='0.1.17',
     py_modules=['artifactory'],
     license='MIT License',
     description='A Python to Artifactory interface',
