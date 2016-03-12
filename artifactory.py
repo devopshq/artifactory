@@ -121,6 +121,25 @@ def without_http_prefix(url):
         return url[8:]
     return url
 
+def get_base_url(config, url):
+    """
+    Look through config and try to find best matching base for 'url'
+
+    config - result of read_config() or read_global_config()
+    url - artifactory url to search the base for
+    """
+    if not config:
+        return None
+
+    # First, try to search for the best match
+    for item in config:
+        if url.startswith(item):
+            return item
+
+    # Then search for indirect match
+    for item in config:
+        if without_http_prefix(url).startswith(without_http_prefix(item)):
+            return item
 
 def get_config_entry(config, url):
     """
@@ -150,6 +169,15 @@ def get_global_config_entry(url):
     """
     read_global_config()
     return get_config_entry(global_config, url)
+
+def get_global_base_url(url):
+    """
+    Look through global config and try to find best matching base for 'url'
+
+    url - artifactory url to search the base for
+    """
+    read_global_config()
+    return get_base_url(global_config, url)
 
 
 def md5sum(filename):
@@ -295,13 +323,18 @@ class _ArtifactoryFlavour(pathlib._Flavour):
         drv = ''
         root = ''
 
-        mark = sep+'artifactory'+sep
-        parts = part.split(mark)
+        base = get_global_base_url(part)
+        if base and without_http_prefix(part).startswith(without_http_prefix(base)):
+            mark = without_http_prefix(base).rstrip(sep)+sep
+            parts = part.split(mark)
+        else:
+            mark = sep+'artifactory'+sep
+            parts = part.split(mark)
 
         if len(parts) >= 2:
-            drv = parts[0] + mark.rstrip('/')
-            rest = '/' + mark.join(parts[1:])
-        elif part.endswith(sep+'artifactory'):
+            drv = parts[0] + mark.rstrip(sep)
+            rest = sep + mark.join(parts[1:])
+        elif part.endswith(mark.rstrip(sep)):
             drv = part
             rest = ''
         else:
@@ -310,7 +343,7 @@ class _ArtifactoryFlavour(pathlib._Flavour):
         if not rest:
             return drv, '', ''
 
-        if rest == '/':
+        if rest == sep:
             return drv, '', ''
 
         if rest.startswith(sep):

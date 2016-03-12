@@ -59,6 +59,14 @@ class ArtifactoryFlavorTest(unittest.TestCase):
             actual = f([x.replace('/', altsep) for x in arg])
             self.assertEqual(actual, expected)
 
+    def setUp(self):
+        artifactory.global_config = {
+            'http://custom/root': {}
+        }
+
+    def tearDown(self):
+        artifactory.global_config = None
+
     def _check_splitroot(self, arg, expected):
         f = self.flavour.splitroot
         actual = f(arg)
@@ -85,6 +93,25 @@ class ArtifactoryFlavorTest(unittest.TestCase):
               ('http://artifactory.local/artifactory', '/foo/', 'bar'))
         check("https://artifactory.a.b.c.d/artifactory/foo/bar",
               ('https://artifactory.a.b.c.d/artifactory', '/foo/', 'bar'))
+
+    def test_splitroot_custom_root(self):
+        check = self._check_splitroot
+
+        check("http://custom/root",
+              ('http://custom/root', '', ''))
+        check("custom/root",
+              ('custom/root', '', ''))
+        check("https://custom/root",
+              ('https://custom/root', '', ''))
+        check("http://custom/root/",
+              ('http://custom/root', '', ''))
+        check("http://custom/root/artifactory",
+              ('http://custom/root', '/artifactory/', ''))
+        check("http://custom/root/foo/bar",
+              ('http://custom/root', '/foo/', 'bar'))
+        check("https://custom/root/foo/baz",
+              ('https://custom/root', '/foo/', 'baz'))
+
 
     def test_parse_parts(self):
         check = self._check_parse_parts
