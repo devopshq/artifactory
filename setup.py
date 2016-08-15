@@ -27,7 +27,7 @@ except ImportError:
                                               fname), 'r').read()
 
 setup(
-    name='artifactory',
+    name='dohq_art',
     version='0.1.17',
     py_modules=['artifactory'],
     license='MIT License',
@@ -44,11 +44,12 @@ setup(
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.2',
         'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.5',
         'Topic :: Software Development :: Libraries',
         'Topic :: System :: Filesystems',
     ],
-    url='http://github.com/parallels/artifactory',
-    download_url='http://github.com/parallels/artifactory',
+    url='https://github.com/devopshq/artifactory',
+    download_url='https://github.com/devopshq/artifactory',
     install_requires=['pathlib', 'requests', 'python-dateutil'],
     zip_safe=False,
     package_data={'': ['README.md']}
