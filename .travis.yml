@@ -1,9 +1,7 @@
 language: python
 python:
 - '3.5'
-- '3.3'
 - '2.7'
-- '2.6'
 before_install:
 - sudo apt-get install pandoc
 install:
