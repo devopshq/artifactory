@@ -1,16 +1,16 @@
 language: python
 python:
-  - "3.5"
-  - "3.3"
-  - "2.7"
-  - "2.6"
+- '3.5'
+- '3.3'
+- '2.7'
+- '2.6'
 install: pip install -r requirements.txt
 script: python test.py
 deploy:
   provider: pypi
   user: alkov.pro
   password:
-    secure: Ly2yScgzWgmWTm8grm3f/KI++cUeoVtsUiBZXj0rQuB9l9drBJKWtepyxMs/jLdhuLg9gqNw8gx81lTTv7y/FhgqTqwmh5qSagExyPp4Pq0UyvmulI0oi39AIoElErzRFwhXjLHUPoNVbBk7KP6P/8GIg9tsIWjcUvl0lmnDqd5H4y27zLfNYgam+NUuCHw918xki6ePd+eJeZocRnzl226VKX5RVi691rc1JJUXWnFsklSHIhuDRMssnUUW/y2qsLvNtIe+OZTCGI9WNn8H8Y45xKb3lywniJWT9a1qlo/okBEEU37oO2eunycB4bBAXTpy2yhzNtq4IQ99qI3rQdwqleQE48R/nCgShcWcAI79v3fZO2tkqSDakF7IiLyli7uvUpzHy9NjLAu1BdO7EKMdaryYoNsCdRV54mQuceNOZSZ+eRxcdqR+AnIAWFntTjYYgbf/k7GUWvvXi6Q6n3zapLEbnp08d7RISwy7y2EnBtOmJozrcRL3ANj+FTcG/U3vYdgS8aqsMWHhaBUI00W/5fG5CsGGY+nD9PZKndrQnSDVa92Wom0iclDjpo/TPSlri0t61xr11cuHfUEyfnFQSluOroeeuka/lQjV8j6oW3K4n39TY3iBXsdcfBgCYqhdIxstuOCWEQpOeUpvAVAUs7CHPHrU26zIZCCIQXo=
+    secure: ejI4CjsydBFlbQIWS75c7CyJGZNv5l95ox332u7e/hMCwhPG2PoAtMA1OyurgTv6P2kYYQgPXcw970TgxRd+LF64ioh+df6qQ308/HXRdO2orSCGoIxLsQVycMEKeelSLzdLZ27u1VpWCPuPJrx7BMKdGCckEOaGBhJO0iK1p8R/7otGpYM2bp1jKd4BnGdHiM2bNCYp5ZuX2qMYxssl9Sz05aZZTrIH322W0JfUaE0Ru4UrIUYLR8QTF+YH/cxwjZ6eWURUvc5inp0jYhw7RFOIDNe1UtXmbIlzhPT16w1vsXW8Z8ThwnfNxXWPa/Z61xhuQv76TKFIcXv7kd6YNPX2SkKkbllsgklGrWUg4OYlo0ChWcYT5N9ksl+TwJlorOT1qDGygbD1+rD66d3IqYZfUZ5opAcQKzg9iYPZU3m/JinQvjJUD18yDEhdhGXE4EZTN/Gl5kGNh9fe2qKWZqPODhCgEBnD/HT3JLsaUHEdV5bpVGjSNqZIMWgrKzhndwu8z/lhuCenL0jq6excEHP/zyXjQHgcJD+nKt95sLnCPBNjYmB3Fy/2jfPeNM4ImdaygUOu9HxRB5DVT8iY1KJOVZMKxnBS3rXHfRCJgylkA0Gtwm1/RBqaY+6PHzPREJbZQNZaCN4tAyLMfWg2T4N+TPqs7ysu5oay/z8OKH4=
   distributions: sdist bdist_wheel
   skip_cleanup: true
   on:
