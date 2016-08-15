@@ -4,13 +4,15 @@ python:
 - '3.3'
 - '2.7'
 - '2.6'
-install: pip install -r requirements.txt
+install:
+- pip install -r requirements.txt
+- pip install pypandoc
 script: python test.py
 deploy:
   provider: pypi
   user: alkov.pro
   password:
-    secure: ejI4CjsydBFlbQIWS75c7CyJGZNv5l95ox332u7e/hMCwhPG2PoAtMA1OyurgTv6P2kYYQgPXcw970TgxRd+LF64ioh+df6qQ308/HXRdO2orSCGoIxLsQVycMEKeelSLzdLZ27u1VpWCPuPJrx7BMKdGCckEOaGBhJO0iK1p8R/7otGpYM2bp1jKd4BnGdHiM2bNCYp5ZuX2qMYxssl9Sz05aZZTrIH322W0JfUaE0Ru4UrIUYLR8QTF+YH/cxwjZ6eWURUvc5inp0jYhw7RFOIDNe1UtXmbIlzhPT16w1vsXW8Z8ThwnfNxXWPa/Z61xhuQv76TKFIcXv7kd6YNPX2SkKkbllsgklGrWUg4OYlo0ChWcYT5N9ksl+TwJlorOT1qDGygbD1+rD66d3IqYZfUZ5opAcQKzg9iYPZU3m/JinQvjJUD18yDEhdhGXE4EZTN/Gl5kGNh9fe2qKWZqPODhCgEBnD/HT3JLsaUHEdV5bpVGjSNqZIMWgrKzhndwu8z/lhuCenL0jq6excEHP/zyXjQHgcJD+nKt95sLnCPBNjYmB3Fy/2jfPeNM4ImdaygUOu9HxRB5DVT8iY1KJOVZMKxnBS3rXHfRCJgylkA0Gtwm1/RBqaY+6PHzPREJbZQNZaCN4tAyLMfWg2T4N+TPqs7ysu5oay/z8OKH4=
+    secure: Z9MxxwwY9ZtJBDKr+gwwNFQEZxOjqUo0oVLN9k9gN26uH+Ntgpd5u3VuckJB7vnrHjpi4BnhrGprHFzUMLCjTdX+R/sXtIIUP3FV9UFMFSpkXiCJ0zkUDlb5pwX2FAt8oOAmZM1Qa+rNOCB+ui/Xb3nUBcwngiL8nE/CoBUiDOGt13W/n/vUvB5Omlvo1bUww+DFoaVn6oOohv2OSRCgziO+WCHAnSo+vYFTE5TFMzvXafVcLFcOs+m/nLCtwzJU1m2E+V+NTXkuitrJRZVTNuuEJJZg5q07Fwa3eA8GBqnAG33I4Qxxc65PLb9W5RWqHgIIGlPRkY3Z5HGhDgFM8Y7OZm+hAp6kbgh0//6bvvR+0oMil93vYCUEB2wYevkPb/XjaIfXJluq/URxIfnd7Bd7SILV/O5rL0xKSCb4MVAlkX27BRMxNlI1v5JDEZohEPoGt72yiOAOauF5hocUOpHnF8uY++9LDU2J8+iR5Hw3Ev6FCv9df1XDNMbqSKRysYt/qPGppMCj7eETkuvsi4cau25Mda6W31kgw8+PGZvc3lUXVx0fMhlaYUGeuwMmPYoJvkGvUVyEdmhjmbl2gabJ96mFYCby2ArSqA+2Wese72HwleI/DgPbnb5a+IpsgDgNJcIAp1npNozIeCscPehqyJ6qIWfk3FGYKBXNXQ4=
   distributions: sdist bdist_wheel
   skip_cleanup: true
   on:
