@@ -25,6 +25,7 @@ art_username = config.get("artifactory", "username")
 art_password = config.get("artifactory", "password")
 art_auth = (art_username, art_password)
 
+
 class ArtifactoryPathTest(unittest.TestCase):
     cls = artifactory.ArtifactoryPath
 
@@ -158,7 +159,6 @@ class ArtifactoryPathTest(unittest.TestCase):
 
         p.unlink()
         p2.unlink()
-
 
     def test_deploy_file(self):
         P = self.cls

@@ -9,6 +9,7 @@ try:
 except ImportError:
     from distutils.core import setup
 
+
 # PyPi RST variant doesn't understand the 'code' tag. so replacing it
 # with a regular quote
 def rst_strip_code_tag(string):
