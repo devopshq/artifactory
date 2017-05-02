@@ -6,7 +6,7 @@ import os
 import re
 
 
-__version__ = '1.2'  # identify main version of dohq_artifactory
+__version__ = '0.2'  # identify main version of dohq_artifactory
 
 if 'TRAVIS_BUILD_NUMBER' in os.environ and 'TRAVIS_BRANCH' in os.environ:
     print("This is TRAVIS-CI build")
