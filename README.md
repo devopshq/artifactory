@@ -1,6 +1,6 @@
 # Python interface library for Jfrog Artifactory #
 
-[![Build Status](https://travis-ci.org/devopshq/artifactory.svg?branch=master)](https://travis-ci.org/devopshq/artifactory)
+[![dohq-artifactory build Status](https://travis-ci.org/devopshq/artifactory.svg?branch=master)](https://travis-ci.org/devopshq/artifactory) [![dohq-artifactory on PyPI](https://img.shields.io/pypi/v/dohq-artifactory.svg)](https://pypi.python.org/pypi/dohq-artifactory/last) [![dohq-artifactory license](https://img.shields.io/pypi/l/dohq-artifactory.svg)](https://github.com/devopshq/artifactory/blob/master/LICENSE)
 
 This module is intended to serve as a logical descendant of [pathlib](https://docs.python.org/3/library/pathlib.html), a Python 3 module for object-oriented path manipulations. As such, it implements everything as closely as possible to the origin with few exceptions, such as stat().
 
@@ -15,7 +15,7 @@ from artifactory import ArtifactoryPath
 path = ArtifactoryPath(
     "http://repo.jfrog.org/artifactory/gradle-ivy-local")
 for p in path:
-    print p
+    print(p)
 ```
 
 Find all .gz files in current dir, recursively:
@@ -26,7 +26,7 @@ path = ArtifactoryPath(
     "http://repo.jfrog.org/artifactory/distributions/org/")
 
 for p in path.glob("**/*.gz"):
-    print p
+    print(p)
 ```
 
 ## Downloading Artifacts ##
