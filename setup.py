@@ -6,7 +6,7 @@ import os
 import re
 
 
-__version__ = '0.2'  # identify main version of dohq_artifactory
+__version__ = '0.2'  # identify main version of dohq-artifactory
 
 if 'TRAVIS_BUILD_NUMBER' in os.environ and 'TRAVIS_BRANCH' in os.environ:
     print("This is TRAVIS-CI build")
@@ -22,7 +22,7 @@ else:
     print("This is local build")
     __version__ += '.localbuild'  # set version as major.minor.localbuild if local build: python setup.py install
 
-print("dohq_artifactory build version = {}".format(__version__))
+print("dohq-artifactory build version = {}".format(__version__))
 
 
 try:
@@ -59,7 +59,7 @@ except ImportError:
 
 
 setup(
-    name='dohq_artifactory',
+    name='dohq-artifactory',
     version=__version__,
     py_modules=['artifactory'],
     license='MIT License',
