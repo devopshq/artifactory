@@ -112,7 +112,6 @@ class ArtifactoryFlavorTest(unittest.TestCase):
         check("https://custom/root/foo/baz",
               ('https://custom/root', '/foo/', 'baz'))
 
-
     def test_parse_parts(self):
         check = self._check_parse_parts
 
@@ -120,20 +119,20 @@ class ArtifactoryFlavorTest(unittest.TestCase):
               ('', '', ['.txt']))
 
         check(['http://b/artifactory/c/d.xml'],
-               ('http://b/artifactory', '/c/',
-                ['http://b/artifactory/c/', 'd.xml']))
+              ('http://b/artifactory', '/c/',
+              ['http://b/artifactory/c/', 'd.xml']))
 
         check(['http://example.com/artifactory/foo'],
               ('http://example.com/artifactory', '/foo/',
-               ['http://example.com/artifactory/foo/']))
+              ['http://example.com/artifactory/foo/']))
 
         check(['http://example.com/artifactory/foo/bar'],
               ('http://example.com/artifactory', '/foo/',
-               ['http://example.com/artifactory/foo/', 'bar']))
+              ['http://example.com/artifactory/foo/', 'bar']))
 
         check(['http://example.com/artifactory/foo/bar/artifactory'],
               ('http://example.com/artifactory', '/foo/',
-               ['http://example.com/artifactory/foo/', 'bar', 'artifactory']))
+              ['http://example.com/artifactory/foo/', 'bar', 'artifactory']))
 
 
 class PureArtifactoryPathTest(unittest.TestCase):
@@ -147,7 +146,6 @@ class PureArtifactoryPathTest(unittest.TestCase):
 
         self.assertEqual(P('http://a/artifactory/').root,
                          '')
-
 
     def test_anchor(self):
         P = self.cls
@@ -262,7 +260,6 @@ class ArtifactoryAccessorTest(unittest.TestCase):
 
         a.rest_get = MM(return_value=(self.file_stat, 200))
 
-
         self.assertRaises(OSError, a.listdir, p)
 
     def test_mkdir(self):
@@ -348,7 +345,7 @@ class TestArtifactoryConfig(unittest.TestCase):
             self.assertEqual(c['password'], 'ilikerandompasswords')
             self.assertEqual(c['verify'], False)
             self.assertEqual(c['cert'],
-                              os.path.expanduser('~/path-to-cert'))
+                             os.path.expanduser('~/path-to-cert'))
 
             c = artifactory.get_config_entry(cfg, 'http://bar.net/artifactory')
             self.assertEqual(c['username'], 'foo')

@@ -83,7 +83,6 @@ def read_config(config_path=default_config_path):
         verify = p.getboolean(section, 'verify') if p.has_option(section, 'verify') else True
         cert = p.get(section, 'cert') if p.has_option(section, 'cert') else None
 
-
         result[section] = {'username': username,
                            'password': password,
                            'verify': verify,
@@ -121,6 +120,7 @@ def without_http_prefix(url):
         return url[8:]
     return url
 
+
 def get_base_url(config, url):
     """
     Look through config and try to find best matching base for 'url'
@@ -140,6 +140,7 @@ def get_base_url(config, url):
     for item in config:
         if without_http_prefix(url).startswith(without_http_prefix(item)):
             return item
+
 
 def get_config_entry(config, url):
     """
@@ -169,6 +170,7 @@ def get_global_config_entry(url):
     """
     read_global_config()
     return get_config_entry(global_config, url)
+
 
 def get_global_base_url(url):
     """
@@ -753,7 +755,6 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         return json.loads(text)['properties']
 
-
     def set_properties(self, pathobj, props, recursive):
         """
         Set artifact properties
@@ -762,7 +763,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                         'api/storage',
                         str(pathobj.relative_to(pathobj.drive)).strip('/')])
 
-        params = { 'properties': encode_properties(props) }
+        params = {'properties': encode_properties(props)}
 
         if not recursive:
             params['recursive'] = '0'
@@ -778,7 +779,6 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if code != 204:
             raise RuntimeError(text)
 
-
     def del_properties(self, pathobj, props, recursive):
         """
         Delete artifact properties
@@ -790,7 +790,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                         'api/storage',
                         str(pathobj.relative_to(pathobj.drive)).strip('/')])
 
-        params = { 'properties': ','.join(sorted(props)) }
+        params = {'properties': ','.join(sorted(props))}
 
         if not recursive:
             params['recursive'] = '0'
@@ -884,7 +884,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         return obj
 
     def _init(self, *args, **kwargs):
-        if not 'template' in kwargs:
+        if 'template' not in kwargs:
             kwargs['template'] = _FakePathTemplate(_artifactory_accessor)
 
         super(ArtifactoryPath, self)._init(*args, **kwargs)
