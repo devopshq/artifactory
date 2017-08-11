@@ -79,6 +79,27 @@ path = ArtifactoryPath(
 path.touch()
 ```
 
+## Session ##
+
+To re-use the established connection, you can pass ```session``` parameter to ArtifactoryPath:
+
+```python
+from artifactory import ArtifactoryPath
+import requests
+ses = requests.Session()
+ses.auth = ('username', 'password')
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/myrepo/my-path-1",
+    sesssion=ses)
+path.touch()
+
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/myrepo/my-path-2",
+    sesssion=ses)
+path.touch()
+```
+
+
 ## SSL Cert Verification Options ##
 See [Requests - SSL verification](http://docs.python-requests.org/en/latest/user/advanced/#ssl-cert-verification) for more details.  
 
