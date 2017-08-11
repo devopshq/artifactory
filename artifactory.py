@@ -863,6 +863,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         cfg_entry = get_global_config_entry(obj.drive)
         obj.auth = kwargs.get('auth', None)
         obj.cert = kwargs.get('cert', None)
+        obj.session = kwargs.get('session', None)
 
         if obj.auth is None and cfg_entry:
             obj.auth = (cfg_entry['username'], cfg_entry['password'])
@@ -877,8 +878,9 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         else:
             obj.verify = True
 
-        obj.session = requests.session()
-        obj.session.auth = obj.auth
+        if obj.session is None:
+            obj.session = requests.Session()
+            obj.session.auth = obj.auth
 
         return obj
 
