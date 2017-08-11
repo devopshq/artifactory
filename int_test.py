@@ -2,16 +2,21 @@
 
 import os
 import sys
-import StringIO
 
 import unittest
 import multiprocessing
 import tempfile
 import artifactory
-import ConfigParser
+
+if sys.version_info[0] < 3:
+    import StringIO as io
+    import ConfigParser as configparser
+else:
+    import io
+    import configparser
 
 
-config = ConfigParser.ConfigParser()
+config = configparser.ConfigParser()
 
 config.read("test.cfg")
 
@@ -19,6 +24,7 @@ art_uri = config.get("artifactory", "uri")
 art_username = config.get("artifactory", "username")
 art_password = config.get("artifactory", "password")
 art_auth = (art_username, art_password)
+
 
 class ArtifactoryPathTest(unittest.TestCase):
     cls = artifactory.ArtifactoryPath
@@ -133,7 +139,7 @@ class ArtifactoryPathTest(unittest.TestCase):
         if p.exists():
             p.unlink()
 
-        s = StringIO.StringIO()
+        s = io.StringIO()
         s.write("Some test string")
 
         p.deploy(s)
@@ -153,7 +159,6 @@ class ArtifactoryPathTest(unittest.TestCase):
 
         p.unlink()
         p2.unlink()
-
 
     def test_deploy_file(self):
         P = self.cls
@@ -186,7 +191,7 @@ class ArtifactoryPathTest(unittest.TestCase):
         if p.exists():
             p.rmdir()
 
-        s = StringIO.StringIO()
+        s = io.StringIO()
         s.write("Some test string")
 
         p.deploy(s)
