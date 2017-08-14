@@ -335,30 +335,34 @@ class TestArtifactoryConfig(unittest.TestCase):
               "username=foo\n" + \
               "password=bar\n"
 
-        with tempfile.NamedTemporaryFile(mode='w+') as tf:
+        tf = tempfile.NamedTemporaryFile(mode='w+', delete=False)
+        try:
             tf.write(cfg)
             tf.flush()
+            tf.close()
             cfg = artifactory.read_config(tf.name)
+        finally:
+            os.remove(tf.name)
 
-            c = artifactory.get_config_entry(cfg, 'foo.net/artifactory')
-            self.assertEqual(c['username'], 'admin')
-            self.assertEqual(c['password'], 'ilikerandompasswords')
-            self.assertEqual(c['verify'], False)
-            self.assertEqual(c['cert'],
-                             os.path.expanduser('~/path-to-cert'))
+        c = artifactory.get_config_entry(cfg, 'foo.net/artifactory')
+        self.assertEqual(c['username'], 'admin')
+        self.assertEqual(c['password'], 'ilikerandompasswords')
+        self.assertEqual(c['verify'], False)
+        self.assertEqual(c['cert'],
+                         os.path.expanduser('~/path-to-cert'))
 
-            c = artifactory.get_config_entry(cfg, 'http://bar.net/artifactory')
-            self.assertEqual(c['username'], 'foo')
-            self.assertEqual(c['password'], 'bar')
-            self.assertEqual(c['verify'], True)
+        c = artifactory.get_config_entry(cfg, 'http://bar.net/artifactory')
+        self.assertEqual(c['username'], 'foo')
+        self.assertEqual(c['password'], 'bar')
+        self.assertEqual(c['verify'], True)
 
-            c = artifactory.get_config_entry(cfg, 'bar.net/artifactory')
-            self.assertEqual(c['username'], 'foo')
-            self.assertEqual(c['password'], 'bar')
+        c = artifactory.get_config_entry(cfg, 'bar.net/artifactory')
+        self.assertEqual(c['username'], 'foo')
+        self.assertEqual(c['password'], 'bar')
 
-            c = artifactory.get_config_entry(cfg, 'https://bar.net/artifactory')
-            self.assertEqual(c['username'], 'foo')
-            self.assertEqual(c['password'], 'bar')
+        c = artifactory.get_config_entry(cfg, 'https://bar.net/artifactory')
+        self.assertEqual(c['username'], 'foo')
+        self.assertEqual(c['password'], 'bar')
 
 
 if __name__ == '__main__':
