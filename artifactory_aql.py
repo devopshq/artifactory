@@ -29,7 +29,12 @@ class ArtifactoryAQL(object):
             self.session.auth = self.auth
 
     def send_aql(self, *args):
-        pass
+        aql_query_url = '{}/api/search/aql'.format(self.server)
+        aql_query_text = self.create_aql_text(*args)
+        r = self.session.post(aql_query_url, data=aql_query_text)
+        r.raise_for_status()
+        content = r.json()
+        return content['results']
 
     @staticmethod
     def create_aql_text(*args):
