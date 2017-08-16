@@ -24,16 +24,16 @@ to manipulate artifactory paths. See pathlib docs for details how
 pure paths can be used.
 """
 
-import os
-import sys
-import errno
-import pathlib
 import collections
-import requests
-import re
-import json
-import dateutil.parser
+import errno
 import hashlib
+import json
+import os
+import pathlib
+import sys
+
+import dateutil.parser
+import requests
 
 try:
     import requests.packages.urllib3 as urllib3
@@ -1266,6 +1266,25 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                      possible to force recursive behavior.
         """
         return self._accessor.del_properties(self, properties, recursive)
+
+    def aql(self, *args):
+        aql_query_url = '{}/api/search/aql'.format(self.drive)
+        aql_query_text = self.create_aql_text(*args)
+        r = self.session.post(aql_query_url, data=aql_query_text)
+        r.raise_for_status()
+        content = r.json()
+        return content['results']
+
+    @staticmethod
+    def create_aql_text(*args):
+        aql_query_text = ""
+        for arg in args:
+            if isinstance(arg, dict):
+                arg = "({})".format(json.dumps(arg))
+            elif isinstance(arg, list):
+                arg = "({})".format(json.dumps(arg)).replace("[", "").replace("]", "")
+            aql_query_text += arg
+        return aql_query_text
 
 
 def walk(pathobj, topdown=True):

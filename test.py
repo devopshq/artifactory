@@ -9,8 +9,6 @@ import dateutil
 from mock import MagicMock as MM
 
 import artifactory
-from artifactory_aql import ArtifactoryAQL
-
 
 class UtilTest(unittest.TestCase):
     def test_matrix_encode(self):
@@ -363,7 +361,7 @@ class TestArtifactoryConfig(unittest.TestCase):
 
 class TestArtifactoryAql(unittest.TestCase):
     def setUp(self):
-        self.aql = ArtifactoryAQL("")
+        self.aql = artifactory.ArtifactoryPath("")
 
     def test_create_aql_text_simple(self):
         args = ["items.find", {"repo": "myrepo"}]
