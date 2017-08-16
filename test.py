@@ -1,19 +1,15 @@
 #!/usr/bin/env python
 
-import os
-import sys
 import io
-
-import unittest
-import multiprocessing
+import os
 import tempfile
-import artifactory
-import json
-import requests
-import datetime
-import dateutil
+import unittest
 
+import dateutil
 from mock import MagicMock as MM
+
+import artifactory
+from artifactory_aql import ArtifactoryAQL
 
 
 class UtilTest(unittest.TestCase):
@@ -120,19 +116,19 @@ class ArtifactoryFlavorTest(unittest.TestCase):
 
         check(['http://b/artifactory/c/d.xml'],
               ('http://b/artifactory', '/c/',
-              ['http://b/artifactory/c/', 'd.xml']))
+               ['http://b/artifactory/c/', 'd.xml']))
 
         check(['http://example.com/artifactory/foo'],
               ('http://example.com/artifactory', '/foo/',
-              ['http://example.com/artifactory/foo/']))
+               ['http://example.com/artifactory/foo/']))
 
         check(['http://example.com/artifactory/foo/bar'],
               ('http://example.com/artifactory', '/foo/',
-              ['http://example.com/artifactory/foo/', 'bar']))
+               ['http://example.com/artifactory/foo/', 'bar']))
 
         check(['http://example.com/artifactory/foo/bar/artifactory'],
               ('http://example.com/artifactory', '/foo/',
-              ['http://example.com/artifactory/foo/', 'bar', 'artifactory']))
+               ['http://example.com/artifactory/foo/', 'bar', 'artifactory']))
 
 
 class PureArtifactoryPathTest(unittest.TestCase):
@@ -363,6 +359,37 @@ class TestArtifactoryConfig(unittest.TestCase):
         c = artifactory.get_config_entry(cfg, 'https://bar.net/artifactory')
         self.assertEqual(c['username'], 'foo')
         self.assertEqual(c['password'], 'bar')
+
+
+class TestArtifactoryAql(unittest.TestCase):
+    def setUp(self):
+        self.aql = ArtifactoryAQL("")
+
+    def test_create_aql_text_simple(self):
+        args = ["items.find", {"repo": "myrepo"}]
+        aql_text = self.aql.create_aql_text(*args)
+        assert aql_text == 'items.find({"repo": "myrepo"})'
+
+    def test_create_aql_text_list(self):
+        args = ["items.find()", ".include", ["name", "repo"]]
+        aql_text = self.aql.create_aql_text(*args)
+        assert aql_text == 'items.find().include("name", "repo")'
+
+    def test_create_aql_text_list_in_dict(self):
+        args = ["items.find", {"$and": [
+            {
+                "repo": {"$eq": "repo"}
+            },
+            {
+                "$or": [
+                    {"path": {"$match": "*path1"}},
+                    {"path": {"$match": "*path2"}},
+                ]
+            },
+        ]
+        }]
+        aql_text = self.aql.create_aql_text(*args)
+        assert aql_text == 'items.find({"$and": [{"repo": {"$eq": "repo"}}, {"$or": [{"path": {"$match": "*path1"}}, {"path": {"$match": "*path2"}}]}]})'
 
 
 if __name__ == '__main__':
