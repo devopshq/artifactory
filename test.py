@@ -10,6 +10,7 @@ from mock import MagicMock as MM
 
 import artifactory
 
+
 class UtilTest(unittest.TestCase):
     def test_matrix_encode(self):
         params = {"foo": "bar",
@@ -361,7 +362,7 @@ class TestArtifactoryConfig(unittest.TestCase):
 
 class TestArtifactoryAql(unittest.TestCase):
     def setUp(self):
-        self.aql = artifactory.ArtifactoryPath("")
+        self.aql = artifactory.ArtifactoryPath("http://b/artifactory")
 
     def test_create_aql_text_simple(self):
         args = ["items.find", {"repo": "myrepo"}]
@@ -388,6 +389,18 @@ class TestArtifactoryAql(unittest.TestCase):
         }]
         aql_text = self.aql.create_aql_text(*args)
         assert aql_text == 'items.find({"$and": [{"repo": {"$eq": "repo"}}, {"$or": [{"path": {"$match": "*path1"}}, {"path": {"$match": "*path2"}}]}]})'
+
+    def test_from_aql_file(self):
+        result = {
+            'repo': 'reponame',
+            'path': 'folder1/folder2',
+            'name': 'name.nupkg',
+            'type': 'file',
+        }
+        artifact = self.aql.from_aql(result)
+        assert artifact.drive == "http://b/artifactory"
+        assert artifact.name == "name.nupkg"
+        assert artifact.root == "/reponame/"
 
 
 if __name__ == '__main__':

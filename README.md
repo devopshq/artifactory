@@ -186,7 +186,13 @@ args = ["items.find", {"$and": [
     },
 ]
 }]
-artifacts_list = aql.aql(*args) 
+
 # send query: 
 # items.find({"$and": [{"repo": {"$eq": "repo"}}, {"$or": [{"path": {"$match": "*path1"}}, {"path": {"$match": "*path2"}}]}]})
+# artifacts_list contains raw data (list of dict)
+artifacts_list = aql.aql(*args) 
+
+# You can convert to patlib object:
+artifact_pathlib = map(aql.from_aql, artifacts_list)
+artifact_pathlib_list = list(map(aql.from_aql, artifacts_list))
 ```
