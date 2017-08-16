@@ -164,15 +164,14 @@ Whether or not you specify ```http://``` or ```https://``` prefix is not essenti
 Supported [Artifactory-AQL](https://www.jfrog.com/confluence/display/RTF/Artifactory+Query+Language)
 
 ```python
-from artifactory_aql import ArtifactoryAQL
-aql = ArtifactoryAQL(
-    "http://my-artifactory/artifactory/myrepo/my-path-1")
+from artifactory import ArtifactoryPath
+aql = ArtifactoryPath( "http://my-artifactory/artifactory") # path to artifactory, NO repo
 
 # dict support
-artifacts = aql.send_aql("items.find", {"repo": "myrepo"}) # send query: items.find({"repo": "myrepo"})
+artifacts = aql.aql("items.find", {"repo": "myrepo"}) # send query: items.find({"repo": "myrepo"})
 
 # list support
-artifacts = aql.send_aql("items.find()", ".include", ["name", "repo"]) # send query: items.find().include("name", "repo")
+artifacts = aql.aql("items.find()", ".include", ["name", "repo"]) # send query: items.find().include("name", "repo")
 
 #  support complex query
 args = ["items.find", {"$and": [
@@ -187,7 +186,13 @@ args = ["items.find", {"$and": [
     },
 ]
 }]
-artifacts = aql.send_aql(*args) 
+
 # send query: 
 # items.find({"$and": [{"repo": {"$eq": "repo"}}, {"$or": [{"path": {"$match": "*path1"}}, {"path": {"$match": "*path2"}}]}]})
+# artifacts_list contains raw data (list of dict)
+artifacts_list = aql.aql(*args) 
+
+# You can convert to patlib object:
+artifact_pathlib = map(aql.from_aql, artifacts_list)
+artifact_pathlib_list = list(map(aql.from_aql, artifacts_list))
 ```
