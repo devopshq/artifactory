@@ -1,19 +1,14 @@
 #!/usr/bin/env python
 
-import os
-import sys
 import io
-
-import unittest
-import multiprocessing
+import os
 import tempfile
-import artifactory
-import json
-import requests
-import datetime
-import dateutil
+import unittest
 
+import dateutil
 from mock import MagicMock as MM
+
+import artifactory
 
 
 class UtilTest(unittest.TestCase):
@@ -120,19 +115,19 @@ class ArtifactoryFlavorTest(unittest.TestCase):
 
         check(['http://b/artifactory/c/d.xml'],
               ('http://b/artifactory', '/c/',
-              ['http://b/artifactory/c/', 'd.xml']))
+               ['http://b/artifactory/c/', 'd.xml']))
 
         check(['http://example.com/artifactory/foo'],
               ('http://example.com/artifactory', '/foo/',
-              ['http://example.com/artifactory/foo/']))
+               ['http://example.com/artifactory/foo/']))
 
         check(['http://example.com/artifactory/foo/bar'],
               ('http://example.com/artifactory', '/foo/',
-              ['http://example.com/artifactory/foo/', 'bar']))
+               ['http://example.com/artifactory/foo/', 'bar']))
 
         check(['http://example.com/artifactory/foo/bar/artifactory'],
               ('http://example.com/artifactory', '/foo/',
-              ['http://example.com/artifactory/foo/', 'bar', 'artifactory']))
+               ['http://example.com/artifactory/foo/', 'bar', 'artifactory']))
 
 
 class PureArtifactoryPathTest(unittest.TestCase):
@@ -335,30 +330,77 @@ class TestArtifactoryConfig(unittest.TestCase):
               "username=foo\n" + \
               "password=bar\n"
 
-        with tempfile.NamedTemporaryFile(mode='w+') as tf:
+        tf = tempfile.NamedTemporaryFile(mode='w+', delete=False)
+        try:
             tf.write(cfg)
             tf.flush()
+            tf.close()
             cfg = artifactory.read_config(tf.name)
+        finally:
+            os.remove(tf.name)
 
-            c = artifactory.get_config_entry(cfg, 'foo.net/artifactory')
-            self.assertEqual(c['username'], 'admin')
-            self.assertEqual(c['password'], 'ilikerandompasswords')
-            self.assertEqual(c['verify'], False)
-            self.assertEqual(c['cert'],
-                             os.path.expanduser('~/path-to-cert'))
+        c = artifactory.get_config_entry(cfg, 'foo.net/artifactory')
+        self.assertEqual(c['username'], 'admin')
+        self.assertEqual(c['password'], 'ilikerandompasswords')
+        self.assertEqual(c['verify'], False)
+        self.assertEqual(c['cert'],
+                         os.path.expanduser('~/path-to-cert'))
 
-            c = artifactory.get_config_entry(cfg, 'http://bar.net/artifactory')
-            self.assertEqual(c['username'], 'foo')
-            self.assertEqual(c['password'], 'bar')
-            self.assertEqual(c['verify'], True)
+        c = artifactory.get_config_entry(cfg, 'http://bar.net/artifactory')
+        self.assertEqual(c['username'], 'foo')
+        self.assertEqual(c['password'], 'bar')
+        self.assertEqual(c['verify'], True)
 
-            c = artifactory.get_config_entry(cfg, 'bar.net/artifactory')
-            self.assertEqual(c['username'], 'foo')
-            self.assertEqual(c['password'], 'bar')
+        c = artifactory.get_config_entry(cfg, 'bar.net/artifactory')
+        self.assertEqual(c['username'], 'foo')
+        self.assertEqual(c['password'], 'bar')
 
-            c = artifactory.get_config_entry(cfg, 'https://bar.net/artifactory')
-            self.assertEqual(c['username'], 'foo')
-            self.assertEqual(c['password'], 'bar')
+        c = artifactory.get_config_entry(cfg, 'https://bar.net/artifactory')
+        self.assertEqual(c['username'], 'foo')
+        self.assertEqual(c['password'], 'bar')
+
+
+class TestArtifactoryAql(unittest.TestCase):
+    def setUp(self):
+        self.aql = artifactory.ArtifactoryPath("http://b/artifactory")
+
+    def test_create_aql_text_simple(self):
+        args = ["items.find", {"repo": "myrepo"}]
+        aql_text = self.aql.create_aql_text(*args)
+        assert aql_text == 'items.find({"repo": "myrepo"})'
+
+    def test_create_aql_text_list(self):
+        args = ["items.find()", ".include", ["name", "repo"]]
+        aql_text = self.aql.create_aql_text(*args)
+        assert aql_text == 'items.find().include("name", "repo")'
+
+    def test_create_aql_text_list_in_dict(self):
+        args = ["items.find", {"$and": [
+            {
+                "repo": {"$eq": "repo"}
+            },
+            {
+                "$or": [
+                    {"path": {"$match": "*path1"}},
+                    {"path": {"$match": "*path2"}},
+                ]
+            },
+        ]
+        }]
+        aql_text = self.aql.create_aql_text(*args)
+        assert aql_text == 'items.find({"$and": [{"repo": {"$eq": "repo"}}, {"$or": [{"path": {"$match": "*path1"}}, {"path": {"$match": "*path2"}}]}]})'
+
+    def test_from_aql_file(self):
+        result = {
+            'repo': 'reponame',
+            'path': 'folder1/folder2',
+            'name': 'name.nupkg',
+            'type': 'file',
+        }
+        artifact = self.aql.from_aql(result)
+        assert artifact.drive == "http://b/artifactory"
+        assert artifact.name == "name.nupkg"
+        assert artifact.root == "/reponame/"
 
 
 if __name__ == '__main__':
