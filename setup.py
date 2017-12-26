@@ -5,6 +5,10 @@
 import os
 import re
 import sys
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
 
 
 __version__ = '0.2'  # identify main version of dohq-artifactory
@@ -25,49 +29,15 @@ else:
 
 print("dohq-artifactory build version = {}".format(__version__))
 
-
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
-
-
-# PyPi RST variant doesn't understand the 'code' tag. so replacing it
-# with a regular quote
-def rst_strip_code_tag(string):
-    return re.sub('^\\.\\. code:: .*', '::', string, flags=re.MULTILINE)
-
-
-# Utility function to read the README file.
-# To upload to PyPi, you need to have 'pypandoc'.
-# Otherwise the readme will be clumsy.
-def convert_rst():
-    return lambda fname: rst_strip_code_tag(
-        convert(os.path.join(os.path.dirname(__file__), fname), 'rst'))
-
-
-def read_md():
-    return lambda fname: open(os.path.join(os.path.dirname(__file__), fname), 'r').read()
-
-
-try:
-    from pypandoc import convert
-    read_md = convert_rst()
-
-except ImportError:
-    print("warning: pypandoc module not found, could not convert Markdown to RST")
-    read_md = read_md()
-
-
 setup(
     name='dohq-artifactory',
     version=__version__,
     py_modules=['artifactory'],
     license='MIT License',
-    description='A Python to Artifactory interface',
-    long_description=read_md('README.md'),
-    author='Konstantin Nazarov',
-    author_email='knazarov@parallels.com',
+    description='A Python interface to Artifactory',
+    long_description='See full documentation here: https://devopshq.github.io/artifactory/',
+    author='Alexey Burov',
+    author_email='aburov@ptsecurity.com',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
