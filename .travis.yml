@@ -3,7 +3,7 @@ python:
 - '3.5'
 - '2.7'
 install:
-- pip install python-dateutil
+- pip install python-dateutil requests
 script: python test.py
 deploy:
   provider: pypi
