@@ -79,6 +79,27 @@ path = ArtifactoryPath(
 path.touch()
 ```
 
+## Session ##
+
+To re-use the established connection, you can pass ```session``` parameter to ArtifactoryPath:
+
+```python
+from artifactory import ArtifactoryPath
+import requests
+ses = requests.Session()
+ses.auth = ('username', 'password')
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/myrepo/my-path-1",
+    sesssion=ses)
+path.touch()
+
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/myrepo/my-path-2",
+    sesssion=ses)
+path.touch()
+```
+
+
 ## SSL Cert Verification Options ##
 See [Requests - SSL verification](http://docs.python-requests.org/en/latest/user/advanced/#ssl-cert-verification) for more details.  
 
@@ -137,3 +158,41 @@ cert = ~/mycert
 ```
 
 Whether or not you specify ```http://``` or ```https://``` prefix is not essential. The module will first try to locate the best match and then try to match URLs without prefixes. So if in the config you specify ```https://my-instance.local``` and call ```ArtifactoryPath``` with ```http://my-instance.local```, it will still do the right thing. 
+
+# Artifactory AQL #
+
+Supported [Artifactory-AQL](https://www.jfrog.com/confluence/display/RTF/Artifactory+Query+Language)
+
+```python
+from artifactory import ArtifactoryPath
+aql = ArtifactoryPath( "http://my-artifactory/artifactory") # path to artifactory, NO repo
+
+# dict support
+artifacts = aql.aql("items.find", {"repo": "myrepo"}) # send query: items.find({"repo": "myrepo"})
+
+# list support
+artifacts = aql.aql("items.find()", ".include", ["name", "repo"]) # send query: items.find().include("name", "repo")
+
+#  support complex query
+args = ["items.find", {"$and": [
+    {
+        "repo": {"$eq": "repo"}
+    },
+    {
+        "$or": [
+            {"path": {"$match": "*path1"}},
+            {"path": {"$match": "*path2"}},
+        ]
+    },
+]
+}]
+
+# send query: 
+# items.find({"$and": [{"repo": {"$eq": "repo"}}, {"$or": [{"path": {"$match": "*path1"}}, {"path": {"$match": "*path2"}}]}]})
+# artifacts_list contains raw data (list of dict)
+artifacts_list = aql.aql(*args) 
+
+# You can convert to patlib object:
+artifact_pathlib = map(aql.from_aql, artifacts_list)
+artifact_pathlib_list = list(map(aql.from_aql, artifacts_list))
+```

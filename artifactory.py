@@ -24,16 +24,17 @@ to manipulate artifactory paths. See pathlib docs for details how
 pure paths can be used.
 """
 
-import os
-import sys
-import errno
-import pathlib
 import collections
-import requests
-import re
-import json
-import dateutil.parser
+import errno
 import hashlib
+import json
+import os
+import pathlib
+import sys
+
+import dateutil.parser
+import requests
+
 try:
     import requests.packages.urllib3 as urllib3
 except ImportError:
@@ -42,7 +43,6 @@ try:
     import configparser
 except ImportError:
     import ConfigParser as configparser
-
 
 default_config_path = '~/.artifactory_python.cfg'
 global_config = None
@@ -83,7 +83,6 @@ def read_config(config_path=default_config_path):
         verify = p.getboolean(section, 'verify') if p.has_option(section, 'verify') else True
         cert = p.get(section, 'cert') if p.has_option(section, 'cert') else None
 
-
         result[section] = {'username': username,
                            'password': password,
                            'verify': verify,
@@ -121,6 +120,7 @@ def without_http_prefix(url):
         return url[8:]
     return url
 
+
 def get_base_url(config, url):
     """
     Look through config and try to find best matching base for 'url'
@@ -140,6 +140,7 @@ def get_base_url(config, url):
     for item in config:
         if without_http_prefix(url).startswith(without_http_prefix(item)):
             return item
+
 
 def get_config_entry(config, url):
     """
@@ -169,6 +170,7 @@ def get_global_config_entry(url):
     """
     read_global_config()
     return get_config_entry(global_config, url)
+
 
 def get_global_base_url(url):
     """
@@ -218,6 +220,7 @@ class HTTPResponseWrapper(object):
     since the stream is not rewindable, by the time it tries to send
     actual content, there is nothing left in the stream.
     """
+
     def __init__(self, obj):
         self.obj = obj
 
@@ -325,10 +328,10 @@ class _ArtifactoryFlavour(pathlib._Flavour):
 
         base = get_global_base_url(part)
         if base and without_http_prefix(part).startswith(without_http_prefix(base)):
-            mark = without_http_prefix(base).rstrip(sep)+sep
+            mark = without_http_prefix(base).rstrip(sep) + sep
             parts = part.split(mark)
         else:
-            mark = sep+'artifactory'+sep
+            mark = sep + 'artifactory' + sep
             parts = part.split(mark)
 
         if len(parts) >= 2:
@@ -407,51 +410,49 @@ class _ArtifactoryAccessor(pathlib._Accessor):
     """
     Implements operations with Artifactory REST API
     """
-    def rest_get(self, url, params=None, headers=None, auth=None, verify=True, cert=None):
+
+    def rest_get(self, url, params=None, headers=None, session=None, verify=True, cert=None):
         """
-        Perform a GET request to url with optional authentication
+        Perform a GET request to url with requests.session
         """
-        res = requests.get(url, params=params, headers=headers, auth=auth, verify=verify,
-                           cert=cert)
+        res = session.get(url, params=params, headers=headers, verify=verify, cert=cert)
         return res.text, res.status_code
 
-    def rest_put(self, url, params=None, headers=None, auth=None, verify=True, cert=None):
+    def rest_put(self, url, params=None, headers=None, session=None, verify=True, cert=None):
         """
-        Perform a PUT request to url with optional authentication
+        Perform a PUT request to url with requests.session
         """
-        res = requests.put(url, params=params, headers=headers, auth=auth, verify=verify,
-                           cert=cert)
+        res = session.put(url, params=params, headers=headers, verify=verify, cert=cert)
         return res.text, res.status_code
 
-    def rest_post(self, url, params=None, headers=None, auth=None, verify=True, cert=None):
+    def rest_post(self, url, params=None, headers=None, session=None, verify=True, cert=None):
         """
-        Perform a PUT request to url with optional authentication
+        Perform a POST request to url with requests.session
         """
-        res = requests.post(url, params=params, headers=headers, auth=auth, verify=verify,
-                            cert=cert)
+        res = session.post(url, params=params, headers=headers, verify=verify, cert=cert)
         return res.text, res.status_code
 
-    def rest_del(self, url, params=None, auth=None, verify=True, cert=None):
+    def rest_del(self, url, params=None, session=None, verify=True, cert=None):
         """
-        Perform a DELETE request to url with optional authentication
+        Perform a DELETE request to url with requests.session
         """
-        res = requests.delete(url, params=params, auth=auth, verify=verify, cert=cert)
+        res = session.delete(url, params=params, verify=verify, cert=cert)
         return res.text, res.status_code
 
-    def rest_put_stream(self, url, stream, headers=None, auth=None, verify=True, cert=None):
+    def rest_put_stream(self, url, stream, headers=None, session=None, verify=True, cert=None):
         """
-        Perform a chunked PUT request to url with optional authentication
+        Perform a chunked PUT request to url with requests.session
         This is specifically to upload files.
         """
-        res = requests.put(url, headers=headers, auth=auth, data=stream, verify=verify, cert=cert)
+        res = session.put(url, headers=headers, data=stream, verify=verify, cert=cert)
         return res.text, res.status_code
 
-    def rest_get_stream(self, url, auth=None, verify=True, cert=None):
+    def rest_get_stream(self, url, session=None, verify=True, cert=None):
         """
-        Perform a chunked GET request to url with optional authentication
+        Perform a chunked GET request to url with requests.session
         This is specifically to download files.
         """
-        res = requests.get(url, auth=auth, stream=True, verify=verify, cert=cert)
+        res = session.get(url, stream=True, verify=verify, cert=cert)
         return res.raw, res.status_code
 
     def get_stat_json(self, pathobj):
@@ -463,7 +464,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                         'api/storage',
                         str(pathobj.relative_to(pathobj.drive)).strip('/')])
 
-        text, code = self.rest_get(url, auth=pathobj.auth, verify=pathobj.verify,
+        text, code = self.rest_get(url, session=pathobj.session, verify=pathobj.verify,
                                    cert=pathobj.cert)
         if code == 404 and "Unable to find item" in text:
             raise OSError(2, "No such file or directory: '%s'" % url)
@@ -562,8 +563,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             raise OSError(17, "File exists: '%s'" % str(pathobj))
 
         url = str(pathobj) + '/'
-        text, code = self.rest_put(url, auth=pathobj.auth, verify=pathobj.verify,
-                                   cert=pathobj.cert)
+        text, code = self.rest_put(url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert)
 
         if not code == 201:
             raise RuntimeError("%s %d" % (text, code))
@@ -579,8 +579,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         url = str(pathobj) + '/'
 
-        text, code = self.rest_del(url, auth=pathobj.auth, verify=pathobj.verify,
-                                   cert=pathobj.cert)
+        text, code = self.rest_del(url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert)
 
         if code not in [200, 202, 204]:
             raise RuntimeError("Failed to delete directory: '%s'" % text)
@@ -595,7 +594,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             raise OSError(1, "Operation not permitted: '%s'" % str(pathobj))
 
         url = str(pathobj)
-        text, code = self.rest_del(url, auth=pathobj.auth, verify=pathobj.verify,
+        text, code = self.rest_del(url, session=pathobj.session, verify=pathobj.verify,
                                    cert=pathobj.cert)
 
         if code not in [200, 202, 204]:
@@ -612,8 +611,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             return
 
         url = str(pathobj)
-        text, code = self.rest_put(url, auth=pathobj.auth, verify=pathobj.verify,
-                                   cert=pathobj.cert)
+        text, code = self.rest_put(url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert)
 
         if not code == 201:
             raise RuntimeError("%s %d" % (text, code))
@@ -651,7 +649,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         seek()
         """
         url = str(pathobj)
-        raw, code = self.rest_get_stream(url, auth=pathobj.auth, verify=pathobj.verify,
+        raw, code = self.rest_get_stream(url, session=pathobj.session, verify=pathobj.verify,
                                          cert=pathobj.cert)
 
         if not code == 200:
@@ -682,7 +680,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         text, code = self.rest_put_stream(url,
                                           fobj,
                                           headers=headers,
-                                          auth=pathobj.auth,
+                                          session=pathobj.session,
                                           verify=pathobj.verify,
                                           cert=pathobj.cert)
 
@@ -702,7 +700,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         text, code = self.rest_post(url,
                                     params=params,
-                                    auth=src.auth,
+                                    session=src.session,
                                     verify=src.verify,
                                     cert=src.cert)
 
@@ -721,7 +719,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         text, code = self.rest_post(url,
                                     params=params,
-                                    auth=src.auth,
+                                    session=src.session,
                                     verify=src.verify,
                                     cert=src.cert)
 
@@ -740,7 +738,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         text, code = self.rest_get(url,
                                    params=params,
-                                   auth=pathobj.auth,
+                                   session=pathobj.session,
                                    verify=pathobj.verify,
                                    cert=pathobj.cert)
 
@@ -753,7 +751,6 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         return json.loads(text)['properties']
 
-
     def set_properties(self, pathobj, props, recursive):
         """
         Set artifact properties
@@ -762,14 +759,14 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                         'api/storage',
                         str(pathobj.relative_to(pathobj.drive)).strip('/')])
 
-        params = { 'properties': encode_properties(props) }
+        params = {'properties': encode_properties(props)}
 
         if not recursive:
             params['recursive'] = '0'
 
         text, code = self.rest_put(url,
                                    params=params,
-                                   auth=pathobj.auth,
+                                   session=pathobj.session,
                                    verify=pathobj.verify,
                                    cert=pathobj.cert)
 
@@ -777,7 +774,6 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             raise OSError(2, "No such file or directory: '%s'" % url)
         if code != 204:
             raise RuntimeError(text)
-
 
     def del_properties(self, pathobj, props, recursive):
         """
@@ -790,14 +786,14 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                         'api/storage',
                         str(pathobj.relative_to(pathobj.drive)).strip('/')])
 
-        params = { 'properties': ','.join(sorted(props)) }
+        params = {'properties': ','.join(sorted(props))}
 
         if not recursive:
             params['recursive'] = '0'
 
         text, code = self.rest_del(url,
                                    params=params,
-                                   auth=pathobj.auth,
+                                   session=pathobj.session,
                                    verify=pathobj.verify,
                                    cert=pathobj.cert)
 
@@ -852,7 +848,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
     """
     # Pathlib limits what members can be present in 'Path' class,
     # so authentication information has to be added via __slots__
-    __slots__ = ('auth', 'verify', 'cert')
+    __slots__ = ('auth', 'verify', 'cert', 'session')
 
     def __new__(cls, *args, **kwargs):
         """
@@ -867,6 +863,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         cfg_entry = get_global_config_entry(obj.drive)
         obj.auth = kwargs.get('auth', None)
         obj.cert = kwargs.get('cert', None)
+        obj.session = kwargs.get('session', None)
 
         if obj.auth is None and cfg_entry:
             obj.auth = (cfg_entry['username'], cfg_entry['password'])
@@ -881,10 +878,14 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         else:
             obj.verify = True
 
+        if obj.session is None:
+            obj.session = requests.Session()
+            obj.session.auth = obj.auth
+
         return obj
 
     def _init(self, *args, **kwargs):
-        if not 'template' in kwargs:
+        if 'template' not in kwargs:
             kwargs['template'] = _FakePathTemplate(_artifactory_accessor)
 
         super(ArtifactoryPath, self)._init(*args, **kwargs)
@@ -898,6 +899,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.auth = self.auth
         obj.verify = self.verify
         obj.cert = self.cert
+        obj.session = self.session
         return obj
 
     def with_name(self, name):
@@ -908,6 +910,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.auth = self.auth
         obj.verify = self.verify
         obj.cert = self.cert
+        obj.session = self.session
         return obj
 
     def with_suffix(self, suffix):
@@ -918,6 +921,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.auth = self.auth
         obj.verify = self.verify
         obj.cert = self.cert
+        obj.session = self.session
         return obj
 
     def relative_to(self, *other):
@@ -930,6 +934,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.auth = self.auth
         obj.verify = self.verify
         obj.cert = self.cert
+        obj.session = self.session
         return obj
 
     def joinpath(self, *args):
@@ -943,6 +948,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.auth = self.auth
         obj.verify = self.verify
         obj.cert = self.cert
+        obj.session = self.session
         return obj
 
     def __truediv__(self, key):
@@ -953,6 +959,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.auth = self.auth
         obj.verify = self.verify
         obj.cert = self.cert
+        obj.session = self.session
         return obj
 
     def __rtruediv__(self, key):
@@ -963,6 +970,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.auth = self.auth
         obj.verify = self.verify
         obj.cert = self.cert
+        obj.session = self.session
         return obj
 
     if sys.version_info < (3,):
@@ -974,6 +982,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.auth = self.auth
         obj.verify = self.verify
         obj.cert = self.cert
+        obj.session = self.session
         return obj
 
     def _make_child_relpath(self, args):
@@ -981,6 +990,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.auth = self.auth
         obj.verify = self.verify
         obj.cert = self.cert
+        obj.session = self.session
         return obj
 
     def __iter__(self):
@@ -1256,6 +1266,47 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                      possible to force recursive behavior.
         """
         return self._accessor.del_properties(self, properties, recursive)
+
+    def aql(self, *args):
+        """
+        Send AQL query to Artifactory
+        :param args:
+        :return:
+        """
+        aql_query_url = '{}/api/search/aql'.format(self.drive)
+        aql_query_text = self.create_aql_text(*args)
+        r = self.session.post(aql_query_url, data=aql_query_text)
+        r.raise_for_status()
+        content = r.json()
+        return content['results']
+
+    @staticmethod
+    def create_aql_text(*args):
+        """
+        Create AQL querty from string\list\dict arguments
+        """
+        aql_query_text = ""
+        for arg in args:
+            if isinstance(arg, dict):
+                arg = "({})".format(json.dumps(arg))
+            elif isinstance(arg, list):
+                arg = "({})".format(json.dumps(arg)).replace("[", "").replace("]", "")
+            aql_query_text += arg
+        return aql_query_text
+
+    def from_aql(self, result):
+        """
+        Convert raw AQL result to pathlib object
+        :param result: ONE raw result
+        :return:
+        """
+        result_type = result.get('type')
+        if result_type not in ('file', 'folder'):
+            raise RuntimeError("Path object with type '{}' doesn't support. File or folder only".format(result_type))
+
+        result_path = "{}/{repo}/{path}/{name}".format(self.drive, **result)
+        obj = ArtifactoryPath(result_path, auth=self.auth, verify=self.verify, cert=self.cert, session=self.session)
+        return obj
 
 
 def walk(pathobj, topdown=True):
