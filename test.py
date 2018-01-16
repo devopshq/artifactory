@@ -325,7 +325,7 @@ class ArtifactoryAccessorTest(unittest.TestCase):
 
         kwargs = calls[0][2]  # '', args, kwargs, _
         properties_del = kwargs['params']['properties']
-        self.assertEqual(properties_del, 'removethis,test,time')
+        self.assertEqual(properties_del, 'removethis')
 
         # Must put all property
         p._accessor.rest_put.assert_called_once()
@@ -334,8 +334,27 @@ class ArtifactoryAccessorTest(unittest.TestCase):
         kwargs = calls[0][2]  # '', args, kwargs, _
         properties_put = kwargs['params']['properties']
         self.assertEqual(properties_put, "addthis=addthis;test=test_property;time=2018-01-16 12:17:44.135143")
-        pass
 
+    def test_set_properties_without_remove(self):
+        a = self.cls()
+        P = artifactory.ArtifactoryPath
+        properties = {
+            'test': ['test_property'],
+            "time": ["2018-01-16 12:17:44.135143"],
+            "addthis": ['addthis'],
+            "removethis": ["removethis_property"],
+        }
+
+        # Regular File
+        p = P("http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz")
+
+        p._accessor.rest_get = MM(return_value=(self.property_data, 200))
+        p._accessor.rest_del = MM(return_value=('', 204))
+        p._accessor.rest_put = MM(return_value=('', 204))
+        p.properties = properties
+
+        # Must delete only removed property
+        p._accessor.rest_del.assert_not_called()
 
 
 class ArtifactoryPathTest(unittest.TestCase):

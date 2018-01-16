@@ -1234,8 +1234,10 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     @properties.setter
     def properties(self, properties):
-        self.del_properties(self.properties, recursive=False)
         self.set_properties(properties, recursive=False)
+        properties_removed = set(self.properties) - set(properties)
+        if properties_removed:
+            self.del_properties(properties_removed, recursive=False)
 
     @properties.deleter
     def properties(self):
