@@ -286,7 +286,7 @@ def encode_properties(parameters):
 
         result.append("%s=%s" % (param, value))
 
-    return '|'.join(result)
+    return ';'.join(result)
 
 
 class _ArtifactoryFlavour(pathlib._Flavour):
