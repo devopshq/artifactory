@@ -286,7 +286,7 @@ def encode_properties(parameters):
 
         result.append("%s=%s" % (param, value))
 
-    return '|'.join(result)
+    return ';'.join(result)
 
 
 class _ArtifactoryFlavour(pathlib._Flavour):
@@ -1234,7 +1234,9 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     @properties.setter
     def properties(self, properties):
-        self.del_properties(self.properties, recursive=False)
+        properties_to_remove = set(self.properties) - set(properties)
+        if properties_to_remove:
+            self.del_properties(properties_to_remove, recursive=False)
         self.set_properties(properties, recursive=False)
 
     @properties.deleter

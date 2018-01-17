@@ -33,12 +33,12 @@ class UtilTest(unittest.TestCase):
     def test_properties_encode(self):
         params = {"foo": "bar,baz", "qux": "as=df"}
         s = artifactory.encode_properties(params)
-        self.assertEqual(s, "foo=bar\\,baz|qux=as\\=df")
+        self.assertEqual(s, "foo=bar\\,baz;qux=as\\=df")
 
     def test_properties_encode_multi(self):
         params = {'baz': ['ba\\r', 'qu|ux'], 'foo': 'a,s=df'}
         s = artifactory.encode_properties(params)
-        self.assertEqual(s, "baz=ba\\r,qu\|ux|foo=a\,s\=df")
+        self.assertEqual(s, "baz=ba\\r,qu\|ux;foo=a\,s\=df")
 
 
 class ArtifactoryFlavorTest(unittest.TestCase):
@@ -200,6 +200,14 @@ class ArtifactoryAccessorTest(unittest.TestCase):
                 "uri" : "http://artifactory.local/artifactory/api/storage/libs-release-local"
             }
         """
+        self.property_data = '''{
+          "properties" : {
+            "test" : [ "test_property" ],
+            "removethis" : [ "removethis_property" ],
+            "time" : [ "2018-01-16 12:17:44.135143" ]
+          },
+          "uri" : "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        }'''
 
     def test_stat(self):
         a = self.cls()
@@ -277,6 +285,76 @@ class ArtifactoryAccessorTest(unittest.TestCase):
         url = "http://b/artifactory/c/d;baz=quux;foo=bar"
 
         a.rest_put_stream.assert_called_with(url, f, headers={}, session=p.session, verify=True, cert=None)
+
+    def test_get_properties(self):
+        a = self.cls()
+        P = artifactory.ArtifactoryPath
+        properties = {
+            'test': ['test_property'],
+            'removethis': ['removethis_property'],
+            "time": ["2018-01-16 12:17:44.135143"],
+        }
+
+        # Regular File
+        p = P("http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz")
+
+        p._accessor.rest_get = MM(return_value=(self.property_data, 200))
+
+        self.assertEqual(p.properties, properties)
+
+    def test_set_properties(self):
+        a = self.cls()
+        P = artifactory.ArtifactoryPath
+        properties = {
+            'test': ['test_property'],
+            "time": ["2018-01-16 12:17:44.135143"],
+            "addthis": ['addthis'],
+        }
+
+        # Regular File
+        p = P("http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz")
+
+        p._accessor.rest_get = MM(return_value=(self.property_data, 200))
+        p._accessor.rest_del = MM(return_value=('', 204))
+        p._accessor.rest_put = MM(return_value=('', 204))
+        p.properties = properties
+
+        # Must delete only removed property
+        p._accessor.rest_del.assert_called_once()
+        calls = p._accessor.rest_del.mock_calls
+
+        kwargs = calls[0][2]  # '', args, kwargs, _
+        properties_del = kwargs['params']['properties']
+        self.assertEqual(properties_del, 'removethis')
+
+        # Must put all property
+        p._accessor.rest_put.assert_called_once()
+        calls = p._accessor.rest_put.mock_calls
+
+        kwargs = calls[0][2]  # '', args, kwargs, _
+        properties_put = kwargs['params']['properties']
+        self.assertEqual(properties_put, "addthis=addthis;test=test_property;time=2018-01-16 12:17:44.135143")
+
+    def test_set_properties_without_remove(self):
+        a = self.cls()
+        P = artifactory.ArtifactoryPath
+        properties = {
+            'test': ['test_property'],
+            "time": ["2018-01-16 12:17:44.135143"],
+            "addthis": ['addthis'],
+            "removethis": ["removethis_property"],
+        }
+
+        # Regular File
+        p = P("http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz")
+
+        p._accessor.rest_get = MM(return_value=(self.property_data, 200))
+        p._accessor.rest_del = MM(return_value=('', 204))
+        p._accessor.rest_put = MM(return_value=('', 204))
+        p.properties = properties
+
+        # Must delete only removed property
+        p._accessor.rest_del.assert_not_called()
 
 
 class ArtifactoryPathTest(unittest.TestCase):
