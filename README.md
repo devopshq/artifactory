@@ -5,7 +5,19 @@
 This module is intended to serve as a logical descendant of [pathlib](https://docs.python.org/3/library/pathlib.html), a Python 3 module for object-oriented path manipulations. As such, it implements everything as closely as possible to the origin with few exceptions, such as stat().
 
 # Tables of Contents 
-TODO
+- [Usage](#usage)
+    - [Walking Directory Tree](#walking-directory-tree)
+    - [Downloading Artifacts](#downloading-artifacts)
+    - [Uploading Artifacts](#uploading-artifacts)
+    - [Artifact properties](#artifact-properties)
+    - [Artifactory Query Language](./docs/AQL.md)
+- [Advanced](#advanced)
+    - [Authentication](#authentication)
+    - [Session](#session)
+    - [SSL Cert Verification Options](#ssl-cert-verification-options)
+    - [Global Configuration File](#global-config-file)
+
+# Usage 
 
 ## Walking Directory Tree ##
 
@@ -90,6 +102,8 @@ path.properties = properties
 
 ## Artifactory Query Language ##
 You can use [Artifactory Query Language](https://www.jfrog.com/confluence/display/RTF/Artifactory+Query+Language) in python. [Read more in this page](./docs/AQL.md)
+
+# Advanced
 
 ## Authentication ##
 
