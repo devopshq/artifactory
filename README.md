@@ -5,6 +5,7 @@
 This module is intended to serve as a logical descendant of [pathlib](https://docs.python.org/3/library/pathlib.html), a Python 3 module for object-oriented path manipulations. As such, it implements everything as closely as possible to the origin with few exceptions, such as stat().
 
 # Tables of Contents 
+- [Install](#install)
 - [Usage](#usage)
     - [Walking Directory Tree](#walking-directory-tree)
     - [Downloading Artifacts](#downloading-artifacts)
@@ -17,6 +18,10 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
     - [SSL Cert Verification Options](#ssl-cert-verification-options)
     - [Global Configuration File](#global-config-file)
 
+# Install #
+```bash
+python3 -mpip install dohq-artifactory
+```
 # Usage 
 
 ## Walking Directory Tree ##
