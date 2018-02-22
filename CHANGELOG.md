@@ -1,3 +1,7 @@
+## Feb 22, 2018
+- Add `repo` and `path_in_repo` properties
+- Add docs about `stat()`
+
 ## DevOpsHQ (dohq-artifactory) => Original (Parallels)
 Our library `dohq-artifactory` have this diff (unlinke the original)
   - Support [Artifactory AQL](./docs/AQL.md)
