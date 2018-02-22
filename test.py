@@ -396,6 +396,16 @@ class ArtifactoryPathTest(unittest.TestCase):
         c = b.with_suffix(".txt")
         self.assertEqual(c.auth, ('foo', 'bar'))
 
+    def test_repo(self):
+        P = self.cls
+        b = P("http://b/artifactory/reponame/folder/path.xml")
+        self.assertEqual(b.repo, 'reponame')
+
+    def test_path_in_repo(self):
+        P = self.cls
+        b = P("http://b/artifactory/reponame/folder/path.xml")
+        self.assertEqual(b.path_in_repo, '/folder/path.xml')
+
 
 class TestArtifactoryConfig(unittest.TestCase):
     def test_artifactory_config(self):

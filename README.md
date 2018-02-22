@@ -12,6 +12,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
     - [Uploading Artifacts](#uploading-artifacts)
     - [Artifact properties](#artifact-properties)
     - [Artifactory Query Language](./docs/AQL.md)
+    - [FileStat](./docs/FileStat.md)
 - [Advanced](#advanced)
     - [Authentication](#authentication)
     - [Session](#session)
@@ -107,6 +108,9 @@ path.properties = properties
 
 ## Artifactory Query Language ##
 You can use [Artifactory Query Language](https://www.jfrog.com/confluence/display/RTF/Artifactory+Query+Language) in python. [Read more in this page](./docs/AQL.md)
+
+## FileStat
+You can get hash (`md5`, `sha1`), create and change date, use [FileStat](./docs/FileStat.md)
 
 # Advanced
 

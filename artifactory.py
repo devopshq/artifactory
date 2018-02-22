@@ -1310,6 +1310,16 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj = ArtifactoryPath(result_path, auth=self.auth, verify=self.verify, cert=self.cert, session=self.session)
         return obj
 
+    @property
+    def repo(self):
+        return self._root.replace('/', '')
+
+    @property
+    def path_in_repo(self):
+        parts = self.parts
+        path_in_repo = '/' + '/'.join(parts[1:])
+        return path_in_repo
+
 
 def walk(pathobj, topdown=True):
     """
