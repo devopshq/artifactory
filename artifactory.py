@@ -31,6 +31,7 @@ import json
 import os
 import pathlib
 import sys
+from itertools import islice
 
 import dateutil.parser
 import requests
@@ -202,6 +203,15 @@ def sha1sum(filename):
         for chunk in iter(lambda: f.read(128 * sha1.block_size), b''):
             sha1.update(chunk)
     return sha1.hexdigest()
+
+
+def chunks(data, size):
+    """
+    Get chink for dict, copy as-is from https://stackoverflow.com/a/8290508/6753144
+    """
+    it = iter(data)
+    for i in range(0, len(data), size):
+        yield {k: data[k] for k in islice(it, size)}
 
 
 class HTTPResponseWrapper(object):
@@ -1256,7 +1266,13 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         if not properties:
             return
 
-        return self._accessor.set_properties(self, properties, recursive)
+        # If URL > 13KB, nginx default raise error '414 Request-URI Too Large'
+        MAX_SIZE = 50
+        if len(properties) > MAX_SIZE:
+            for chunk in chunks(properties, MAX_SIZE):
+                self._accessor.set_properties(self, chunk, recursive)
+        else:
+            self._accessor.set_properties(self, properties, recursive)
 
     def del_properties(self, properties, recursive=None):
         """
