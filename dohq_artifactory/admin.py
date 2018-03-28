@@ -2,8 +2,6 @@ import logging
 import random
 import time
 
-import requests
-
 from dohq_artifactory.exception import ArtifactoryException
 
 
@@ -78,7 +76,7 @@ class User(object):
             request_url,
         ))
 
-        r = requests.put(
+        r = self._session.put(
             request_url,
             json=data_json,
             headers={'Content-Type': 'application/json'},
@@ -102,9 +100,8 @@ class User(object):
             request_url,
         ))
 
-        r = requests.get(
+        r = self._session.get(
             request_url,
-            # headers={'Content-Type': 'application/json'},
             verify=False,
             auth=self._auth,
         )
@@ -146,7 +143,7 @@ class User(object):
             request_url,
         ))
 
-        r = requests.delete(
+        r = self._session.delete(
             request_url,
             verify=False,
             auth=self._auth,
@@ -171,7 +168,7 @@ class User(object):
             request_url,
         ))
 
-        r = requests.get(
+        r = self._session.get(
             request_url,
             verify=False,
             auth=(self.name, self.password),
@@ -190,13 +187,124 @@ class User(object):
         return self._realm
 
 
-class Repo:
-    pass
-
-
 class Group:
+    @classmethod
+    def find(cls, name):
+
+        result = None
+        group_obj = cls()
+        group_obj.name = name
+
+        if group_obj._read():
+            result = group_obj
+
+        return result
+
+    def __init__(self, artifactory, name):
+
+        self.name = name
+        self.description = ''
+        self.autoJoin = False
+        self.realm = ''
+        self.realmAttributes = ''
+
+        self._artifactory = artifactory
+        self._auth = self._artifactory.auth
+        self._session = self._artifactory.session
+
+    def create(self):
+        logging.debug('\tuser group create [{x.name}]'.format(x=self))
+
+        data_json = {
+            "name": self.name,
+            "description": self.description,
+            "autoJoin": self.autoJoin,
+        }
+
+        request_url = self._artifactory.drive + '/api/security/groups/{x.name}'.format(x=self)
+
+        logging.debug('\t\tcall artifactory api (user [{}]):\n\t\t{}:{}'.format(
+            self._auth[0] if self._auth else 'ANONYM',
+            'PUT',
+            request_url,
+        ))
+
+        r = self._session.put(
+            request_url,
+            json=data_json,
+            headers={'Content-Type': 'application/json'},
+            verify=False,
+            auth=self._auth,
+        )
+
+        r.raise_for_status()
+
+        rest_delay()
+
+    def _read(self):
+
+        result = True
+        request_url = self._artifactory.drive + '/api/security/groups/{x.name}'.format(x=self)
+
+        logging.debug('\tuser group _read [{x.name}]'.format(x=self))
+        logging.debug('\t\tcall artifactory api (user [{}]):\n\t\t{}:{}'.format(
+            self._auth[0] if self._auth else 'ANONYM',
+            'GET',
+            request_url,
+        ))
+
+        r = self._session.get(
+            request_url,
+            # headers={'Content-Type': 'application/json'},
+            verify=False,
+            auth=self._auth,
+        )
+
+        if 404 == r.status_code:
+
+            result = False
+
+        else:
+
+            r.raise_for_status()
+
+            response = r.json()
+
+            self.name = response['name']
+            self.description = response['description']
+            self.autoJoin = response['autoJoin']
+            self.realm = response['realm']
+            self.realmAttributes = response.get('realmAttributes', None)
+
+        return result
+
+    def update(self):
+        self.create()
+
+    def delete(self):
+        logging.debug('\tuser group delete [{x.name}]'.format(x=self))
+        request_url = self._artifactory.drive + '/api/security/groups/{x.name}'.format(x=self)
+
+        logging.debug('\t\tcall artifactory api (user [{}]):\n\t\t{}:{}'.format(
+            self._auth[0] if self._auth else 'ANONYM',
+            'DELETE',
+            request_url,
+        ))
+
+        r = self._session.delete(
+            request_url,
+            verify=False,
+            auth=self._auth,
+        )
+
+        r.raise_for_status()
+
+        rest_delay()
+
+
+class PermissionTarget:
     pass
 
 
-class Permission:
+class Repo:
     pass

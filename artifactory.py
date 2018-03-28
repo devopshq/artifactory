@@ -36,7 +36,7 @@ from itertools import islice
 import dateutil.parser
 import requests
 
-from dohq_artifactory.admin import User
+from dohq_artifactory.admin import User, Group
 
 try:
     import requests.packages.urllib3 as urllib3
@@ -1339,10 +1339,18 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         return path_in_repo
 
     def find_user(self, name):
-        user = User(self, name, email='', password=None)
-        user.name = name
-        if user._read():
-            return user
+        obj = User(self, name, email='', password=None)
+        obj.name = name
+        if obj._read():
+            return obj
+        else:
+            return None
+
+    def find_group(self, name):
+        obj = Group(self, name)
+        obj.name = name
+        if obj._read():
+            return obj
         else:
             return None
 

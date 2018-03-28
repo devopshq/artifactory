@@ -2,7 +2,7 @@ import os
 import sys
 
 from artifactory import ArtifactoryPath
-from dohq_artifactory.admin import User
+from dohq_artifactory.admin import User, Group
 
 # TODO Протестировать что просто pytest тоже берет нужный конфиг
 # Env prepared from https://github.com/JFrogDev/artifactory-user-plugins-devenv
@@ -72,3 +72,24 @@ class TestUser:
         # DELETE
         test_user.delete()
         assert self.artifactory.find_user(user_name) is None
+
+
+class TestGroup:
+    artifactory = ArtifactoryPath(art_uri, auth=art_auth)
+
+    def test_create_delete_group(self):
+        name = 'test_group'
+
+        # Remove if exist
+        test_group = self.artifactory.find_group(name)
+        if test_group is not None:
+            test_group.delete()
+
+        test_group = Group(artifactory=self.artifactory, name=name)
+        # CREATE
+        test_group.create()
+        assert self.artifactory.find_group(name) is not None
+
+        # DELETE
+        test_group.delete()
+        assert self.artifactory.find_group(name) is None
