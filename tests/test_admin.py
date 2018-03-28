@@ -2,7 +2,7 @@ import os
 import sys
 
 from artifactory import ArtifactoryPath
-from dohq_artifactory.admin import User, Group
+from dohq_artifactory.admin import User, Group, RepositoryLocal
 
 # TODO Протестировать что просто pytest тоже берет нужный конфиг
 # Env prepared from https://github.com/JFrogDev/artifactory-user-plugins-devenv
@@ -93,3 +93,26 @@ class TestGroup:
         # DELETE
         test_group.delete()
         assert self.artifactory.find_group(name) is None
+
+
+class TestLocalRepositories:
+    artifactory = ArtifactoryPath(art_uri, auth=art_auth)
+
+    def test_create_delete_group(self):
+        name = 'test_debian_repo'
+
+        # Remove if exist
+        test_repo = self.artifactory.find_repository_local(name)
+        if test_repo is not None:
+            test_repo.delete()
+
+        test_repo = RepositoryLocal(artifactory=self.artifactory, name=name, packageType=RepositoryLocal.DEBIAN)
+        # CREATE
+        test_repo.create()
+        assert self.artifactory.find_repository_local(name) is not None
+
+        assert test_repo.raw['enableDebianSupport'], "Repository is not Debian"
+
+        # DELETE
+        test_repo.delete()
+        assert self.artifactory.find_repository_local(name) is None
