@@ -36,7 +36,7 @@ from itertools import islice
 import dateutil.parser
 import requests
 
-from dohq_artifactory.admin import User, Group, RepositoryLocal
+from dohq_artifactory.admin import User, Group, RepositoryLocal, PermissionTarget
 
 try:
     import requests.packages.urllib3 as urllib3
@@ -1340,7 +1340,6 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     def find_user(self, name):
         obj = User(self, name, email='', password=None)
-        obj.name = name
         if obj._read():
             return obj
         else:
@@ -1348,7 +1347,6 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     def find_group(self, name):
         obj = Group(self, name)
-        obj.name = name
         if obj._read():
             return obj
         else:
@@ -1356,7 +1354,13 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     def find_repository_local(self, name):
         obj = RepositoryLocal(self, name, packageType=None)
-        obj.name = name
+        if obj._read():
+            return obj
+        else:
+            return None
+
+    def find_permission_target(self, name):
+        obj = PermissionTarget(self, name)
         if obj._read():
             return obj
         else:

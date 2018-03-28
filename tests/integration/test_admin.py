@@ -2,16 +2,15 @@ import os
 import sys
 
 from artifactory import ArtifactoryPath
-from dohq_artifactory.admin import User, Group, RepositoryLocal
+from dohq_artifactory.admin import User, Group, RepositoryLocal, PermissionTarget
 
-# TODO Протестировать что просто pytest тоже берет нужный конфиг
 # Env prepared from https://github.com/JFrogDev/artifactory-user-plugins-devenv
 if sys.version_info[0] < 3:
     import ConfigParser as configparser
 else:
     import configparser
 
-config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'test.cfg')
+config_path = os.path.join(os.path.dirname(__file__), 'test.cfg')
 config = configparser.ConfigParser()
 
 config.read(config_path)
@@ -25,7 +24,7 @@ art_auth = (art_username, art_password)
 class TestUser:
     artifactory = ArtifactoryPath(art_uri, auth=art_auth)
 
-    def test_create_delete_user(self):
+    def test_create_delete(self):
         user_name = 'test_user'
 
         # Remove if user exist
@@ -44,7 +43,7 @@ class TestUser:
         test_user.delete()
         assert self.artifactory.find_user(user_name) is None
 
-    def test_create_update_user(self):
+    def test_create_update(self):
         user_name = 'test_user'
 
         # Remove if user exist
@@ -77,7 +76,7 @@ class TestUser:
 class TestGroup:
     artifactory = ArtifactoryPath(art_uri, auth=art_auth)
 
-    def test_create_delete_group(self):
+    def test_create_delete(self):
         name = 'test_group'
 
         # Remove if exist
@@ -98,7 +97,7 @@ class TestGroup:
 class TestLocalRepositories:
     artifactory = ArtifactoryPath(art_uri, auth=art_auth)
 
-    def test_create_delete_group(self):
+    def test_create_delete(self):
         name = 'test_debian_repo'
 
         # Remove if exist
@@ -116,3 +115,25 @@ class TestLocalRepositories:
         # DELETE
         test_repo.delete()
         assert self.artifactory.find_repository_local(name) is None
+
+
+class TestTargetPermission:
+    artifactory = ArtifactoryPath(art_uri, auth=art_auth)
+
+    def test_create_delete(self):
+        name = 'test_permission'
+
+        # Remove if exist
+        test_permission = self.artifactory.find_permission_target(name)
+        if test_permission is not None:
+            test_permission.delete()
+
+        test_permission = PermissionTarget(artifactory=self.artifactory, name=name)
+
+        # CREATE
+        test_permission.create()
+        assert self.artifactory.find_permission_target(name) is not None
+
+        # DELETE
+        test_permission.delete()
+        assert self.artifactory.find_permission_target(name) is None

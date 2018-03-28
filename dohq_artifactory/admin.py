@@ -37,16 +37,53 @@ def gen_passwd(pw_len=16):
 
 
 class ArtifactoryObject(object):
+    _uri = None
+
     def __init__(self, artifactory):
-        self.additional_dict = {}
+        self.additional_params = {}
         self.raw = None
 
         self._artifactory = artifactory
         self._auth = self._artifactory.auth
         self._session = self._artifactory.session
 
+    def _create_json(self):
+        raise NotImplementedError()
+
+    def create(self):
+        logging.debug('Create (or update) {x.__class__.__name__} [{x.name}]'.format(x=self))
+        data_json = self._create_json()
+        data_json.update(self.additional_params)
+        request_url = self._artifactory.drive + '/api/{uri}/{x.name}'.format(uri=self._uri, x=self)
+        r = self._session.put(
+            request_url,
+            json=data_json,
+            headers={'Content-Type': 'application/json'},
+            verify=False,
+            auth=self._auth,
+        )
+        r.raise_for_status()
+        rest_delay()
+        self._read()
+
+    def _read(self):
+        raise NotImplementedError()
+
+    def delete(self):
+        logging.debug('Remove {x.__class__.__name__} [{x.name}]'.format(x=self))
+        request_url = self._artifactory.drive + '/api/{uri}/{x.name}'.format(uri=self._uri, x=self)
+        r = self._session.delete(
+            request_url,
+            verify=False,
+            auth=self._auth,
+        )
+        r.raise_for_status()
+        rest_delay()
+
 
 class User(ArtifactoryObject):
+    _uri = 'security/users'
+
     def __init__(self, artifactory, name, email, password):
         super(User, self).__init__(artifactory)
 
@@ -62,10 +99,7 @@ class User(ArtifactoryObject):
         self._lastLoggedIn = None
         self._realm = None
 
-    def create(self):
-
-        logging.debug('\tuser create/update local [{x.name}]'.format(x=self))
-
+    def _create_json(self):
         data_json = {
             'name': self.name,
             'email': self.email,
@@ -75,39 +109,13 @@ class User(ArtifactoryObject):
             "internalPasswordDisabled": self.internalPasswordDisabled,
             "groups": self.groups,
         }
-        data_json.update(self.additional_dict)
-
-        request_url = self._artifactory.drive + '/api/security/users/{x.name}'.format(x=self)
-
-        logging.debug('\t\tcall artifactory api (user [{}]):\n\t\t{}:{}'.format(
-            self._auth[0] if self._auth else 'ANONYM',
-            'PUT',
-            request_url,
-        ))
-
-        r = self._session.put(
-            request_url,
-            json=data_json,
-            headers={'Content-Type': 'application/json'},
-            verify=False,
-            auth=self._auth,
-        )
-
-        r.raise_for_status()
-
-        rest_delay()
+        return data_json
 
     def _read(self):
-
         result = True
         request_url = self._artifactory.drive + '/api/security/users/{x.name}'.format(x=self)
 
-        logging.debug('\tuser _read [{x.name}]'.format(x=self))
-        logging.debug('\t\tcall artifactory api (user [{}]):\n\t\t{}:{}'.format(
-            self._auth[0] if self._auth else 'ANONYM',
-            'GET',
-            request_url,
-        ))
+        logging.debug('user _read [{x.name}]'.format(x=self))
 
         r = self._session.get(
             request_url,
@@ -123,6 +131,7 @@ class User(ArtifactoryObject):
 
             r.raise_for_status()
 
+            # def _read_response(self, response):
             response = r.json()
             self.raw = response
 
@@ -141,42 +150,14 @@ class User(ArtifactoryObject):
     def update(self):
         self.create()
 
-    def delete(self):
-
-        logging.debug('\tremove user [{x.name}]'.format(x=self))
-
-        request_url = self._artifactory.drive + '/api/security/users/{x.name}'.format(x=self)
-
-        logging.debug('\t\tcall artifactory api (user [{}]):\n\t\t{}:{}'.format(
-            self._auth[0] if self._auth else 'ANONYM',
-            'DELETE',
-            request_url,
-        ))
-
-        r = self._session.delete(
-            request_url,
-            verify=False,
-            auth=self._auth,
-        )
-
-        r.raise_for_status()
-
-        rest_delay()
-
     @property
     def encryptedPassword(self):
         if self.password is None:
             raise ArtifactoryException('Please, set [self.password] before query encryptedPassword')
 
-        logging.debug('\tuser get encrypted password [{x.name}]'.format(x=self))
+        logging.debug('user get encrypted password [{x.name}]'.format(x=self))
 
         request_url = self._artifactory.drive + '/api/security/encryptedPassword'
-
-        logging.debug('\t\tcall artifactory api (user [{}]):\n\t\t{}:{}'.format(
-            self.name,
-            'GET',
-            request_url,
-        ))
 
         r = self._session.get(
             request_url,
@@ -198,6 +179,8 @@ class User(ArtifactoryObject):
 
 
 class Group(ArtifactoryObject):
+    _uri = 'security/groups'
+
     def __init__(self, artifactory, name):
         super(Group, self).__init__(artifactory)
 
@@ -207,47 +190,20 @@ class Group(ArtifactoryObject):
         self.realm = ''
         self.realmAttributes = ''
 
-    def create(self):
-        logging.debug('\tuser group create [{x.name}]'.format(x=self))
-
+    def _create_json(self):
         data_json = {
             "name": self.name,
             "description": self.description,
             "autoJoin": self.autoJoin,
         }
-        data_json.update(self.additional_dict)
-
-        request_url = self._artifactory.drive + '/api/security/groups/{x.name}'.format(x=self)
-
-        logging.debug('\t\tcall artifactory api (user [{}]):\n\t\t{}:{}'.format(
-            self._auth[0] if self._auth else 'ANONYM',
-            'PUT',
-            request_url,
-        ))
-
-        r = self._session.put(
-            request_url,
-            json=data_json,
-            headers={'Content-Type': 'application/json'},
-            verify=False,
-            auth=self._auth,
-        )
-
-        r.raise_for_status()
-
-        rest_delay()
+        return data_json
 
     def _read(self):
 
         result = True
         request_url = self._artifactory.drive + '/api/security/groups/{x.name}'.format(x=self)
 
-        logging.debug('\tuser group _read [{x.name}]'.format(x=self))
-        logging.debug('\t\tcall artifactory api (user [{}]):\n\t\t{}:{}'.format(
-            self._auth[0] if self._auth else 'ANONYM',
-            'GET',
-            request_url,
-        ))
+        logging.debug('user group _read [{x.name}]'.format(x=self))
 
         r = self._session.get(
             request_url,
@@ -278,26 +234,6 @@ class Group(ArtifactoryObject):
     def update(self):
         self.create()
 
-    def delete(self):
-        logging.debug('\tuser group delete [{x.name}]'.format(x=self))
-        request_url = self._artifactory.drive + '/api/security/groups/{x.name}'.format(x=self)
-
-        logging.debug('\t\tcall artifactory api (user [{}]):\n\t\t{}:{}'.format(
-            self._auth[0] if self._auth else 'ANONYM',
-            'DELETE',
-            request_url,
-        ))
-
-        r = self._session.delete(
-            request_url,
-            verify=False,
-            auth=self._auth,
-        )
-
-        r.raise_for_status()
-
-        rest_delay()
-
 
 class Repository(ArtifactoryObject):
     # List packageType from wiki:
@@ -324,6 +260,8 @@ class Repository(ArtifactoryObject):
 
 
 class RepositoryLocal(Repository):
+    _uri = 'repositories'
+
     def __init__(self, artifactory, name, packageType=Repository.GENERIC):
         super(RepositoryLocal, self).__init__(artifactory)
         self.name = name
@@ -332,17 +270,7 @@ class RepositoryLocal(Repository):
         self.repoLayoutRef = 'maven-2-default'
         self.archiveBrowsingEnabled = True
 
-    def create(self):
-
-        request_url = self._artifactory.drive + '/api/repositories/{.name}'.format(self)
-
-        logging.debug('\trepository create local [{x.name}]'.format(x=self))
-        logging.debug('\t\tcall artifactory api (user [{}]):\n\t\t{}:{}'.format(
-            self._auth[0] if self._auth else 'ANONYM',
-            'PUT',
-            request_url,
-        ))
-
+    def _create_json(self):
         # Original JSON, add more property if you need
         # https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
         data_json = {
@@ -366,31 +294,13 @@ class RepositoryLocal(Repository):
             "archiveBrowsingEnabled": self.archiveBrowsingEnabled,
             "yumRootDepth": 0,
         }
-        data_json.update(self.additional_dict)
-
-        r = self._session.put(
-            request_url,
-            json=data_json,
-            headers={'Content-Type': 'application/json'},
-            verify=False,
-            auth=self._auth,
-        )
-
-        r.raise_for_status()
-
-        rest_delay()
-        self._read()
+        return data_json
 
     def _read(self):
 
         request_url = self._artifactory.drive + '/api/repositories/{x.name}'.format(x=self)
 
-        logging.debug('\trepositories read [{x.name}]'.format(x=self))
-        logging.debug('\t\tcall artifactory api (user [{}]):\n\t\t{}:{}'.format(
-            self._auth[0] if self._auth else 'ANONYM',
-            'GET',
-            request_url,
-        ))
+        logging.debug('repositories read [{x.name}]'.format(x=self))
 
         r = self._session.get(
             request_url,
@@ -419,22 +329,68 @@ class RepositoryLocal(Repository):
 
         return result
 
-    def delete(self):
 
-        request_url = self._artifactory.drive + '/api/repositories/{.name}'.format(self)
+class PermissionTarget(ArtifactoryObject):
+    _uri = 'security/permissions'
 
-        logging.debug('\trepository create local [{x.name}]'.format(x=self))
-        logging.debug('\t\tcall artifactory api (user [{}]):\n\t\t{}:{}'.format(
-            self._auth[0] if self._auth else 'ANONYM',
-            'PUT',
+    def __init__(self, artifactory, name):
+        super(PermissionTarget, self).__init__(artifactory)
+        self.name = name
+        self.includesPattern = '**'
+        self.excludesPattern = ''
+        self.repositories = []
+        self.principals = {
+            'users': {},
+            'groups': {},
+        }
+
+    def _create_json(self):
+        data_json = {
+            "name": self.name,
+            "includesPattern": self.includesPattern,
+            "excludesPattern": self.excludesPattern,
+            "repositories": self.repositories,
+            "principals": self.principals
+        }
+        return data_json
+
+    def _read(self):
+
+        result = True
+        request_url = self._artifactory.drive + '/api/security/permissions/{x.name}'.format(x=self)
+
+        logging.debug('user _read [{x.name}]'.format(x=self))
+
+        r = self._session.get(
             request_url,
-        ))
-
-        r = self._session.delete(
-            request_url,
+            headers={'Content-Type': 'application/json'},
             verify=False,
             auth=self._auth,
         )
 
-        r.raise_for_status()
-        rest_delay()
+        if 404 == r.status_code:
+
+            result = False
+
+        else:
+
+            r.raise_for_status()
+
+            response = r.json()
+
+            self.name = response['name']
+            self.includesPattern = response['includesPattern']
+            self.excludesPattern = response['excludesPattern']
+
+            if 'repositories' in response:
+                self.repositories = response['repositories']
+
+            if 'principals' in response:
+
+                if 'users' in response['principals']:
+                    self.principals['users'] = response['principals']['users']
+
+                if 'groups' in response['principals']:
+                    self.principals['groups'] = response['principals']['groups']
+
+        return result
