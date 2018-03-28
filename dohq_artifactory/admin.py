@@ -1,7 +1,10 @@
+import logging
 import random
 import time
 
 import requests
+
+from dohq_artifactory.exception import ArtifactoryException
 
 
 def rest_delay():
@@ -13,7 +16,6 @@ def gen_passwd(pw_len=16):
     alphabet_upper = alphabet_lower.upper()
     alphabet_len = len(alphabet_lower)
     pwlist = []
-    result = ''
 
     for i in range(pw_len // 3):
         r_0 = random.randrange(alphabet_len)
@@ -37,43 +39,65 @@ def gen_passwd(pw_len=16):
 
 
 class User(object):
-    @classmethod
-    def find(cls, name):
+    def __init__(self, artifactory, name, email, password):
 
-        result = None
-        user_obj = cls()
-        user_obj.name = name
+        self.name = name
+        self.email = email
 
-        if user_obj.load():
-            result = user_obj
-
-        return result
-
-    def __init__(self, artifactory, user, password, session=None, ):
-
-        self.artifactory = artifactory
-        self.auth = (user, password)
-        self.session = requests.Session() if session is None else session
-        self.name = ''
-        self.email = ''
-        self.password = gen_passwd()
-        self.encryptedPassword = ''
+        self.password = password
         self.admin = False
         self.profileUpdatable = True
         self.internalPasswordDisabled = False
-        self.groups = '[]'
-        self.lastLoggedIn = ''
-        self.realm = ''
+        self.groups = []
 
-    def load(self):
+        self._artifactory = artifactory
+        self._auth = self._artifactory.auth
+        self._session = self._artifactory.session
+        self._lastLoggedIn = None
+        self._realm = None
+
+    def create(self):
+
+        logging.debug('\tuser create/update local [{x.name}]'.format(x=self))
+
+        data_json = {
+            'name': self.name,
+            'email': self.email,
+            'password': self.password,
+            'admin': self.admin,
+            "profileUpdatable": self.profileUpdatable,
+            "internalPasswordDisabled": self.internalPasswordDisabled,
+            "groups": self.groups,
+        }
+
+        request_url = self._artifactory.drive + '/api/security/users/{x.name}'.format(x=self)
+
+        logging.debug('\t\tcall artifactory api (user [{}]):\n\t\t{}:{}'.format(
+            self._auth[0] if self._auth else 'ANONYM',
+            'PUT',
+            request_url,
+        ))
+
+        r = requests.put(
+            request_url,
+            json=data_json,
+            headers={'Content-Type': 'application/json'},
+            verify=False,
+            auth=self._auth,
+        )
+
+        r.raise_for_status()
+
+        rest_delay()
+
+    def _read(self):
 
         result = True
-        response = {}
-        request_url = self.artifactory + '/api/security/users/{x.name}'.format(x=self)
+        request_url = self._artifactory.drive + '/api/security/users/{x.name}'.format(x=self)
 
-        print('\tuser load [{x.name}]'.format(x=self))
-        print('\t\tcall artifactory api (user [{}]):\n\t\t{}:{}'.format(
-            self.auth[0] if self.auth else 'ANONYM',
+        logging.debug('\tuser _read [{x.name}]'.format(x=self))
+        logging.debug('\t\tcall artifactory api (user [{}]):\n\t\t{}:{}'.format(
+            self._auth[0] if self._auth else 'ANONYM',
             'GET',
             request_url,
         ))
@@ -82,7 +106,7 @@ class User(object):
             request_url,
             # headers={'Content-Type': 'application/json'},
             verify=False,
-            auth=self.auth,
+            auth=self._auth,
         )
 
         if 404 == r.status_code:
@@ -95,65 +119,53 @@ class User(object):
 
             response = r.json()
 
-            self.password = ''  # never returned
-            self.encryptedPassword = ''  # need extra request
+            # self.password = ''  # never returned
             self.name = response['name']
             self.email = response['email']
             self.admin = response['admin']
             self.profileUpdatable = response['profileUpdatable']
             self.internalPasswordDisabled = response['internalPasswordDisabled']
-            self.groups = response['groups'] if 'groups' in response else '[]'
-            self.lastLoggedIn = response['lastLoggedIn'] if 'lastLoggedIn' in response else '[]'
-            self.realm = response['realm'] if 'realm' in response else '[]'
+            self.groups = response['groups'] if 'groups' in response else []
+            self._lastLoggedIn = response['lastLoggedIn'] if 'lastLoggedIn' in response else '[]'
+            self._realm = response['realm'] if 'realm' in response else '[]'
 
         return result
 
-    def create(self):
+    def update(self):
+        self.create()
 
-        print('\tuser create local [{x.name}]'.format(x=self))
+    def delete(self):
 
-        data_json = '''{{
-            "name":                    "{x.name}",
-            "email":                   "{x.email}",
-            "password":                "{x.password}",
-            "admin":                    {x.admin},
-            "profileUpdatable":         {x.profileUpdatable},
-            "internalPasswordDisabled": {x.internalPasswordDisabled},
-            "groups":                   {x.groups}
-        }}'''.format(x=self)
+        logging.debug('\tremove user [{x.name}]'.format(x=self))
 
-        data_json = data_json.replace('True', 'true')
-        data_json = data_json.replace('False', 'false')
+        request_url = self._artifactory.drive + '/api/security/users/{x.name}'.format(x=self)
 
-        request_url = self.artifactory + '/api/security/users/{x.name}'.format(x=self)
-
-        print('\t\tcall artifactory api (user [{}]):\n\t\t{}:{}'.format(
-            self.auth[0] if self.auth else 'ANONYM',
-            'PUT',
+        logging.debug('\t\tcall artifactory api (user [{}]):\n\t\t{}:{}'.format(
+            self._auth[0] if self._auth else 'ANONYM',
+            'DELETE',
             request_url,
         ))
 
-        r = requests.put(
+        r = requests.delete(
             request_url,
-            data=data_json,
-            headers={'Content-Type': 'application/json'},
             verify=False,
-            auth=self.auth,
+            auth=self._auth,
         )
 
         r.raise_for_status()
 
         rest_delay()
 
-        self.getEncryptedPassword()
+    @property
+    def encryptedPassword(self):
+        if self.password is None:
+            raise ArtifactoryException('Please, set [self.password] before query encryptedPassword')
 
-    def getEncryptedPassword(self):
+        logging.debug('\tuser get encrypted password [{x.name}]'.format(x=self))
 
-        print('\tuser get encrypted password [{x.name}]'.format(x=self))
+        request_url = self._artifactory.drive + '/api/security/encryptedPassword'
 
-        request_url = self.artifactory + '/api/security/encryptedPassword'
-
-        print('\t\tcall artifactory api (user [{}]):\n\t\t{}:{}'.format(
+        logging.debug('\t\tcall artifactory api (user [{}]):\n\t\t{}:{}'.format(
             self.name,
             'GET',
             request_url,
@@ -161,16 +173,21 @@ class User(object):
 
         r = requests.get(
             request_url,
-            # headers={'Content-Type': 'application/json'},
             verify=False,
             auth=(self.name, self.password),
         )
 
         r.raise_for_status()
+        encryptedPassword = r.text
+        return encryptedPassword
 
-        self.encryptedPassword = r.text
+    @property
+    def lastLoggedIn(self):
+        return self._lastLoggedIn
 
-        return self.encryptedPassword
+    @property
+    def realm(self):
+        return self._realm
 
 
 class Repo:

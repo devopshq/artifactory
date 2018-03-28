@@ -36,6 +36,8 @@ from itertools import islice
 import dateutil.parser
 import requests
 
+from dohq_artifactory.admin import User
+
 try:
     import requests.packages.urllib3 as urllib3
 except ImportError:
@@ -1335,6 +1337,14 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         parts = self.parts
         path_in_repo = '/' + '/'.join(parts[1:])
         return path_in_repo
+
+    def find_user(self, name):
+        user = User(self, name, email='', password=None)
+        user.name = name
+        if user._read():
+            return user
+        else:
+            return None
 
 
 def walk(pathobj, topdown=True):
