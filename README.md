@@ -13,6 +13,14 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
     - [Artifact properties](#artifact-properties)
     - [Artifactory Query Language](#artifactory-query-language)
     - [FileStat](#filestat)
+- [Admin area](#admin-area)
+    - [User](#user)
+    - [Group](#group)
+        - [ Internal](#internal)
+        - [ GroupLDAP](#groupldap)
+    - [RepositoryLocal](#repositorylocal)
+    - [PermissionTarget](#permissiontarget)
+    - [Common](#common)
 - [Advanced](#advanced)
     - [Authentication](#authentication)
     - [Session](#session)
@@ -167,6 +175,144 @@ print(stat.is_dir)
 print(stat.size)
 ```
 
+# Admin area
+You can manipulate with user\group\repository and permission. First, create `ArtifactoryPath` object without repository
+```python
+from artifactory import ArtifactoryPath
+artifactory_ = ArtifactoryPath('https://artifactory.example.com/artifactory', auth=('user', 'password'))
+```
+
+You can see detailed use `AdminObject` in file `.\tests\integration\test_admin.py`
+## User
+```python
+# Find
+from dohq_artifactory import gen_password, User
+user = artifactory_.find_user('username')
+
+# Create
+if user is None:
+    # User does not exist
+    user = User(artifactory_, 'username', 'username@example.com', password=gen_password())
+    user.create()
+
+# Add to group
+user.add_to_group('byname')
+
+group = artifactory_.find_group('groupname')
+user.add_to_group(group)
+user.update() # Don't forget update :)
+
+enc_pwd = user.encryptedPassword
+
+# You can re-read from Artifactory
+user.read()
+
+user.delete()
+```
+
+## Group
+### Internal
+
+```python
+# Find
+from dohq_artifactory import gen_password, Group
+group = artifactory_.find_group('groupname')
+
+# Create
+if group is None:
+    group = Group(artifactory_, 'groupname')
+    group.create()
+
+# You can re-read from Artifactory
+group.read()
+
+group.delete()
+```
+
+### GroupLDAP
+https://www.jfrog.com/confluence/display/RTF/LDAP+Groups#LDAPGroups-UsingtheRESTAPI
+
+```python
+# Full DN path in artifactory
+dn = "cn=R.DevOps.TestArtifactory,ou=Groups,dc=example,dc=com"
+attr = "ldapGroupName=r.devops.testartifactory;groupsStrategy=STATIC;groupDn={}".format(dn)
+test_group = GroupLDAP(artifactory=artifactory_, name='r.devops.testartifactory', realmAttributes=attr)
+test_group.create()
+```
+
+## RepositoryLocal
+`RepositoryLocal` have package types:
+```python
+# Find
+from dohq_artifactory import gen_password, RepositoryLocal
+repo = artifactory_.find_repository_local('reponame')
+
+# Create
+if repo is None:
+    # or RepositoryLocal.PYPI, RepositoryLocal.NUGET, etc
+    repo = RepositoryLocal(artifactory_, 'reponame',packageType=RepositoryLocal.DEBIAN)
+    repo.create()
+
+# You can re-read from Artifactory
+repo.read()
+
+repo.delete()
+```
+
+## PermissionTarget
+Docs: https://www.jfrog.com/confluence/display/RTF/Managing+Permissions
+Supported this role:
+- PermissionTarget.ROLE_ADMIN = `ADMIN + DELETE + DEPLOY + ANNOTATE + READ`
+- PermissionTarget.ROLE_DELETE = `DELETE + DEPLOY + ANNOTATE + READ`
+- PermissionTarget.ROLE_DEPLOY = `DEPLOY + ANNOTATE + READ`
+- PermissionTarget.ROLE_ANNOTATE = `ANNOTATE + READ`
+- PermissionTarget.ROLE_READ = `READ`
+
+And right:
+- `PermissionTarget.ADMIN` - Allows changing the permission settings for other users on this permission target
+- `PermissionTarget.DELETE` - Allows deletion or overwriting of artifacts
+- `PermissionTarget.DEPLOY` - Allows deploying artifacts and deploying to caches (i.e. populating caches with remote artifacts)
+- `PermissionTarget.ANNOTATE` - Allows annotating artifacts and folders with metadata and properties
+- `PermissionTarget.READ` - Allows reading and downloading of artifacts
+
+```python
+from dohq_artifactory import PermissionTarget
+permission = artifactory_.find_permission_target('rule')
+
+# Add repo as string or RepositoryLocal object
+permission.add_repository('repo1', 'repo2')
+
+# Add group or user with permission
+permission.add_user(user_object, PermissionTarget.ROLE_ADMIN)
+permission.add_group('groupname, PermissionTarget.ROLE_READ)
+
+permission.update() # Update!!
+
+```
+
+## Common
+All `AdminObject*`  support:
+```python
+artifactory_.find_user('username')
+print(user.raw) # JSON response from Artifactory
+
+new_repo = RepositoryLocal(artifactory, 'reponame')
+# If some key you can't find in object, you can use this:
+new_repo.additional_params['property_sets'] = ['my', 'properties_sets']
+new_repo.create()
+
+# All object support CRUD operations:
+obj.create()
+obj.read()
+obj.update()
+obj.delete()
+
+# ArtifactoryPath have different find_ method:
+artifactory_.find_user('name')
+artifactory_.find_group('name')
+artifactory_.find_repository_local('name')
+artifactory_.find_permission_target('name')
+```
 
 # Advanced
 

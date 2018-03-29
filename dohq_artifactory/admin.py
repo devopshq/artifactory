@@ -36,7 +36,7 @@ def gen_password(pw_len=16):
     return result
 
 
-class ArtifactoryObjectCR_D(object):
+class AdminObject(object):
     _uri = None
 
     def __init__(self, artifactory):
@@ -92,6 +92,10 @@ class ArtifactoryObjectCR_D(object):
             self._read_response(response)
             return True
 
+    def update(self):
+        logging.debug('Create {x.__class__.__name__} [{x.name}]'.format(x=self))
+        self._create_and_update()
+
     def delete(self):
         logging.debug('Remove {x.__class__.__name__} [{x.name}]'.format(x=self))
         request_url = self._artifactory.drive + '/api/{uri}/{x.name}'.format(uri=self._uri, x=self)
@@ -104,13 +108,7 @@ class ArtifactoryObjectCR_D(object):
         rest_delay()
 
 
-class ArtifactoryObjectCRUD(ArtifactoryObjectCR_D):
-    def update(self):
-        logging.debug('Create {x.__class__.__name__} [{x.name}]'.format(x=self))
-        self._create_and_update()
-
-
-class User(ArtifactoryObjectCRUD):
+class User(AdminObject):
     _uri = 'security/users'
 
     def __init__(self, artifactory, name, email, password):
@@ -185,13 +183,12 @@ class User(ArtifactoryObjectCRUD):
     def realm(self):
         return self._realm
 
-
     @property
     def groups(self):
         return [self._artifactory.find_group(x) for x in self._groups]
 
 
-class Group(ArtifactoryObjectCRUD):
+class Group(AdminObject):
     _uri = 'security/groups'
 
     def __init__(self, artifactory, name):
@@ -246,7 +243,7 @@ class GroupLDAP(Group):
         return data_json
 
 
-class Repository(ArtifactoryObjectCR_D):
+class Repository(AdminObject):
     # List packageType from wiki:
     # https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON#RepositoryConfigurationJSON-application/vnd.org.jfrog.artifactory.repositories.LocalRepositoryConfiguration+json
     MAVEN = "maven"
@@ -318,7 +315,7 @@ class RepositoryLocal(Repository):
         self.archiveBrowsingEnabled = response['archiveBrowsingEnabled']
 
 
-class PermissionTarget(ArtifactoryObjectCRUD):
+class PermissionTarget(AdminObject):
     _uri = 'security/permissions'
 
     # Docs: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
@@ -381,7 +378,7 @@ class PermissionTarget(ArtifactoryObjectCRUD):
         if isinstance(permissions, str):
             permissions = [permissions]
         permissions = list(set(permissions))
-        if isinstance(name, ArtifactoryObjectCR_D):
+        if isinstance(name, AdminObject):
             name = name.name
         principals[name] = permissions
 
