@@ -241,7 +241,6 @@ test_group.create()
 ```
 
 ## RepositoryLocal
-`RepositoryLocal` have package types:
 ```python
 # Find
 from dohq_artifactory import gen_password, RepositoryLocal
@@ -261,6 +260,7 @@ repo.delete()
 
 ## PermissionTarget
 Docs: https://www.jfrog.com/confluence/display/RTF/Managing+Permissions
+
 Supported this role:
 - PermissionTarget.ROLE_ADMIN = `ADMIN + DELETE + DEPLOY + ANNOTATE + READ`
 - PermissionTarget.ROLE_DELETE = `DELETE + DEPLOY + ANNOTATE + READ`
@@ -291,7 +291,7 @@ permission.update() # Update!!
 ```
 
 ## Common
-All `AdminObject*`  support:
+All `AdminObject`  support:
 ```python
 artifactory_.find_user('username')
 print(user.raw) # JSON response from Artifactory
