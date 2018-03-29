@@ -218,6 +218,8 @@ class Group(ArtifactoryObjectCRUD):
 
 class GroupLDAP(Group):
     def __init__(self, artifactory, name, realmAttributes):
+        # Must be lower case: https://www.jfrog.com/confluence/display/RTF/LDAP+Groups#LDAPGroups-UsingtheRESTAPI
+        name = name.lower()
         super(GroupLDAP, self).__init__(artifactory, name)
         self.realm = 'ldap'
         self.realmAttributes = realmAttributes
@@ -229,7 +231,9 @@ class GroupLDAP(Group):
         data_json = super(GroupLDAP, self)._create_json()
         data_json.update({
             'realmAttributes': self.realmAttributes,
+            'external': True,
         })
+        return data_json
 
 
 class Repository(ArtifactoryObjectCR_D):
