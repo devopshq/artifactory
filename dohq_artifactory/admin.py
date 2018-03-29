@@ -68,12 +68,12 @@ class ArtifactoryObjectCR_D(object):
         )
         r.raise_for_status()
         rest_delay()
-        self._read()
+        self.read()
 
     def _read_response(self, response):
         raise NotImplementedError()
 
-    def _read(self):
+    def read(self):
         logging.debug('Read {x.__class__.__name__} [{x.name}]'.format(x=self))
         request_url = self._artifactory.drive + '/api/{uri}/{x.name}'.format(uri=self._uri, x=self)
         r = self._session.get(
@@ -123,7 +123,7 @@ class User(ArtifactoryObjectCRUD):
         self.admin = False
         self.profileUpdatable = True
         self.internalPasswordDisabled = False
-        self.groups = []
+        self._groups = []
 
         self._lastLoggedIn = None
         self._realm = None
@@ -139,7 +139,7 @@ class User(ArtifactoryObjectCRUD):
             'admin': self.admin,
             "profileUpdatable": self.profileUpdatable,
             "internalPasswordDisabled": self.internalPasswordDisabled,
-            "groups": self.groups,
+            "groups": self._groups,
         }
         return data_json
 
@@ -153,9 +153,14 @@ class User(ArtifactoryObjectCRUD):
         self.admin = response['admin']
         self.profileUpdatable = response['profileUpdatable']
         self.internalPasswordDisabled = response['internalPasswordDisabled']
-        self.groups = response['groups'] if 'groups' in response else []
-        self._lastLoggedIn = response['lastLoggedIn'] if 'lastLoggedIn' in response else '[]'
-        self._realm = response['realm'] if 'realm' in response else '[]'
+        self._groups = response['groups'] if 'groups' in response else []
+        self._lastLoggedIn = response['lastLoggedIn'] if 'lastLoggedIn' in response else []
+        self._realm = response['realm'] if 'realm' in response else []
+
+    def add_to_group(self, group):
+        if isinstance(group, Group):
+            group = group.name
+        self._groups.append(group)
 
     @property
     def encryptedPassword(self):
@@ -179,6 +184,11 @@ class User(ArtifactoryObjectCRUD):
     @property
     def realm(self):
         return self._realm
+
+
+    @property
+    def groups(self):
+        return [self._artifactory.find_group(x) for x in self._groups]
 
 
 class Group(ArtifactoryObjectCRUD):

@@ -1340,28 +1340,28 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     def find_user(self, name):
         obj = User(self, name, email='', password=None)
-        if obj._read():
+        if obj.read():
             return obj
         else:
             return None
 
     def find_group(self, name):
         obj = Group(self, name)
-        if obj._read():
+        if obj.read():
             return obj
         else:
             return None
 
     def find_repository_local(self, name):
         obj = RepositoryLocal(self, name, packageType=None)
-        if obj._read():
+        if obj.read():
             return obj
         else:
             return None
 
     def find_permission_target(self, name):
         obj = PermissionTarget(self, name)
-        if obj._read():
+        if obj.read():
             return obj
         else:
             return None

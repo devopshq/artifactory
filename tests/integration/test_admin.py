@@ -50,6 +50,11 @@ class TestUser:
         test_user.delete()
         assert artifactory.find_user(user_name) is None
 
+    def test_add_to_group(self, group1: Group, user1: User):
+        user1.add_to_group(group1)
+        user1.update()
+        assert 'group1' in user1.raw['groups']
+
 
 class TestGroup:
     def test_create_delete(self, artifactory):
