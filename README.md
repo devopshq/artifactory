@@ -11,8 +11,8 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
     - [Downloading Artifacts](#downloading-artifacts)
     - [Uploading Artifacts](#uploading-artifacts)
     - [Artifact properties](#artifact-properties)
-    - [Artifactory Query Language](./docs/AQL.md)
-    - [FileStat](./docs/FileStat.md)
+    - [Artifactory Query Language](#artifactory-query-language)
+    - [FileStat](#filestat)
 - [Advanced](#advanced)
     - [Authentication](#authentication)
     - [Session](#session)
@@ -106,11 +106,67 @@ properties.pop('release')
 path.properties = properties
 ```
 
-## Artifactory Query Language ##
-You can use [Artifactory Query Language](https://www.jfrog.com/confluence/display/RTF/Artifactory+Query+Language) in python. [Read more in this page](./docs/AQL.md)
+## Artifactory Query Language
+You can use [Artifactory Query Language](https://www.jfrog.com/confluence/display/RTF/Artifactory+Query+Language) in python.
+
+```python
+from artifactory import ArtifactoryPath
+aql = ArtifactoryPath( "http://my-artifactory/artifactory") # path to artifactory, NO repo
+
+# dict support
+# Send query:
+# items.find({"repo": "myrepo"})
+artifacts = aql.aql("items.find", {"repo": "myrepo"})
+
+# list support.
+# Send query:
+# items.find().include("name", "repo")
+artifacts = aql.aql("items.find()", ".include", ["name", "repo"])
+
+#  support complex query
+# items.find({"$and": [{"repo": {"$eq": "repo"}}, {"$or": [{"path": {"$match": "*path1"}}, {"path": {"$match": "*path2"}}]}]})
+args = ["items.find", {"$and": [
+    {
+        "repo": {"$eq": "repo"}
+    },
+    {
+        "$or": [
+            {"path": {"$match": "*path1"}},
+            {"path": {"$match": "*path2"}},
+        ]
+    },
+]
+}]
+
+# artifacts_list contains raw data (list of dict)
+# Send query:
+# items.find({"$and": [{"repo": {"$eq": "repo"}}, {"$or": [{"path": {"$match": "*path1"}}, {"path": {"$match": "*path2"}}]}]})
+artifacts_list = aql.aql(*args)
+
+# You can convert to pathlib object:
+artifact_pathlib = map(aql.from_aql, artifacts_list)
+artifact_pathlib_list = list(map(aql.from_aql, artifacts_list))
+```
+
 
 ## FileStat
-You can get hash (`md5`, `sha1`), create and change date, use [FileStat](./docs/FileStat.md)
+You can get hash (`md5`, `sha1`), create and change date:
+
+```python
+from artifactory import ArtifactoryPath
+path = ArtifactoryPath(
+    "http://repo.jfrog.org/artifactory/distributions/org/apache/tomcat/apache-tomcat-7.0.11.tar.gz")
+
+# Get FileStat
+stat = ArtifactoryPath.stat(path)
+print(stat)
+print(stat.md5)
+print(stat.sha1)
+print(stat.ctime)
+print(stat.is_dir)
+print(stat.size)
+```
+
 
 # Advanced
 
