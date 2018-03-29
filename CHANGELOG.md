@@ -1,3 +1,6 @@
+## April, 2018
+- Add Admin Area object - you can add\update\read\delete user, group, repository, permission
+
 ## Feb 22, 2018
 - Add `repo` and `path_in_repo` properties
 - Add docs about `stat()`
