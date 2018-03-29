@@ -12,7 +12,6 @@ else:
 
 config_path = os.path.join(os.path.dirname(__file__), 'test.cfg')
 config = configparser.ConfigParser()
-
 config.read(config_path)
 
 art_uri = config.get("artifactory", "uri")

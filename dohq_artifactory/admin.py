@@ -66,8 +66,27 @@ class ArtifactoryObject(object):
         rest_delay()
         self._read()
 
-    def _read(self):
+    def _read_response(self, response):
         raise NotImplementedError()
+
+    def _read(self):
+        logging.debug('Read {x.__class__.__name__} [{x.name}]'.format(x=self))
+        request_url = self._artifactory.drive + '/api/{uri}/{x.name}'.format(uri=self._uri, x=self)
+        r = self._session.get(
+            request_url,
+            verify=False,
+            auth=self._auth,
+        )
+        if 404 == r.status_code or 400 == r.status_code:
+            logging.debug('{x.__class__.__name__} [{x.name}] does not exist'.format(x=self))
+            return False
+        else:
+            logging.debug('{x.__class__.__name__} [{x.name}] exist'.format(x=self))
+            r.raise_for_status()
+            response = r.json()
+            self.raw = response
+            self._read_response(response)
+            return True
 
     def delete(self):
         logging.debug('Remove {x.__class__.__name__} [{x.name}]'.format(x=self))
@@ -111,41 +130,16 @@ class User(ArtifactoryObject):
         }
         return data_json
 
-    def _read(self):
-        result = True
-        request_url = self._artifactory.drive + '/api/security/users/{x.name}'.format(x=self)
-
-        logging.debug('user _read [{x.name}]'.format(x=self))
-
-        r = self._session.get(
-            request_url,
-            verify=False,
-            auth=self._auth,
-        )
-
-        if 404 == r.status_code:
-
-            result = False
-
-        else:
-
-            r.raise_for_status()
-
-            # def _read_response(self, response):
-            response = r.json()
-            self.raw = response
-
-            # self.password = ''  # never returned
-            self.name = response['name']
-            self.email = response['email']
-            self.admin = response['admin']
-            self.profileUpdatable = response['profileUpdatable']
-            self.internalPasswordDisabled = response['internalPasswordDisabled']
-            self.groups = response['groups'] if 'groups' in response else []
-            self._lastLoggedIn = response['lastLoggedIn'] if 'lastLoggedIn' in response else '[]'
-            self._realm = response['realm'] if 'realm' in response else '[]'
-
-        return result
+    def _read_response(self, response):
+        # self.password = ''  # never returned
+        self.name = response['name']
+        self.email = response['email']
+        self.admin = response['admin']
+        self.profileUpdatable = response['profileUpdatable']
+        self.internalPasswordDisabled = response['internalPasswordDisabled']
+        self.groups = response['groups'] if 'groups' in response else []
+        self._lastLoggedIn = response['lastLoggedIn'] if 'lastLoggedIn' in response else '[]'
+        self._realm = response['realm'] if 'realm' in response else '[]'
 
     def update(self):
         self.create()
@@ -154,17 +148,13 @@ class User(ArtifactoryObject):
     def encryptedPassword(self):
         if self.password is None:
             raise ArtifactoryException('Please, set [self.password] before query encryptedPassword')
-
-        logging.debug('user get encrypted password [{x.name}]'.format(x=self))
-
+        logging.debug('User get encrypted password [{x.name}]'.format(x=self))
         request_url = self._artifactory.drive + '/api/security/encryptedPassword'
-
         r = self._session.get(
             request_url,
             verify=False,
             auth=(self.name, self.password),
         )
-
         r.raise_for_status()
         encryptedPassword = r.text
         return encryptedPassword
@@ -198,38 +188,12 @@ class Group(ArtifactoryObject):
         }
         return data_json
 
-    def _read(self):
-
-        result = True
-        request_url = self._artifactory.drive + '/api/security/groups/{x.name}'.format(x=self)
-
-        logging.debug('user group _read [{x.name}]'.format(x=self))
-
-        r = self._session.get(
-            request_url,
-            # headers={'Content-Type': 'application/json'},
-            verify=False,
-            auth=self._auth,
-        )
-
-        if 404 == r.status_code:
-
-            result = False
-
-        else:
-
-            r.raise_for_status()
-
-            response = r.json()
-            self.raw = response
-
-            self.name = response['name']
-            self.description = response['description']
-            self.autoJoin = response['autoJoin']
-            self.realm = response['realm']
-            self.realmAttributes = response.get('realmAttributes', None)
-
-        return result
+    def _read_response(self, response):
+        self.name = response['name']
+        self.description = response['description']
+        self.autoJoin = response['autoJoin']
+        self.realm = response['realm']
+        self.realmAttributes = response.get('realmAttributes', None)
 
     def update(self):
         self.create()
@@ -296,38 +260,11 @@ class RepositoryLocal(Repository):
         }
         return data_json
 
-    def _read(self):
-
-        request_url = self._artifactory.drive + '/api/repositories/{x.name}'.format(x=self)
-
-        logging.debug('repositories read [{x.name}]'.format(x=self))
-
-        r = self._session.get(
-            request_url,
-            headers={'Content-Type': 'application/json'},
-            verify=False,
-            auth=self._auth,
-        )
-
-        if 404 == r.status_code or 400 == r.status_code:
-
-            result = False
-
-        else:
-
-            result = True
-
-            r.raise_for_status()
-
-            response = r.json()
-            self.raw = response
-
-            self.name = response['key']
-            self.description = response['description']
-            self.layoutName = response['repoLayoutRef']
-            self.archiveBrowsingEnabled = response['archiveBrowsingEnabled']
-
-        return result
+    def _read_response(self, response):
+        self.name = response['key']
+        self.description = response['description']
+        self.layoutName = response['repoLayoutRef']
+        self.archiveBrowsingEnabled = response['archiveBrowsingEnabled']
 
 
 class PermissionTarget(ArtifactoryObject):
@@ -354,43 +291,13 @@ class PermissionTarget(ArtifactoryObject):
         }
         return data_json
 
-    def _read(self):
-
-        result = True
-        request_url = self._artifactory.drive + '/api/security/permissions/{x.name}'.format(x=self)
-
-        logging.debug('user _read [{x.name}]'.format(x=self))
-
-        r = self._session.get(
-            request_url,
-            headers={'Content-Type': 'application/json'},
-            verify=False,
-            auth=self._auth,
-        )
-
-        if 404 == r.status_code:
-
-            result = False
-
-        else:
-
-            r.raise_for_status()
-
-            response = r.json()
-
-            self.name = response['name']
-            self.includesPattern = response['includesPattern']
-            self.excludesPattern = response['excludesPattern']
-
-            if 'repositories' in response:
-                self.repositories = response['repositories']
-
-            if 'principals' in response:
-
-                if 'users' in response['principals']:
-                    self.principals['users'] = response['principals']['users']
-
-                if 'groups' in response['principals']:
-                    self.principals['groups'] = response['principals']['groups']
-
-        return result
+    def _read_response(self, response):
+        self.name = response['name']
+        self.includesPattern = response['includesPattern']
+        self.excludesPattern = response['excludesPattern']
+        self.repositories = response.get('repositories', [])
+        if 'principals' in response:
+            if 'users' in response['principals']:
+                self.principals['users'] = response['principals']['users']
+            if 'groups' in response['principals']:
+                self.principals['groups'] = response['principals']['groups']
