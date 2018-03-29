@@ -190,8 +190,8 @@ class Group(ArtifactoryObjectCRUD):
         self.name = name
         self.description = ''
         self.autoJoin = False
-        self.realm = ''
-        self.realmAttributes = ''
+        self.realm = 'artifactory'
+        self.realmAttributes = None
 
     def _create_json(self):
         """
@@ -201,6 +201,7 @@ class Group(ArtifactoryObjectCRUD):
             "name": self.name,
             "description": self.description,
             "autoJoin": self.autoJoin,
+            "realm": self.realm,
         }
         return data_json
 
@@ -213,6 +214,22 @@ class Group(ArtifactoryObjectCRUD):
         self.autoJoin = response['autoJoin']
         self.realm = response['realm']
         self.realmAttributes = response.get('realmAttributes', None)
+
+
+class GroupLDAP(Group):
+    def __init__(self, artifactory, name, realmAttributes):
+        super(GroupLDAP, self).__init__(artifactory, name)
+        self.realm = 'ldap'
+        self.realmAttributes = realmAttributes
+
+    def _create_json(self):
+        """
+        JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
+        """
+        data_json = super(GroupLDAP, self)._create_json()
+        data_json.update({
+            'realmAttributes': self.realmAttributes,
+        })
 
 
 class Repository(ArtifactoryObjectCR_D):
