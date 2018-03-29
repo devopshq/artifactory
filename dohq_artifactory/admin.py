@@ -9,7 +9,7 @@ def rest_delay():
     time.sleep(0.5)
 
 
-def gen_passwd(pw_len=16):
+def gen_password(pw_len=16):
     alphabet_lower = 'abcdefghijklmnopqrstuvwxyz'
     alphabet_upper = alphabet_lower.upper()
     alphabet_len = len(alphabet_lower)
@@ -36,12 +36,13 @@ def gen_passwd(pw_len=16):
     return result
 
 
-class ArtifactoryObject(object):
+class ArtifactoryObjectCR_D(object):
     _uri = None
 
     def __init__(self, artifactory):
         self.additional_params = {}
         self.raw = None
+        self.name = None
 
         self._artifactory = artifactory
         self._auth = self._artifactory.auth
@@ -51,7 +52,10 @@ class ArtifactoryObject(object):
         raise NotImplementedError()
 
     def create(self):
-        logging.debug('Create (or update) {x.__class__.__name__} [{x.name}]'.format(x=self))
+        logging.debug('Create {x.__class__.__name__} [{x.name}]'.format(x=self))
+        self._create_and_update()
+
+    def _create_and_update(self):
         data_json = self._create_json()
         data_json.update(self.additional_params)
         request_url = self._artifactory.drive + '/api/{uri}/{x.name}'.format(uri=self._uri, x=self)
@@ -100,7 +104,13 @@ class ArtifactoryObject(object):
         rest_delay()
 
 
-class User(ArtifactoryObject):
+class ArtifactoryObjectCRUD(ArtifactoryObjectCR_D):
+    def update(self):
+        logging.debug('Create {x.__class__.__name__} [{x.name}]'.format(x=self))
+        self._create_and_update()
+
+
+class User(ArtifactoryObjectCRUD):
     _uri = 'security/users'
 
     def __init__(self, artifactory, name, email, password):
@@ -119,6 +129,9 @@ class User(ArtifactoryObject):
         self._realm = None
 
     def _create_json(self):
+        """
+        JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
+        """
         data_json = {
             'name': self.name,
             'email': self.email,
@@ -131,6 +144,9 @@ class User(ArtifactoryObject):
         return data_json
 
     def _read_response(self, response):
+        """
+        JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
+        """
         # self.password = ''  # never returned
         self.name = response['name']
         self.email = response['email']
@@ -140,9 +156,6 @@ class User(ArtifactoryObject):
         self.groups = response['groups'] if 'groups' in response else []
         self._lastLoggedIn = response['lastLoggedIn'] if 'lastLoggedIn' in response else '[]'
         self._realm = response['realm'] if 'realm' in response else '[]'
-
-    def update(self):
-        self.create()
 
     @property
     def encryptedPassword(self):
@@ -168,7 +181,7 @@ class User(ArtifactoryObject):
         return self._realm
 
 
-class Group(ArtifactoryObject):
+class Group(ArtifactoryObjectCRUD):
     _uri = 'security/groups'
 
     def __init__(self, artifactory, name):
@@ -181,6 +194,9 @@ class Group(ArtifactoryObject):
         self.realmAttributes = ''
 
     def _create_json(self):
+        """
+        JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
+        """
         data_json = {
             "name": self.name,
             "description": self.description,
@@ -189,17 +205,17 @@ class Group(ArtifactoryObject):
         return data_json
 
     def _read_response(self, response):
+        """
+        JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
+        """
         self.name = response['name']
         self.description = response['description']
         self.autoJoin = response['autoJoin']
         self.realm = response['realm']
         self.realmAttributes = response.get('realmAttributes', None)
 
-    def update(self):
-        self.create()
 
-
-class Repository(ArtifactoryObject):
+class Repository(ArtifactoryObjectCR_D):
     # List packageType from wiki:
     # https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON#RepositoryConfigurationJSON-application/vnd.org.jfrog.artifactory.repositories.LocalRepositoryConfiguration+json
     MAVEN = "maven"
@@ -235,8 +251,9 @@ class RepositoryLocal(Repository):
         self.archiveBrowsingEnabled = True
 
     def _create_json(self):
-        # Original JSON, add more property if you need
-        # https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
+        """
+        JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
+        """
         data_json = {
             "rclass": "local",
             "key": self.name,
@@ -261,43 +278,88 @@ class RepositoryLocal(Repository):
         return data_json
 
     def _read_response(self, response):
+        """
+        JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
+        """
         self.name = response['key']
         self.description = response['description']
         self.layoutName = response['repoLayoutRef']
         self.archiveBrowsingEnabled = response['archiveBrowsingEnabled']
 
 
-class PermissionTarget(ArtifactoryObject):
+class PermissionTarget(ArtifactoryObjectCRUD):
     _uri = 'security/permissions'
+
+    # Docs: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
+    ADMIN = 'm'
+    DELETE = 'd'
+    DEPLOY = 'w'
+    ANNOTATE = 'n'
+    READ = 'r'
+
+    ROLE_ADMIN = [ADMIN, DELETE, DEPLOY, ANNOTATE, READ]
+    ROLE_DELETE = [DELETE, DEPLOY, ANNOTATE, READ]
+    ROLE_DEPLOY = [DEPLOY, ANNOTATE, READ]
+    ROLE_ANNOTATE = [ANNOTATE, READ]
+    ROLE_READ = [READ]
 
     def __init__(self, artifactory, name):
         super(PermissionTarget, self).__init__(artifactory)
         self.name = name
         self.includesPattern = '**'
         self.excludesPattern = ''
-        self.repositories = []
-        self.principals = {
-            'users': {},
-            'groups': {},
-        }
+        self._repositories = []
+        self._users = {}
+        self._groups = {}
 
     def _create_json(self):
+        """
+        JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
+        """
         data_json = {
             "name": self.name,
             "includesPattern": self.includesPattern,
             "excludesPattern": self.excludesPattern,
-            "repositories": self.repositories,
-            "principals": self.principals
+            "repositories": self._repositories,
+            "principals": {
+                'users': self._users,
+                'groups': self._groups,
+            }
         }
         return data_json
 
     def _read_response(self, response):
+        """
+        JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
+        """
         self.name = response['name']
         self.includesPattern = response['includesPattern']
         self.excludesPattern = response['excludesPattern']
-        self.repositories = response.get('repositories', [])
+        self._repositories = response.get('repositories', [])
         if 'principals' in response:
             if 'users' in response['principals']:
-                self.principals['users'] = response['principals']['users']
+                self._users = response['principals']['users']
             if 'groups' in response['principals']:
-                self.principals['groups'] = response['principals']['groups']
+                self._groups = response['principals']['groups']
+
+    def add_repository(self, *args):
+        self._repositories.extend([x if isinstance(x, str) else x.name for x in args])
+
+    @staticmethod
+    def _add_principals(name, permissions, principals):
+        if isinstance(permissions, str):
+            permissions = [permissions]
+        permissions = list(set(permissions))
+        if isinstance(name, ArtifactoryObjectCR_D):
+            name = name.name
+        principals[name] = permissions
+
+    def add_user(self, name, permissions):
+        self._add_principals(name, permissions, self._users)
+
+    def add_group(self, name, permissions):
+        self._add_principals(name, permissions, self._groups)
+
+    @property
+    def repositories(self):
+        return [self._artifactory.find_repository_local(x) for x in self._repositories]
