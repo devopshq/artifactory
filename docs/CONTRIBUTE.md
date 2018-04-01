@@ -21,7 +21,7 @@ python -mpytest -munit
 ```
 
 ### Integration
-For integration test you need have local Artifactory instance, which is installed useing one of methods:
+For integration test you need have **TEST** local Artifactory instance, which is installed useing one of methods:
 1. https://github.com/JFrogDev/artifactory-user-plugins-devenv
 2. or https://www.jfrog.com/confluence/display/RTF/Installing+Artifactory
 

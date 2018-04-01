@@ -38,21 +38,34 @@ def pytest_collection_modifyitems(items):
 
 
 @pytest.fixture(scope='session')
-def artifactory():
+def art_uri():
     config_path = os.path.join(os.path.dirname(__file__), 'test.cfg')
     config = configparser.ConfigParser()
     config.read(config_path)
 
     uri = config.get("artifactory", "uri")
+    yield uri
+
+
+@pytest.fixture(scope='session')
+def art_auth():
+    config_path = os.path.join(os.path.dirname(__file__), 'test.cfg')
+    config = configparser.ConfigParser()
+    config.read(config_path)
+
     username = config.get("artifactory", "username")
     password = config.get("artifactory", "password")
     auth = (username, password)
-
-    artifactory = ArtifactoryPath(uri, auth=auth)
-    yield artifactory
+    yield auth
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope='session')
+def artifactory(art_uri, art_auth):
+    artifactory_ = ArtifactoryPath(art_uri, auth=art_auth)
+    yield artifactory_
+
+
+@pytest.fixture()
 def repo1(artifactory):
     name = 'repo1'
     repo_ = artifactory.find_repository_local(name)
@@ -64,9 +77,21 @@ def repo1(artifactory):
     repo_.delete()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def repo2(artifactory):
     name = 'repo2'
+    repo_ = artifactory.find_repository_local(name)
+    if repo_ is not None:
+        repo_.delete()
+    repo_ = RepositoryLocal(artifactory=artifactory, name=name)
+    repo_.create()
+    yield repo_
+    repo_.delete()
+
+
+@pytest.fixture(scope='session')
+def test_repo(artifactory):
+    name = 'to-delete'
     repo_ = artifactory.find_repository_local(name)
     if repo_ is not None:
         repo_.delete()

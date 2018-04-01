@@ -77,7 +77,7 @@ class TestGroup:
 
 class TestLocalRepositories:
     def test_create_delete(self, artifactory):
-        name = 'test_debian_repo'
+        name = 'test-debian-repo'
 
         # Remove if exist
         test_repo = artifactory.find_repository_local(name)
