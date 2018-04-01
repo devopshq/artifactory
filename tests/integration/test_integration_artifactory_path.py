@@ -16,7 +16,7 @@ else:
     import configparser
 
 
-config_path = os.path.join(os.path.dirname(__file__), 'test.cfg')
+config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'test.cfg')
 config = configparser.ConfigParser()
 config.read(config_path)
 

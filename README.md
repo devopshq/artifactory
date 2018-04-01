@@ -26,6 +26,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
     - [Session](#session)
     - [SSL Cert Verification Options](#ssl-cert-verification-options)
     - [Global Configuration File](#global-config-file)
+- [Contribute](#contribute)
 
 # Install #
 ```bash
@@ -409,3 +410,5 @@ cert = ~/mycert
 Whether or not you specify ```http://``` or ```https://``` prefix is not essential. The module will first try to locate the best match and then try to match URLs without prefixes. So if in the config you specify ```https://my-instance.local``` and call ```ArtifactoryPath``` with ```http://my-instance.local```, it will still do the right thing. 
 
 
+# Contribute
+[About contribute](docs/CONTRIBUTE.md)
