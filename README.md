@@ -10,6 +10,8 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
     - [Walking Directory Tree](#walking-directory-tree)
     - [Downloading Artifacts](#downloading-artifacts)
     - [Uploading Artifacts](#uploading-artifacts)
+    - [Copy Artifacts](#copy-artifacts)
+    - [Remove Artifacts](#remove-artifacts)
     - [Artifact properties](#artifact-properties)
     - [Artifactory Query Language](#artifactory-query-language)
     - [FileStat](#filestat)
@@ -93,6 +95,72 @@ path.deploy_deb('./myapp-1.0.deb',
                 distribution='trusty',
                 component='main',
                 architecture='amd64')
+```
+
+## Copy Artifacts ##
+Copy artifact from this path to destinaiton.
+If files are on the same instance of artifactory, lightweight (local)
+copying will be attempted.
+
+The suppress_layouts parameter, when set to True, will allow artifacts
+from one path to be copied directly into another path without enforcing
+repository layouts. The default behaviour is to copy to the repository
+root, but remap the [org], [module], [baseVer], etc. structure to the
+target repository.
+
+For example, if we have a builds repository using the default maven2
+repository where we publish our builds. We also have a published
+repository where a directory for production and a directory for
+staging environments should hold the current promoted builds. How do
+we copy the contents of a build over to the production folder?
+
+```python
+from artifactory import ArtifactoryPath
+source = ArtifactoryPath("http://example.com/artifactory/builds/product/product/1.0.0/")
+dest = ArtifactoryPath("http://example.com/artifactory/published/production/")
+
+"""
+Using copy with the default, suppress_layouts=False, the artifacts inside
+builds/product/product/1.0.0/ will not end up in the published/production
+path as we intended, but rather the entire structure product/product/1.0.0
+is placed in the destination repo.
+"""
+
+source.copy(dest)
+for p in dest:
+    print(p)
+# http://example.com/artifactory/published/production/foo-0.0.1.gz
+# http://example.com/artifactory/published/production/foo-0.0.1.pom
+
+for p in ArtifactoryPath("http://example.com/artifactory/published/product/product/1.0.0.tar"):
+    print p
+# http://example.com/artifactory/published/product/product/1.0.0/product-1.0.0.tar.gz
+# http://example.com/artifactory/published/product/product/1.0.0/product-1.0.0.tar.pom
+
+"""
+Using copy with suppress_layouts=True, the contents inside our source are copied
+directly inside our dest as we intended.
+"""
+
+source.copy(dest, suppress_layouts=True)
+for p in dest:
+    print(p)
+"""
+http://example.com/artifactory/published/production/foo-0.0.1.gz
+http://example.com/artifactory/published/production/foo-0.0.1.pom
+http://example.com/artifactory/published/production/product-1.0.0.tar.gz
+http://example.com/artifactory/published/production/product-1.0.0.tar.pom
+"""
+```
+
+## Remove Artifacts ##
+```python
+from artifactory import ArtifactoryPath
+path = ArtifactoryPath(
+    "http://repo.jfrog.org/artifactory/distributions/org/apache/tomcat/apache-tomcat-7.0.11.tar.gz")
+
+if path.exists():
+    path.unlink()
 ```
 
 ## Artifact properties ##
@@ -186,15 +254,21 @@ artifactory_ = ArtifactoryPath('https://artifactory.example.com/artifactory', au
 You can see detailed use `AdminObject` in file `.\tests\integration\test_admin.py`
 ## User
 ```python
-# Find
-from dohq_artifactory import gen_password, User
+# Find or create first way
+from dohq_artifactory import generate_password, User
 user = artifactory_.find_user('username')
-
-# Create
 if user is None:
     # User does not exist
-    user = User(artifactory_, 'username', 'username@example.com', password=gen_password())
+    user = User(artifactory_, 'username', 'username@example.com', password=generate_password())
     user.create()
+
+# Find or create - second way
+user = User(artifactory_, 'username')
+if not user.read(): # Return True if user exist
+    # User does not exist
+    user = User(artifactory_, 'username', 'username@example.com', password=generate_password())
+    user.create()
+
 
 # Add to group
 user.add_to_group('byname')
@@ -216,7 +290,7 @@ user.delete()
 
 ```python
 # Find
-from dohq_artifactory import gen_password, Group
+from dohq_artifactory import generate_password, Group
 group = artifactory_.find_group('groupname')
 
 # Create
@@ -244,7 +318,7 @@ test_group.create()
 ## RepositoryLocal
 ```python
 # Find
-from dohq_artifactory import gen_password, RepositoryLocal
+from dohq_artifactory import generate_password, RepositoryLocal
 repo = artifactory_.find_repository_local('reponame')
 
 # Create
@@ -303,8 +377,8 @@ new_repo.additional_params['property_sets'] = ['my', 'properties_sets']
 new_repo.create()
 
 # All object support CRUD operations:
+obj.read() # Return True if user exist (and read from Artifactory), else return False
 obj.create()
-obj.read()
 obj.update()
 obj.delete()
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import sys
 
@@ -89,17 +90,25 @@ def repo2(artifactory):
     repo_.delete()
 
 
-@pytest.fixture(scope='session')
-def test_repo(artifactory):
-    name = 'to-delete'
+@pytest.fixture()
+def integration_artifactory_path_repo(artifactory):
+    """
+    Create repo if not exist and remove all files from this repo
+    :param artifactory:
+    :return:
+    """
+    # Create repo if not exist
+    name = 'integration-artifactory-path-repo'
     repo_ = artifactory.find_repository_local(name)
-    if repo_ is not None:
-        repo_.delete()
-    repo_ = RepositoryLocal(artifactory=artifactory, name=name)
-    repo_.create()
-    yield repo_
-    repo_.delete()
+    if repo_ is None:
+        repo_ = RepositoryLocal(artifactory=artifactory, name=name)
+        repo_.create()
 
+    # Remove all file from repo
+    repo_path = ArtifactoryPath(str(artifactory) + "/" + name, auth=artifactory.auth)
+    for path_ in repo_path.glob('*'):
+        path_.unlink()
+    yield repo_
 
 @pytest.fixture()
 def permission(artifactory):

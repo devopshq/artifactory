@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import sys
 import tempfile
@@ -14,43 +15,43 @@ else:
 class TestArtifactoryPathTest:
     cls = artifactory.ArtifactoryPath
 
-    def test_root(self, test_repo, art_uri, art_auth):
+    def test_root(self, integration_artifactory_path_repo, art_uri, art_auth):
         P = self.cls
 
         assert P(art_uri + '/libs-release-local').root == '/libs-release-local/'
 
-    def test_isdir(self, test_repo, art_uri, art_auth):
+    def test_isdir(self, integration_artifactory_path_repo, art_uri, art_auth):
         P = self.cls
 
-        assert P(art_uri + '/to-delete').is_dir()
+        assert P(art_uri + '/integration-artifactory-path-repo').is_dir()
         assert not P(art_uri + '/non-existing-repo').is_dir()
 
-    def test_owner(self, test_repo, art_uri, art_auth):
+    def test_owner(self, integration_artifactory_path_repo, art_uri, art_auth):
         P = self.cls
 
-        assert P(art_uri + '/to-delete').owner() == 'nobody'
+        assert P(art_uri + '/integration-artifactory-path-repo').owner() == 'nobody'
 
-    def test_mkdir(self, test_repo, art_uri, art_auth):
+    def test_mkdir(self, integration_artifactory_path_repo, art_uri, art_auth):
         P = self.cls
 
-        p = P(art_uri + '/to-delete/foo', auth=art_auth)
+        p = P(art_uri + '/integration-artifactory-path-repo/foo', auth=art_auth)
 
         p.mkdir()
         assert p.is_dir()
         assert not p.is_file()
 
-        # TODO: Сделать pytest.raises
+        # TODO: fix it
         # self.assertRaises(OSError, p.mkdir)
 
         p.rmdir()
         assert not p.exists()
         assert not p.is_dir()
-        assert p.is_file()
+        assert not p.is_file()
 
-    def test_touch(self, test_repo, art_uri, art_auth):
+    def test_touch(self, integration_artifactory_path_repo, art_uri, art_auth):
         P = self.cls
 
-        p = P(art_uri + '/to-delete/foo', auth=art_auth)
+        p = P(art_uri + '/integration-artifactory-path-repo/foo', auth=art_auth)
 
         p.touch(exist_ok=False)
         p.touch()
@@ -58,16 +59,16 @@ class TestArtifactoryPathTest:
         assert p.is_file()
         assert p.exists()
 
-        # TODO: Сделать pytest.raises
+        # TODO: fix it
         # self.assertRaises(OSError, p.touch, exist_ok=False)
 
         p.unlink()
         assert not p.exists()
 
-    def test_iterdir(self, test_repo, art_uri, art_auth):
+    def test_iterdir(self, integration_artifactory_path_repo, art_uri, art_auth):
         P = self.cls
 
-        p = P(art_uri + '/to-delete/foo', auth=art_auth)
+        p = P(art_uri + '/integration-artifactory-path-repo/foo', auth=art_auth)
 
         p.mkdir()
 
@@ -86,12 +87,12 @@ class TestArtifactoryPathTest:
 
         p.rmdir()
 
-    def test_glob(self, test_repo, art_uri, art_auth):
+    def test_glob(self, integration_artifactory_path_repo, art_uri, art_auth):
 
         P = self.cls
 
-        p = P(art_uri + '/to-delete/foo', auth=art_auth)
-        p_root = P(art_uri + '/to-delete', auth=art_auth)
+        p = P(art_uri + '/integration-artifactory-path-repo/foo', auth=art_auth)
+        p_root = P(art_uri + '/integration-artifactory-path-repo', auth=art_auth)
 
         if p.exists():
             p.rmdir()
@@ -115,11 +116,11 @@ class TestArtifactoryPathTest:
 
         p.rmdir()
 
-    def test_deploy(self, test_repo, art_uri, art_auth):
+    def test_deploy(self, integration_artifactory_path_repo, art_uri, art_auth):
         P = self.cls
 
-        p = P(art_uri + '/to-delete/foo', auth=art_auth)
-        p2 = P(art_uri + '/to-delete/foo2', auth=art_auth)
+        p = P(art_uri + '/integration-artifactory-path-repo/foo', auth=art_auth)
+        p2 = P(art_uri + '/integration-artifactory-path-repo/foo2', auth=art_auth)
 
         if p.exists():
             p.unlink()
@@ -145,10 +146,10 @@ class TestArtifactoryPathTest:
         p.unlink()
         p2.unlink()
 
-    def test_deploy_file(self, test_repo, art_uri, art_auth):
+    def test_deploy_file(self, integration_artifactory_path_repo, art_uri, art_auth):
         P = self.cls
 
-        p = P(art_uri + '/to-delete/foo', auth=art_auth)
+        p = P(art_uri + '/integration-artifactory-path-repo/foo', auth=art_auth)
 
         if p.exists():
             p.unlink()
@@ -168,10 +169,10 @@ class TestArtifactoryPathTest:
 
         p.unlink()
 
-    def test_open(self, test_repo, art_uri, art_auth):
+    def test_open(self, integration_artifactory_path_repo, art_uri, art_auth):
         P = self.cls
 
-        p = P(art_uri + '/to-delete/foo', auth=art_auth)
+        p = P(art_uri + '/integration-artifactory-path-repo/foo', auth=art_auth)
 
         if p.exists():
             p.rmdir()
@@ -181,7 +182,7 @@ class TestArtifactoryPathTest:
 
         p.deploy(s)
 
-        # TODO: сделать тоже
+        # TODO: fix it
         # with self.assertRaises(NotImplementedError):
         #     p.open('w')
         #

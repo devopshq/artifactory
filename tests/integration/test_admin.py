@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from dohq_artifactory.admin import User, Group, RepositoryLocal, PermissionTarget
 
 

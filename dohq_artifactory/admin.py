@@ -9,7 +9,7 @@ def rest_delay():
     time.sleep(0.5)
 
 
-def gen_password(pw_len=16):
+def generate_password(pw_len=16):
     alphabet_lower = 'abcdefghijklmnopqrstuvwxyz'
     alphabet_upper = alphabet_lower.upper()
     alphabet_len = len(alphabet_lower)
@@ -49,13 +49,25 @@ class AdminObject(object):
         self._session = self._artifactory.session
 
     def _create_json(self):
+        """
+        Function prepare JSON which send for create or update event
+        :return: dict
+        """
         raise NotImplementedError()
 
     def create(self):
+        """
+        Create object
+        :return: None
+        """
         logging.debug('Create {x.__class__.__name__} [{x.name}]'.format(x=self))
         self._create_and_update()
 
     def _create_and_update(self):
+        """
+        Create or update request, re-read object from Artifactory
+        :return: None
+        """
         data_json = self._create_json()
         data_json.update(self.additional_params)
         request_url = self._artifactory.drive + '/api/{uri}/{x.name}'.format(uri=self._uri, x=self)
@@ -71,9 +83,20 @@ class AdminObject(object):
         self.read()
 
     def _read_response(self, response):
+        """
+        Read response (JSON) and fill object
+        :param response: JSON returned from Artifactory
+        :return: None
+        """
         raise NotImplementedError()
 
     def read(self):
+        """
+        Read object from artifactory. Fill object if exist
+        :return:
+        True if object exist,
+        False else
+        """
         logging.debug('Read {x.__class__.__name__} [{x.name}]'.format(x=self))
         request_url = self._artifactory.drive + '/api/{uri}/{x.name}'.format(uri=self._uri, x=self)
         r = self._session.get(
@@ -93,10 +116,18 @@ class AdminObject(object):
             return True
 
     def update(self):
+        """
+        Update object
+        :return: None
+        """
         logging.debug('Create {x.__class__.__name__} [{x.name}]'.format(x=self))
         self._create_and_update()
 
     def delete(self):
+        """
+        Remove object
+        :return: None
+        """
         logging.debug('Remove {x.__class__.__name__} [{x.name}]'.format(x=self))
         request_url = self._artifactory.drive + '/api/{uri}/{x.name}'.format(uri=self._uri, x=self)
         r = self._session.delete(
@@ -111,7 +142,7 @@ class AdminObject(object):
 class User(AdminObject):
     _uri = 'security/users'
 
-    def __init__(self, artifactory, name, email, password):
+    def __init__(self, artifactory, name, email=None, password=None):
         super(User, self).__init__(artifactory)
 
         self.name = name
@@ -224,7 +255,7 @@ class Group(AdminObject):
 
 
 class GroupLDAP(Group):
-    def __init__(self, artifactory, name, realmAttributes):
+    def __init__(self, artifactory, name, realmAttributes=None):
         # Must be lower case: https://www.jfrog.com/confluence/display/RTF/LDAP+Groups#LDAPGroups-UsingtheRESTAPI
         name = name.lower()
         super(GroupLDAP, self).__init__(artifactory, name)
