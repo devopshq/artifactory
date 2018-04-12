@@ -51,7 +51,8 @@ class TestUser:
         test_user.delete()
         assert artifactory.find_user(user_name) is None
 
-    def test_add_to_group(self, group1: Group, user1: User):
+    def test_add_to_group(self, group1, user1):
+        # type: (Group, User) -> None
         user1.add_to_group(group1)
         user1.update()
         assert 'group1' in user1.raw['groups']
@@ -116,7 +117,8 @@ class TestTargetPermission:
         test_permission.delete()
         assert artifactory.find_permission_target(name) is None
 
-    def test_add_repositories(self, permission: PermissionTarget, repo1: RepositoryLocal, repo2: RepositoryLocal):
+    def test_add_repositories(self, permission, repo1, repo2):
+        # type: (PermissionTarget, RepositoryLocal, RepositoryLocal) -> None
         permission.add_repository(repo1, repo2)
         permission.update()
         assert 'repo1' in permission.raw['repositories']
@@ -126,7 +128,8 @@ class TestTargetPermission:
 
         assert 'repo1' in [repositories[0].name, repositories[1].name]
 
-    def test_add_user_group(self, permission: PermissionTarget, user1: User, user2: User, group1: Group):
+    def test_add_user_group(self, permission, user1, user2, group1):
+        # type: (PermissionTarget, User, User, Group) -> None
         permission.add_user(user1, PermissionTarget.ROLE_DEPLOY)
         permission.update()
         assert 'user1' in permission.raw['principals']['users']
