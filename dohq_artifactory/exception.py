@@ -1,0 +1,2 @@
+class ArtifactoryException(Exception):
+    pass

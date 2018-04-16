@@ -36,6 +36,8 @@ from itertools import islice
 import dateutil.parser
 import requests
 
+from dohq_artifactory.admin import User, Group, RepositoryLocal, PermissionTarget
+
 try:
     import requests.packages.urllib3 as urllib3
 except ImportError:
@@ -600,8 +602,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         """
         stat = self.stat(pathobj)
 
-        if stat.is_dir:
-            raise OSError(1, "Operation not permitted: '%s'" % str(pathobj))
+        # TODO: Why do we forbid remove folder?
+        # if stat.is_dir:
+        #     raise OSError(1, "Operation not permitted: '%s'" % str(pathobj))
 
         url = str(pathobj)
         text, code = self.rest_del(url, session=pathobj.session, verify=pathobj.verify,
@@ -1335,6 +1338,34 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         parts = self.parts
         path_in_repo = '/' + '/'.join(parts[1:])
         return path_in_repo
+
+    def find_user(self, name):
+        obj = User(self, name, email='', password=None)
+        if obj.read():
+            return obj
+        else:
+            return None
+
+    def find_group(self, name):
+        obj = Group(self, name)
+        if obj.read():
+            return obj
+        else:
+            return None
+
+    def find_repository_local(self, name):
+        obj = RepositoryLocal(self, name, packageType=None)
+        if obj.read():
+            return obj
+        else:
+            return None
+
+    def find_permission_target(self, name):
+        obj = PermissionTarget(self, name)
+        if obj.read():
+            return obj
+        else:
+            return None
 
 
 def walk(pathobj, topdown=True):

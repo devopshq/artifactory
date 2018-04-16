@@ -9,7 +9,7 @@ except ImportError:
     from distutils.core import setup
 
 
-__version__ = '0.2'  # identify main version of dohq-artifactory
+__version__ = '0.3'  # identify main version of dohq-artifactory
 
 if 'TRAVIS_BUILD_NUMBER' in os.environ and 'TRAVIS_BRANCH' in os.environ:
     print("This is TRAVIS-CI build")
@@ -51,7 +51,14 @@ setup(
     ],
     url='https://devopshq.github.io/artifactory/',
     download_url='https://github.com/devopshq/artifactory',
-    install_requires=['pathlib', 'requests', 'python-dateutil'],
+    install_requires=[
+        'pathlib',
+        'requests',
+        'python-dateutil'
+    ],
     zip_safe=False,
-    package_data={'': ['README.md']}
+    package_data={'': ['README.md']},
+    packages=[
+        'dohq_artifactory',
+    ]
 )
