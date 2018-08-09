@@ -9,21 +9,7 @@ except ImportError:
     from distutils.core import setup
 
 
-__version__ = '0.3'  # identify main version of dohq-artifactory
-
-if 'TRAVIS_BUILD_NUMBER' in os.environ and 'TRAVIS_BRANCH' in os.environ:
-    print("This is TRAVIS-CI build")
-    print("TRAVIS_BUILD_NUMBER = {}".format(os.environ['TRAVIS_BUILD_NUMBER']))
-    print("TRAVIS_BRANCH = {}".format(os.environ['TRAVIS_BRANCH']))
-
-    __version__ += '.{}{}'.format(
-        '' if 'release' in os.environ['TRAVIS_BRANCH'] or os.environ['TRAVIS_BRANCH'] == 'master' else 'dev',
-        os.environ['TRAVIS_BUILD_NUMBER'],
-    )
-
-else:
-    print("This is local build")
-    __version__ += '.localbuild'  # set version as major.minor.localbuild if local build: python setup.py install
+__version__ = '0.4.100'  # identify main version of dohq-artifactory
 
 print("dohq-artifactory build version = {}".format(__version__))
 
