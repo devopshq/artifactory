@@ -75,7 +75,6 @@ class AdminObject(object):
             request_url,
             json=data_json,
             headers={'Content-Type': 'application/json'},
-            verify=False,
             auth=self._auth,
         )
         r.raise_for_status()
@@ -101,7 +100,6 @@ class AdminObject(object):
         request_url = self._artifactory.drive + '/api/{uri}/{x.name}'.format(uri=self._uri, x=self)
         r = self._session.get(
             request_url,
-            verify=False,
             auth=self._auth,
         )
         if 404 == r.status_code or 400 == r.status_code:
@@ -132,7 +130,6 @@ class AdminObject(object):
         request_url = self._artifactory.drive + '/api/{uri}/{x.name}'.format(uri=self._uri, x=self)
         r = self._session.delete(
             request_url,
-            verify=False,
             auth=self._auth,
         )
         r.raise_for_status()
@@ -199,7 +196,6 @@ class User(AdminObject):
         request_url = self._artifactory.drive + '/api/security/encryptedPassword'
         r = self._session.get(
             request_url,
-            verify=False,
             auth=(self.name, self.password),
         )
         r.raise_for_status()
