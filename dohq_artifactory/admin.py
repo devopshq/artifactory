@@ -418,3 +418,147 @@ class PermissionTarget(AdminObject):
     @property
     def repositories(self):
         return [self._artifactory.find_repository_local(x) for x in self._repositories]
+
+class Token(AdminObject):
+    _uri = "security/token"
+
+    def __init__(
+        self,
+        artifactory,
+        username=None,
+        scope=None,
+        expires_in=None,
+        refreshable=None,
+        audience=None,
+        grant_type=None,
+    ):
+        super(Token, self).__init__(artifactory)
+
+        # Either or is optional
+        if not (username or scope):
+            raise TypeError("Require either username or scope as argument")
+
+        if username is None:
+            username = self._artifactory.session.auth[0]
+
+        self._request_keys = [
+            "username",
+            "scope",
+            "expires_in",
+            "refreshable",
+            "audience",
+            "grant_type",
+        ]
+
+        for key in self._request_keys:
+            self.__dict__[key] = locals().get(key)
+
+        self.grant_type = grant_type
+        self.tokens = []
+        del self.additional_params
+
+    def _create_and_update(self):
+        """
+        Create Token, Refresh Token:
+        POST security/token
+          grant_type
+          username
+          scope
+          expires
+          refreshable
+          audience
+        To refresh:
+          TODO: not implemented yet
+          grant_type=refresh_token
+          refresh_token=...
+          # TODO: access_token is mutually exclusive to username
+          access_token=...
+        :return: None
+        """
+        payload = self._prepare_request()
+        request_url = self._artifactory.drive + "/api/{uri}".format(uri=self._uri)
+        r = self._session.post(
+            request_url,
+            data=payload,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            auth=self._auth,
+        )
+        r.raise_for_status()
+        response = r.json()
+        access_token = response.get("access_token")
+        access_token_decoded = jwt.decode(access_token, verify=False)
+        token_id = access_token_decoded.get("jti")
+        token_position = self.get_position(self.tokens, token_id=token_id)
+        if not token_position:
+            self.tokens.append({"token_id": token_id})
+            token_position = -1
+        token = self.tokens[token_position]
+        token.update(response)
+        self.token = token
+
+    def _prepare_request(self):
+        data = []
+        for key in self._request_keys:
+            value = self.__dict__.get(key)
+            if value is not None:
+                data.append((key, value))
+
+        return data
+
+    def read(self):
+        """
+        Get Tokens:
+        GET security/token
+          {
+            "tokens":[
+                {
+                "token_id":"<the token id>",
+                "issuer":"<the service ID of the issuing Artifactory instance>",
+                "subject":"<subject>",
+                "expiry": <time when token expires as seconds since 00:00:00 1/1/1970>,
+                "refreshable":<true | false>,
+                "issued_at":<time issued as seconds since 00:00:00 1/1/1970>,
+                }, ...
+            ]
+          }
+        Read object from artifactory. Fill object if exist
+        :return:
+        True if object exist,
+        False else
+        """
+        logging.debug("Read {x.__class__.__name__} [{x.name}]".format(x=self))
+        request_url = self._artifactory.drive + "/api/{uri}".format(uri=self._uri)
+        r = self._session.get(request_url, auth=self._auth)
+        if 404 == r.status_code or 400 == r.status_code:
+            logging.debug(
+                "{x.__class__.__name__} [{x.name}] does not exist".format(x=self)
+            )
+            return False
+        else:
+            logging.debug("{x.__class__.__name__} [{x.name}] exist".format(x=self))
+            r.raise_for_status()
+            response = r.json()
+            self.raw = response
+            self.tokens = list(set(self.tokens + response.get("tokens")))
+
+    def delete(self):
+        """
+        TODO: Revoke Token:
+        POST security/token/revoke
+          token
+          token_id
+        HTTP Status codes:
+         200 (OK)
+         400 (Error)
+        """
+        pass
+
+    @staticmethod
+    def get_position(dv=[], **kwargs):
+        """
+        search in list of dicts for specific key with specific value
+        """
+        for idx, d in enumerate(dv):
+            for k in iter(kwargs):
+                if d.get(k) == kwargs.get(k):
+                    return idx
