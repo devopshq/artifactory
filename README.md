@@ -29,6 +29,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
     - [SSL Cert Verification Options](#ssl-cert-verification-options)
     - [Global Configuration File](#global-config-file)
 - [Contribute](#contribute)
+- [Advertising](#advertising)
 
 # Install #
 ```bash
@@ -486,3 +487,10 @@ Whether or not you specify ```http://``` or ```https://``` prefix is not essenti
 
 # Contribute
 [About contribute](docs/CONTRIBUTE.md)
+
+# Advertising
+- [artifactory-du](https://github.com/devopshq/artifactory-du) - estimate file space usage. Summarize disk usage in JFrog Artifactory of the set of FILEs, recursively for directories.
+- [artifacotyr-cleanup-rules](https://github.com/devopshq/artifactory-du/issues/2) - python-script for Artifactory intelligence cleanup rules with config.
+
+
+
