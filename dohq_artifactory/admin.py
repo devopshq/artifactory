@@ -216,38 +216,50 @@ class User(AdminObject):
 
 
 class Group(AdminObject):
-    _uri = 'security/groups'
+    _uri = 'groups'
 
     def __init__(self, artifactory, name):
         super(Group, self).__init__(artifactory)
 
-        self.name = name
         self.description = ''
-        self.autoJoin = False
+        self.external = False
+        self.name = name
+        self.newUserDefault = False
         self.realm = 'artifactory'
         self.realmAttributes = None
+        self.users = None
+
+        # Deprecated
+        self.autoJoin = self.newUserDefault
 
     def _create_json(self):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
         """
         data_json = {
-            "name": self.name,
             "description": self.description,
-            "autoJoin": self.autoJoin,
+            "external": self.external,
+            "name": self.name,
+            "newUserDefault": self.newUserDefault,
             "realm": self.realm,
         }
+
+        if isinstance(self.users, list):
+            data_json.update({"usersInGroup": self.users})
+
         return data_json
 
     def _read_response(self, response):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
         """
-        self.name = response['name']
         self.description = response['description']
-        self.autoJoin = response['autoJoin']
+        self.external = response.get('external')
+        self.name = response['name']
+        self.newUserDefault = response.get('newUserDefault')
         self.realm = response['realm']
         self.realmAttributes = response.get('realmAttributes', None)
+        self.users = response.get('usersInGroup')
 
 
 class GroupLDAP(Group):

@@ -1,3 +1,7 @@
+## August, 2018
+- Change API endpoint of Groups object from `/security/groups` to => `/groups`
+- Add User management feature to Groups object
+
 ## April, 2018
 - Add Admin Area object - you can add\update\read\delete user, group, repository, permission
 
