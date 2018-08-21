@@ -487,6 +487,7 @@ class PermissionTarget(AdminObject):
     def repositories(self):
         return [self._artifactory.find_repository_local(x) for x in self._repositories]
 
+
 class Token(AdminObject):
     _uri = "security/token"
 
@@ -499,11 +500,18 @@ class Token(AdminObject):
         refreshable=None,
         audience=None,
         grant_type=None,
+        jwt_token=None,
+        token_id=None,
     ):
+        from collections import defaultdict
+
         super(Token, self).__init__(artifactory)
 
+        # TODO: Communicate that for creation and stuff
+        # username or scope is necessary
+        # and for deletion jwt_token or token_id is mandatory
         # Either or is optional
-        if not (username or scope):
+        if not (username or scope or jwt_token or token_id):
             raise TypeError("Require either username or scope as argument")
 
         if username is None:
@@ -518,11 +526,15 @@ class Token(AdminObject):
             "grant_type",
         ]
 
-        for key in self._request_keys:
+        self._deletion_keys = ["token_id", ("jwt_token", "token")]
+
+        for key in [*self._request_keys, *self._deletion_keys]:
+            if isinstance(key, tuple):
+                key = key[0]
             self.__dict__[key] = locals().get(key)
 
         self.grant_type = grant_type
-        self.tokens = []
+        self.tokens = defaultdict(dict)
         del self.additional_params
 
     def _create_and_update(self):
@@ -551,23 +563,48 @@ class Token(AdminObject):
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             auth=self._auth,
         )
+
+        if r.json().get("error_description"):
+            r.reason = r.json().get("error_description")
         r.raise_for_status()
         response = r.json()
         access_token = response.get("access_token")
         access_token_decoded = jwt.decode(access_token, verify=False)
-        token_id = access_token_decoded.get("jti")
-        token_position = self.get_position(self.tokens, token_id=token_id)
-        if not token_position:
-            self.tokens.append({"token_id": token_id})
-            token_position = -1
-        token = self.tokens[token_position]
-        token.update(response)
-        self.token = token
+
+        self.token = response
+        self.token_id = access_token_decoded.get("jti")
+        self.jwt_token = response.get("access_token")
 
     def _prepare_request(self):
+        return self._generate_request_data(self._request_keys)
+
+    def _prepare_deletion(self):
+        """
+        artifactory revoke expect only either
+        token OR token_id
+        requests expects a list of tuples
+        code is a little bit overcomplicated
+        """
+        keys = self._generate_request_data(self._deletion_keys)
+        return [keys.pop()]
+
+    def _generate_request_data(self, keys):
+        """
+        expects either list containing mixed strings OR tuples
+          if tuple first tuple name is the local variable
+          second tuple string is what should be used as request description
+
+        returns: [(key, value)]
+        required for sending post data with requests
+        """
         data = []
-        for key in self._request_keys:
-            value = self.__dict__.get(key)
+        for key in keys:
+            if isinstance(key, tuple):
+                value = self.__dict__.get(key[0])
+                # overwriting keyname here
+                key = key[1]
+            else:
+                value = self.__dict__.get(key)
             if value is not None:
                 data.append((key, value))
 
@@ -607,26 +644,24 @@ class Token(AdminObject):
             r.raise_for_status()
             response = r.json()
             self.raw = response
-            self.tokens = list(set(self.tokens + response.get("tokens")))
+            tokens = response.get("tokens")
+
+            for token in tokens:
+                key = token.pop("token_id")
+                if key:
+                    self.tokens[key].update(token)
 
     def delete(self):
         """
-        TODO: Revoke Token:
         POST security/token/revoke
-          token
-          token_id
-        HTTP Status codes:
-         200 (OK)
-         400 (Error)
+        revoke (calling it deletion to be consistent with other classes) a token
         """
-        pass
+        logging.debug("Delete {x.__class__.__name__} [{x.name}]".format(x=self))
+        request_url = self._artifactory.drive + "/api/{uri}".format(
+            uri=self._uri + "/revoke"
+        )
+        payload = self._prepare_deletion()
 
-    @staticmethod
-    def get_position(dv=[], **kwargs):
-        """
-        search in list of dicts for specific key with specific value
-        """
-        for idx, d in enumerate(dv):
-            for k in iter(kwargs):
-                if d.get(k) == kwargs.get(k):
-                    return idx
+        r = self._session.post(request_url, data=payload, auth=self._auth)
+        r.raise_for_status()
+        rest_delay()
