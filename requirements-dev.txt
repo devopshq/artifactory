@@ -4,3 +4,4 @@ python-dateutil
 pytest
 mock
 flake8
+PyJWT
