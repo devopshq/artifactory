@@ -2,12 +2,10 @@
 # -*- coding: utf-8 -*-
 
 
-import os
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
-
 
 __version__ = '0.4.101'  # identify main version of dohq-artifactory
 
