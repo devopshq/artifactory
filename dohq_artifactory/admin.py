@@ -342,6 +342,73 @@ class RepositoryLocal(Repository):
         self.archiveBrowsingEnabled = response['archiveBrowsingEnabled']
 
 
+class RepositoryVirtual(AdminObject):
+    _uri = "repositories"
+
+    _packageTypes = [
+        "bower",
+        "chef",
+        "cran",
+        "docker",
+        "gems",
+        "generic",
+        "go",
+        "gradle",
+        "helm",
+        "ivy",
+        "maven",
+        "npm",
+        "nuget",
+        "p2",
+        "puppet",
+        "pypi",
+        "rpm",
+        "sbt",
+        "yum",
+    ]
+
+    def __init__(self, artifactory, name, repositories=[], packageType="generic"):
+        super(RepositoryVirtual, self).__init__(artifactory)
+        self.name = name
+        self.description = ""
+        self.notes = ""
+        self._setValidPackageType(packageType)
+        self.repositories = repositories
+
+    def _setValidPackageType(self, packageType):
+        if packageType not in self._packageTypes:
+            raise KeyError(
+                "Error packageType {} is an invalid packageType for virtual Repositories".format(
+                    packageType
+                )
+            )
+        self.packageType = packageType
+
+    def _create_json(self):
+        """
+        JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
+        """
+        data_json = {
+            "rclass": "virtual",
+            "key": self.name,
+            "description": self.description,
+            "packageType": self.packageType,
+            "repositories": self.repositories,
+            "notes": self.notes,
+        }
+
+        return data_json
+
+    def _read_response(self, response):
+        """
+        JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
+        """
+        self.name = response["key"]
+        self.description = response["description"]
+        self.packageType = response["packageType"]
+        self.repositories = response["repositories"]
+
+
 class PermissionTarget(AdminObject):
     _uri = 'security/permissions'
 
