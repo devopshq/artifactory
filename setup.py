@@ -40,7 +40,8 @@ setup(
     install_requires=[
         'pathlib',
         'requests',
-        'python-dateutil'
+        'python-dateutil',
+        'PyJWT',
     ],
     zip_safe=False,
     package_data={'': ['README.md']},
