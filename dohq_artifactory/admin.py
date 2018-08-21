@@ -216,16 +216,17 @@ class User(AdminObject):
 
 
 class Group(AdminObject):
-    _uri = 'groups'
+    _uri = "groups"
+    _uri_deletion = "security/groups"
 
     def __init__(self, artifactory, name):
         super(Group, self).__init__(artifactory)
 
-        self.description = ''
+        self.description = ""
         self.external = False
         self.name = name
         self.newUserDefault = False
-        self.realm = 'artifactory'
+        self.realm = "artifactory"
         self.realmAttributes = None
         self.users = None
 
@@ -253,13 +254,53 @@ class Group(AdminObject):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
         """
-        self.description = response['description']
-        self.external = response.get('external')
-        self.name = response['name']
-        self.newUserDefault = response.get('newUserDefault')
-        self.realm = response['realm']
-        self.realmAttributes = response.get('realmAttributes', None)
-        self.users = response.get('usersInGroup')
+        self.description = response.get("description")
+        self.external = response.get("external")
+        self.name = response.get("name")
+        self.newUserDefault = response.get("newUserDefault")
+        self.realm = response.get("realm")
+        self.realmAttributes = response.get("realmAttributes")
+        self.users = response.get("usersInGroup")
+
+    def delete(self):
+        """
+        Remove object
+        :return: None
+        TODO: New entrypoint would go like
+        /api/groups/delete and consumes ["list", "of", "groupnames"]
+        """
+        logging.debug(
+            "Remove {x.__class__.__name__} [{x.name}]".format(x=self)
+        )
+        request_url = self._artifactory.drive + "/api/{uri}/{x.name}".format(
+            uri=self._uri_deletion, x=self
+        )
+        r = self._session.delete(request_url, auth=self._auth)
+        r.raise_for_status()
+        rest_delay()
+
+    def create(self):
+        """
+        Create object
+        :return: None
+        """
+        logging.debug(
+            "Create {x.__class__.__name__} [{x.name}]".format(x=self)
+        )
+        data_json = self._create_json()
+        data_json.update(self.additional_params)
+        request_url = self._artifactory.drive + "/api/{uri}".format(
+            uri=self._uri, x=self
+        )
+        r = self._session.post(
+            request_url,
+            json=data_json,
+            headers={"Content-Type": "application/json"},
+            auth=self._auth,
+        )
+        r.raise_for_status()
+        rest_delay()
+        self.read()
 
 
 class GroupLDAP(Group):
