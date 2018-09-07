@@ -28,6 +28,7 @@ import collections
 import errno
 import hashlib
 import json
+import logging
 import os
 import pathlib
 import sys
@@ -37,6 +38,7 @@ import dateutil.parser
 import requests
 
 from dohq_artifactory.admin import User, Group, RepositoryLocal, PermissionTarget, RepositoryVirtual
+from dohq_artifactory.auth import XJFrogArtApiAuth
 
 try:
     import requests.packages.urllib3 as urllib3
@@ -873,7 +875,14 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj = pathlib.Path.__new__(cls, *args, **kwargs)
 
         cfg_entry = get_global_config_entry(obj.drive)
-        obj.auth = kwargs.get('auth', None)
+
+        apikey = kwargs.get('apikey', None)
+        if apikey is not None:
+            logging.debug('Use XJFrogApiAuth')
+            obj.auth = XJFrogArtApiAuth(apikey)
+        else:
+            obj.auth = kwargs.get('auth', None)
+
         obj.cert = kwargs.get('cert', None)
         obj.session = kwargs.get('session', None)
 

@@ -391,6 +391,10 @@ class RepositoryVirtual(AdminObject):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
         """
+        rclass = response['rclass']
+        if rclass != "virtual":
+            raise ArtifactoryException("Repositiry '{}' have '{}', but expect 'virtual'".format(self.name, rclass))
+
         self.name = response["key"]
         self.description = response["description"]
         self.packageType = response["packageType"]

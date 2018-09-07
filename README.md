@@ -39,14 +39,20 @@ python3 -mpip install dohq-artifactory
 # Usage 
 
 ## Authentication ##
-
-To provide username and password (or [API KEY](https://www.jfrog.com/confluence/display/RTF/Artifactory+REST+API#ArtifactoryRESTAPI-Authentication)) to access restricted resources, you can pass ```auth``` parameter to ArtifactoryPath.
+`dohq-artifactory` support this way to authentication:
+- Username and password (or [API KEY](https://www.jfrog.com/confluence/display/RTF/Updating+Your+Profile#UpdatingYourProfile-APIKey)) to access restricted resources, you can pass ```auth``` parameter to ArtifactoryPath.
+- [API KEY](https://www.jfrog.com/confluence/display/RTF/Updating+Your+Profile#UpdatingYourProfile-APIKey) can pass with `apikey` parameter.
 
 ```python
 from artifactory import ArtifactoryPath
 path = ArtifactoryPath(
     "http://my-artifactory/artifactory/myrepo/restricted-path",
+    apikey='MY_API_KEY')
+
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/myrepo/restricted-path",
     auth=('USERNAME', 'PASSWORD or API_KEY'))
+
 path.touch()
 ```
 
