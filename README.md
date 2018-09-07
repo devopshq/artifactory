@@ -7,6 +7,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
 # Tables of Contents 
 - [Install](#install)
 - [Usage](#usage)
+    - [Authentication](#authentication)
     - [Walking Directory Tree](#walking-directory-tree)
     - [Downloading Artifacts](#downloading-artifacts)
     - [Uploading Artifacts](#uploading-artifacts)
@@ -24,17 +25,29 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
     - [PermissionTarget](#permissiontarget)
     - [Common](#common)
 - [Advanced](#advanced)
-    - [Authentication](#authentication)
     - [Session](#session)
     - [SSL Cert Verification Options](#ssl-cert-verification-options)
     - [Global Configuration File](#global-config-file)
 - [Contribute](#contribute)
+- [Advertising](#advertising)
 
 # Install #
 ```bash
 python3 -mpip install dohq-artifactory
 ```
 # Usage 
+
+## Authentication ##
+
+To provide username and password (or [API KEY](https://www.jfrog.com/confluence/display/RTF/Artifactory+REST+API#ArtifactoryRESTAPI-Authentication)) to access restricted resources, you can pass ```auth``` parameter to ArtifactoryPath.
+
+```python
+from artifactory import ArtifactoryPath
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/myrepo/restricted-path",
+    auth=('USERNAME', 'PASSWORD or API_KEY'))
+path.touch()
+```
 
 ## Walking Directory Tree ##
 
@@ -391,18 +404,6 @@ artifactory_.find_permission_target('name')
 
 # Advanced
 
-## Authentication ##
-
-To provide username and password to access restricted resources, you can pass ```auth``` parameter to ArtifactoryPath:
-
-```python
-from artifactory import ArtifactoryPath
-path = ArtifactoryPath(
-    "http://my-artifactory/artifactory/myrepo/restricted-path",
-    auth=('admin', 'ilikerandompasswords'))
-path.touch()
-```
-
 ## Session ##
 
 To re-use the established connection, you can pass ```session``` parameter to ArtifactoryPath:
@@ -486,3 +487,10 @@ Whether or not you specify ```http://``` or ```https://``` prefix is not essenti
 
 # Contribute
 [About contribute](docs/CONTRIBUTE.md)
+
+# Advertising
+- [artifactory-du](https://github.com/devopshq/artifactory-du) - estimate file space usage. Summarize disk usage in JFrog Artifactory of the set of FILEs, recursively for directories.
+- [artifacotyr-cleanup-rules](https://github.com/devopshq/artifactory-du/issues/2) - python-script for Artifactory intelligence cleanup rules with config.
+
+
+

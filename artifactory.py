@@ -600,7 +600,6 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         """
         Removes a file
         """
-        stat = self.stat(pathobj)
 
         # TODO: Why do we forbid remove folder?
         # if stat.is_dir:
