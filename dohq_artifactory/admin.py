@@ -344,45 +344,33 @@ class RepositoryLocal(Repository):
 
 class RepositoryVirtual(AdminObject):
     _uri = "repositories"
+    BOWER = "bower"
+    CHEF = "chef"
+    CRAN = "cran"
+    DOCKER = "docker"
+    GEMS = "gems"
+    GENERIC = "generic"
+    GO = "go"
+    GRADLE = "gradle"
+    HELM = "helm"
+    IVY = "ivy"
+    MAVEN = "maven"
+    NPM = "npm"
+    NUGET = "nuget"
+    P2 = "p2"
+    PUPPET = "puppet"
+    PYPI = "pypi"
+    RPM = "rpm"
+    SBT = "sbt"
+    YUM = "yum"
 
-    _packageTypes = [
-        "bower",
-        "chef",
-        "cran",
-        "docker",
-        "gems",
-        "generic",
-        "go",
-        "gradle",
-        "helm",
-        "ivy",
-        "maven",
-        "npm",
-        "nuget",
-        "p2",
-        "puppet",
-        "pypi",
-        "rpm",
-        "sbt",
-        "yum",
-    ]
-
-    def __init__(self, artifactory, name, repositories=[], packageType="generic"):
+    def __init__(self, artifactory, name, repositories, packageType="generic"):
         super(RepositoryVirtual, self).__init__(artifactory)
         self.name = name
         self.description = ""
         self.notes = ""
-        self._setValidPackageType(packageType)
-        self.repositories = repositories
-
-    def _setValidPackageType(self, packageType):
-        if packageType not in self._packageTypes:
-            raise KeyError(
-                "Error packageType {} is an invalid packageType for virtual Repositories".format(
-                    packageType
-                )
-            )
         self.packageType = packageType
+        self._repositories = repositories
 
     def _create_json(self):
         """
@@ -393,7 +381,7 @@ class RepositoryVirtual(AdminObject):
             "key": self.name,
             "description": self.description,
             "packageType": self.packageType,
-            "repositories": self.repositories,
+            "repositories": self._repositories,
             "notes": self.notes,
         }
 
@@ -406,7 +394,11 @@ class RepositoryVirtual(AdminObject):
         self.name = response["key"]
         self.description = response["description"]
         self.packageType = response["packageType"]
-        self.repositories = response["repositories"]
+        self._repositories = response["repositories"]
+
+    @property
+    def repositories(self):
+        return [self._artifactory.find_repository_local(x) for x in self._repositories]
 
 
 class PermissionTarget(AdminObject):

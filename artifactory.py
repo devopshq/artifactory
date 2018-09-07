@@ -36,7 +36,7 @@ from itertools import islice
 import dateutil.parser
 import requests
 
-from dohq_artifactory.admin import User, Group, RepositoryLocal, PermissionTarget
+from dohq_artifactory.admin import User, Group, RepositoryLocal, PermissionTarget, RepositoryVirtual
 
 try:
     import requests.packages.urllib3 as urllib3
@@ -1354,6 +1354,13 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     def find_repository_local(self, name):
         obj = RepositoryLocal(self, name, packageType=None)
+        if obj.read():
+            return obj
+        else:
+            return None
+
+    def find_repository_virtual(self, name):
+        obj = RepositoryVirtual(self, name, packageType=None)
         if obj.read():
             return obj
         else:

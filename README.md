@@ -22,6 +22,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
         - [ Internal](#internal)
         - [ GroupLDAP](#groupldap)
     - [RepositoryLocal](#repositorylocal)
+    - [RepositoryVirtual](#virtualrepository)
     - [PermissionTarget](#permissiontarget)
     - [Common](#common)
 - [Advanced](#advanced)
@@ -342,6 +343,26 @@ if repo is None:
 
 # You can re-read from Artifactory
 repo.read()
+
+repo.delete()
+```
+
+## RepositoryVirtual
+```python
+# Find
+from dohq_artifactory import RepositoryVirtual
+repo = artifactory_.find_repository_virtual('pypi.all')
+
+# Create
+if repo is None:
+    # or RepositoryVirtual.PYPI, RepositoryLocal.NUGET, etc
+    repo = RepositoryVirtual(artifactory_, 'pypi.all', repositories=['pypi.snapshot', 'pypi.release'], packageType=RepositoryLocal.DEBIAN)
+    repo.create()
+
+# You can re-read from Artifactory
+repo.read()
+
+local_repos = repo.repositories # return List<RepositiryLocal>
 
 repo.delete()
 ```
