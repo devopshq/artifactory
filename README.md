@@ -356,7 +356,7 @@ repo = artifactory_.find_repository_virtual('pypi.all')
 # Create
 if repo is None:
     # or RepositoryVirtual.PYPI, RepositoryLocal.NUGET, etc
-    repo = RepositoryVirtual(artifactory_, 'pypi.all', repositories=['pypi.snapshot', 'pypi.release'], packageType=RepositoryLocal.DEBIAN)
+    repo = RepositoryVirtual(artifactory_, 'pypi.all', repositories=['pypi.snapshot', 'pypi.release'], packageType=RepositoryVirtual.PYPI)
     repo.create()
 
 # You can re-read from Artifactory

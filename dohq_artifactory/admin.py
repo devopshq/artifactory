@@ -364,7 +364,7 @@ class RepositoryVirtual(AdminObject):
     SBT = "sbt"
     YUM = "yum"
 
-    def __init__(self, artifactory, name, repositories, packageType="generic"):
+    def __init__(self, artifactory, name, repositories=None, packageType="generic"):
         super(RepositoryVirtual, self).__init__(artifactory)
         self.name = name
         self.description = ""
