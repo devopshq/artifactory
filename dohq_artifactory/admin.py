@@ -342,6 +342,69 @@ class RepositoryLocal(Repository):
         self.archiveBrowsingEnabled = response['archiveBrowsingEnabled']
 
 
+class RepositoryVirtual(AdminObject):
+    _uri = "repositories"
+    BOWER = "bower"
+    CHEF = "chef"
+    CRAN = "cran"
+    DOCKER = "docker"
+    GEMS = "gems"
+    GENERIC = "generic"
+    GO = "go"
+    GRADLE = "gradle"
+    HELM = "helm"
+    IVY = "ivy"
+    MAVEN = "maven"
+    NPM = "npm"
+    NUGET = "nuget"
+    P2 = "p2"
+    PUPPET = "puppet"
+    PYPI = "pypi"
+    RPM = "rpm"
+    SBT = "sbt"
+    YUM = "yum"
+
+    def __init__(self, artifactory, name, repositories=None, packageType="generic"):
+        super(RepositoryVirtual, self).__init__(artifactory)
+        self.name = name
+        self.description = ""
+        self.notes = ""
+        self.packageType = packageType
+        self._repositories = repositories
+
+    def _create_json(self):
+        """
+        JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
+        """
+        data_json = {
+            "rclass": "virtual",
+            "key": self.name,
+            "description": self.description,
+            "packageType": self.packageType,
+            "repositories": self._repositories,
+            "notes": self.notes,
+        }
+
+        return data_json
+
+    def _read_response(self, response):
+        """
+        JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
+        """
+        rclass = response['rclass']
+        if rclass != "virtual":
+            raise ArtifactoryException("Repositiry '{}' have '{}', but expect 'virtual'".format(self.name, rclass))
+
+        self.name = response["key"]
+        self.description = response["description"]
+        self.packageType = response["packageType"]
+        self._repositories = response["repositories"]
+
+    @property
+    def repositories(self):
+        return [self._artifactory.find_repository_local(x) for x in self._repositories]
+
+
 class PermissionTarget(AdminObject):
     _uri = 'security/permissions'
 

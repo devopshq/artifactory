@@ -28,6 +28,7 @@ import collections
 import errno
 import hashlib
 import json
+import logging
 import os
 import pathlib
 import sys
@@ -36,7 +37,8 @@ from itertools import islice
 import dateutil.parser
 import requests
 
-from dohq_artifactory.admin import User, Group, RepositoryLocal, PermissionTarget
+from dohq_artifactory.admin import User, Group, RepositoryLocal, PermissionTarget, RepositoryVirtual
+from dohq_artifactory.auth import XJFrogArtApiAuth
 
 try:
     import requests.packages.urllib3 as urllib3
@@ -814,6 +816,12 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if code != 204:
             raise RuntimeError(text)
 
+    # https://github.com/devopshq/artifactory/issues/11
+    # Added for support python 3.6
+    def scandir(self, pathobj):
+        for x in _ArtifactoryAccessor.listdir(self, pathobj):
+            yield pathobj.joinpath(x)
+
 
 _artifactory_accessor = _ArtifactoryAccessor()
 
@@ -873,7 +881,14 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj = pathlib.Path.__new__(cls, *args, **kwargs)
 
         cfg_entry = get_global_config_entry(obj.drive)
-        obj.auth = kwargs.get('auth', None)
+
+        apikey = kwargs.get('apikey', None)
+        if apikey is not None:
+            logging.debug('Use XJFrogApiAuth')
+            obj.auth = XJFrogArtApiAuth(apikey)
+        else:
+            obj.auth = kwargs.get('auth', None)
+
         obj.cert = kwargs.get('cert', None)
         obj.session = kwargs.get('session', None)
 
@@ -1354,6 +1369,13 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     def find_repository_local(self, name):
         obj = RepositoryLocal(self, name, packageType=None)
+        if obj.read():
+            return obj
+        else:
+            return None
+
+    def find_repository_virtual(self, name):
+        obj = RepositoryVirtual(self, name, packageType=None)
         if obj.read():
             return obj
         else:

@@ -22,12 +22,15 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
         - [ Internal](#internal)
         - [ GroupLDAP](#groupldap)
     - [RepositoryLocal](#repositorylocal)
+    - [RepositoryVirtual](#virtualrepository)
     - [PermissionTarget](#permissiontarget)
     - [Common](#common)
+- [FAQ](docs/FAQ.md)
 - [Advanced](#advanced)
     - [Session](#session)
     - [SSL Cert Verification Options](#ssl-cert-verification-options)
     - [Global Configuration File](#global-config-file)
+    - [Troubleshooting](#troubleshooting)
 - [Contribute](#contribute)
 - [Advertising](#advertising)
 
@@ -38,14 +41,20 @@ python3 -mpip install dohq-artifactory
 # Usage 
 
 ## Authentication ##
-
-To provide username and password (or [API KEY](https://www.jfrog.com/confluence/display/RTF/Artifactory+REST+API#ArtifactoryRESTAPI-Authentication)) to access restricted resources, you can pass ```auth``` parameter to ArtifactoryPath.
+`dohq-artifactory` support this way to authentication:
+- Username and password (or [API KEY](https://www.jfrog.com/confluence/display/RTF/Updating+Your+Profile#UpdatingYourProfile-APIKey)) to access restricted resources, you can pass ```auth``` parameter to ArtifactoryPath.
+- [API KEY](https://www.jfrog.com/confluence/display/RTF/Updating+Your+Profile#UpdatingYourProfile-APIKey) can pass with `apikey` parameter.
 
 ```python
 from artifactory import ArtifactoryPath
 path = ArtifactoryPath(
     "http://my-artifactory/artifactory/myrepo/restricted-path",
+    apikey='MY_API_KEY')
+
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/myrepo/restricted-path",
     auth=('USERNAME', 'PASSWORD or API_KEY'))
+
 path.touch()
 ```
 
@@ -346,6 +355,26 @@ repo.read()
 repo.delete()
 ```
 
+## RepositoryVirtual
+```python
+# Find
+from dohq_artifactory import RepositoryVirtual
+repo = artifactory_.find_repository_virtual('pypi.all')
+
+# Create
+if repo is None:
+    # or RepositoryVirtual.PYPI, RepositoryLocal.NUGET, etc
+    repo = RepositoryVirtual(artifactory_, 'pypi.all', repositories=['pypi.snapshot', 'pypi.release'], packageType=RepositoryVirtual.PYPI)
+    repo.create()
+
+# You can re-read from Artifactory
+repo.read()
+
+local_repos = repo.repositories # return List<RepositiryLocal>
+
+repo.delete()
+```
+
 ## PermissionTarget
 Docs: https://www.jfrog.com/confluence/display/RTF/Managing+Permissions
 
@@ -463,6 +492,22 @@ To disable these warning, one needs to call urllib3.disable_warnings().
 import requests.packages.urllib3 as urllib3
 urllib3.disable_warnings()
 ```
+
+## Troubleshooting ##
+Use [logging](https://docs.python.org/3/library/logging.html) for debug:
+```python
+def init_logging():
+    logger_format_string = '%(thread)5s %(module)-20s %(levelname)-8s %(message)s'
+    logging.basicConfig(level=logging.DEBUG, format=logger_format_string, stream=sys.stdout)
+
+init_logging()
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/myrepo/restricted-path",
+    auth=('USERNAME', 'PASSWORD or API_KEY'))
+
+path.touch()
+```
+
 
 ## Global Configuration File ##
 
