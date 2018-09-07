@@ -816,6 +816,12 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if code != 204:
             raise RuntimeError(text)
 
+    # https://github.com/devopshq/artifactory/issues/11
+    # Added for support python 3.6
+    def scandir(self, pathobj):
+        for x in _ArtifactoryAccessor.listdir(self, pathobj):
+            yield pathobj.joinpath(x)
+
 
 _artifactory_accessor = _ArtifactoryAccessor()
 
