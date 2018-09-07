@@ -25,6 +25,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
     - [RepositoryVirtual](#virtualrepository)
     - [PermissionTarget](#permissiontarget)
     - [Common](#common)
+- [FAQ](docs/FAQ.md)
 - [Advanced](#advanced)
     - [Session](#session)
     - [SSL Cert Verification Options](#ssl-cert-verification-options)
