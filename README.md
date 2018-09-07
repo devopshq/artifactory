@@ -29,6 +29,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
     - [Session](#session)
     - [SSL Cert Verification Options](#ssl-cert-verification-options)
     - [Global Configuration File](#global-config-file)
+    - [Troubleshooting](#troubleshooting)
 - [Contribute](#contribute)
 - [Advertising](#advertising)
 
@@ -490,6 +491,22 @@ To disable these warning, one needs to call urllib3.disable_warnings().
 import requests.packages.urllib3 as urllib3
 urllib3.disable_warnings()
 ```
+
+## Troubleshooting ##
+Use [logging](https://docs.python.org/3/library/logging.html) for debug:
+```python
+def init_logging():
+    logger_format_string = '%(thread)5s %(module)-20s %(levelname)-8s %(message)s'
+    logging.basicConfig(level=logging.DEBUG, format=logger_format_string, stream=sys.stdout)
+
+init_logging()
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/myrepo/restricted-path",
+    auth=('USERNAME', 'PASSWORD or API_KEY'))
+
+path.touch()
+```
+
 
 ## Global Configuration File ##
 
