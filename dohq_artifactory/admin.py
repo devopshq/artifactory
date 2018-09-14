@@ -293,17 +293,21 @@ class Repository(AdminObject):
     PUPPET = "puppet"
     GENERIC = "generic"
 
+    # List dockerApiVersion from wiki:
+    V1 = "V1"
+    V2 = "V2"
 
 class RepositoryLocal(Repository):
     _uri = 'repositories'
 
-    def __init__(self, artifactory, name, packageType=Repository.GENERIC):
+    def __init__(self, artifactory, name, packageType=Repository.GENERIC, dockerApiVersion=Repository.V1):
         super(RepositoryLocal, self).__init__(artifactory)
         self.name = name
         self.description = ''
         self.packageType = packageType
         self.repoLayoutRef = 'maven-2-default'
         self.archiveBrowsingEnabled = True
+        self.dockerApiVersion = dockerApiVersion
 
     def _create_json(self):
         """
@@ -318,7 +322,7 @@ class RepositoryLocal(Repository):
             "includesPattern": "**/*",
             "excludesPattern": "",
             "repoLayoutRef": self.repoLayoutRef,
-            "dockerApiVersion": "V1",
+            "dockerApiVersion": self.dockerApiVersion,
             "checksumPolicyType": "client-checksums",
             "handleReleases": True,
             "handleSnapshots": True,
@@ -364,7 +368,7 @@ class RepositoryVirtual(AdminObject):
     SBT = "sbt"
     YUM = "yum"
 
-    def __init__(self, artifactory, name, repositories=None, packageType="generic"):
+    def __init__(self, artifactory, name, repositories=None, packageType=RepositoryVirtual.GENERIC):
         super(RepositoryVirtual, self).__init__(artifactory)
         self.name = name
         self.description = ""
