@@ -282,7 +282,7 @@ class Repository(AdminObject):
     NPM = "npm"
     BOWER = "bower"
     DEBIAN = "debian"
-    COMPOSER = "comoser"
+    COMPOSER = "composer"
     PYPI = "pypi"
     DOCKER = "docker"
     VAGRANT = "vagrant"
