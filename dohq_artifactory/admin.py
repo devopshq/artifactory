@@ -297,6 +297,7 @@ class Repository(AdminObject):
     V1 = "V1"
     V2 = "V2"
 
+
 class RepositoryLocal(Repository):
     _uri = 'repositories'
 
@@ -368,7 +369,7 @@ class RepositoryVirtual(AdminObject):
     SBT = "sbt"
     YUM = "yum"
 
-    def __init__(self, artifactory, name, repositories=None, packageType=RepositoryVirtual.GENERIC):
+    def __init__(self, artifactory, name, repositories=None, packageType=Repository.GENERIC):
         super(RepositoryVirtual, self).__init__(artifactory)
         self.name = name
         self.description = ""
