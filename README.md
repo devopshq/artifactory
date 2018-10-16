@@ -1,6 +1,6 @@
 # Python interface library for Jfrog Artifactory #
 
-[![docs](https://img.shields.io/readthedocs/pip.svg)](https://devopshq.github.io/artifactory/)] [![artifactory build Status](https://travis-ci.org/thaligar/artifactory.svg?branch=develop)](https://travis-ci.org/thaligar/artifactory) [![dohq-artifactory license](https://img.shields.io/pypi/l/dohq-artifactory.svg)](https://github.com/devopshq/artifactory/blob/master/LICENSE)
+[![docs](https://img.shields.io/readthedocs/pip.svg)](https://devopshq.github.io/artifactory/) [![artifactory build Status](https://travis-ci.org/thaligar/artifactory.svg?branch=develop)](https://travis-ci.org/thaligar/artifactory) [![dohq-artifactory license](https://img.shields.io/pypi/l/dohq-artifactory.svg)](https://github.com/devopshq/artifactory/blob/master/LICENSE)
 
 This module is intended to serve as a logical descendant of [pathlib](https://docs.python.org/3/library/pathlib.html), a Python 3 module for object-oriented path manipulations. As such, it implements everything as closely as possible to the origin with few exceptions, such as stat().
 
