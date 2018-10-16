@@ -1,6 +1,7 @@
 import logging
 import random
 import time
+import jwt
 
 from dohq_artifactory.exception import ArtifactoryException
 
