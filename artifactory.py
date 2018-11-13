@@ -908,6 +908,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         if obj.session is None:
             obj.session = requests.Session()
             obj.session.auth = obj.auth
+            obj.session.cert = obj.cert
+            obj.session.verify = obj.verify
 
         return obj
 
