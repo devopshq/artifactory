@@ -4,8 +4,10 @@ python:
 install:
   - pip install -r ./requirements-dev.txt
 script:
+  - set -e
   - python -mpytest -munit
   - flake8 .
+  - set +e
 deploy:
   provider: pypi
   user: devopshq
