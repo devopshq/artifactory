@@ -908,6 +908,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         if obj.session is None:
             obj.session = requests.Session()
             obj.session.auth = obj.auth
+            obj.session.cert = obj.cert
+            obj.session.verify = obj.verify
 
         return obj
 
@@ -1318,7 +1320,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
     @staticmethod
     def create_aql_text(*args):
         """
-        Create AQL querty from string\list\dict arguments
+        Create AQL querty from string or list or dict arguments
         """
         aql_query_text = ""
         for arg in args:
