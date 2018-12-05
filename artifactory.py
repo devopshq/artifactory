@@ -328,6 +328,14 @@ class _ArtifactoryFlavour(pathlib._Flavour):
         drv, root, parsed = super(_ArtifactoryFlavour, self).parse_parts(parts)
         return drv, root, parsed
 
+    def join_parsed_parts(self, drv, root, parts, drv2, root2, parts2):
+        drv2, root2, parts2 = super(_ArtifactoryFlavour, self).join_parsed_parts(drv, root, parts, drv2, root2, parts2)
+        # quick hack for https://github.com/devopshq/artifactory/issues/29
+        # drive or repository must start with / , if not - add it
+        if not drv2.endswith('/') and not root2.startswith('/'):
+            drv2 = drv2 + self.sep
+        return drv2, root2, parts2
+
     def splitroot(self, part, sep=sep):
         """
         Splits path string into drive, root and relative path

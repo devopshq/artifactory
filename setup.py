@@ -7,7 +7,7 @@ try:
 except ImportError:
     from distutils.core import setup
 
-__version__ = '0.4.104'  # identify main version of dohq-artifactory
+__version__ = '0.4.105'  # identify main version of dohq-artifactory
 
 print("dohq-artifactory build version = {}".format(__version__))
 
