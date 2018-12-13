@@ -154,6 +154,46 @@ class PureArtifactoryPathTest(unittest.TestCase):
         c = b.with_suffix(".txt")
         self.assertEqual(str(c), "http://b/artifactory/c/d.txt")
 
+    def test_join_endswith_slash(self):
+        """
+        https://github.com/devopshq/artifactory/issues/29
+        """
+        P = self.cls
+
+        b = P("http://b/artifactory/")
+        c = b / "reponame" / "path.txt"
+        self.assertEqual(str(c), "http://b/artifactory/reponame/path.txt")
+
+    def test_join_endswithout_slash(self):
+        """
+        https://github.com/devopshq/artifactory/issues/29
+        """
+        P = self.cls
+
+        b = P("http://b/artifactory")
+        c = b / "reponame" / "path.txt"
+        self.assertEqual(str(c), "http://b/artifactory/reponame/path.txt")
+
+    def test_join_with_repo(self):
+        """
+        https://github.com/devopshq/artifactory/issues/29
+        """
+        P = self.cls
+
+        b = P("http://b/artifactory/reponame/")
+        c = b / "path.txt"
+        self.assertEqual(str(c), "http://b/artifactory/reponame/path.txt")
+
+    def test_join_with_repo_folder(self):
+        """
+        https://github.com/devopshq/artifactory/issues/29
+        """
+        P = self.cls
+
+        b = P("http://b/artifactory/reponame/f")
+        c = b / "path.txt"
+        self.assertEqual(str(c), "http://b/artifactory/reponame/f/path.txt")
+
 
 class ArtifactoryAccessorTest(unittest.TestCase):
     """ Test the real artifactory integration """
