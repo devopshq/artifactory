@@ -410,7 +410,7 @@ permission.update() # Update!!
 ## Common
 All `AdminObject`  support:
 ```python
-artifactory_.find_user('username')
+user = artifactory_.find_user('username')
 print(user.raw) # JSON response from Artifactory
 
 new_repo = RepositoryLocal(artifactory, 'reponame')
