@@ -901,7 +901,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.session = kwargs.get('session', None)
 
         if obj.auth is None and cfg_entry:
-            obj.auth = (cfg_entry['username'], cfg_entry['password'])
+            obj.auth = requests.auth.HTTPDigestAuth(cfg_entry['username'],
+                                                    cfg_entry['password'])
 
         if obj.cert is None and cfg_entry:
             obj.cert = cfg_entry['cert']
