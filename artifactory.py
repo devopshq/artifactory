@@ -890,19 +890,23 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         cfg_entry = get_global_config_entry(obj.drive)
 
+        # Auth section
         apikey = kwargs.get('apikey', None)
-        if apikey is not None:
+        auth_type = kwargs.get('auth_type', tuple)
+        if apikey is None:
+            auth = kwargs.get('auth', None)
+            obj.auth = auth_type(auth)
+        else:
             logging.debug('Use XJFrogApiAuth')
             obj.auth = XJFrogArtApiAuth(apikey)
-        else:
-            obj.auth = kwargs.get('auth', None)
+
+        if obj.auth is None and cfg_entry:
+            obj.auth = auth_type(cfg_entry['username'],
+                                                    cfg_entry['password'])
 
         obj.cert = kwargs.get('cert', None)
         obj.session = kwargs.get('session', None)
 
-        if obj.auth is None and cfg_entry:
-            obj.auth = requests.auth.HTTPDigestAuth(cfg_entry['username'],
-                                                    cfg_entry['password'])
 
         if obj.cert is None and cfg_entry:
             obj.cert = cfg_entry['cert']

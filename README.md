@@ -47,13 +47,33 @@ python3 -mpip install dohq-artifactory
 
 ```python
 from artifactory import ArtifactoryPath
+
+# API_KEY
 path = ArtifactoryPath(
     "http://my-artifactory/artifactory/myrepo/restricted-path",
     apikey='MY_API_KEY')
 
+# User and password OR API_KEY
 path = ArtifactoryPath(
     "http://my-artifactory/artifactory/myrepo/restricted-path",
     auth=('USERNAME', 'PASSWORD or API_KEY'))
+
+# Other authentication types
+from requests.auth import HTTPDigestAuth
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/myrepo/restricted-path",
+    auth=('USERNAME', 'PASSWORD'),
+    auth_type=HTTPDigestAuth,
+    
+    )
+
+from requests.auth import HTTPBasicAuth
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/myrepo/restricted-path",
+    auth=('USERNAME', 'PASSWORD'),
+    auth_type=HTTPBasicAuth,
+    
+    )
 
 path.touch()
 ```
