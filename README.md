@@ -72,7 +72,12 @@ path = ArtifactoryPath(
     "http://my-artifactory/artifactory/myrepo/restricted-path",
     auth=('USERNAME', 'PASSWORD'),
     auth_type=HTTPBasicAuth,
-    
+    )
+
+# Load username, password from global config if exist:
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/myrepo/restricted-path",
+    auth_type=HTTPBasicAuth,
     )
 
 path.touch()
