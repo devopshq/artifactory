@@ -1,5 +1,6 @@
 *.py[cod]
 test-*.py
+.pytest_cache
 
 # C extensions
 *.so

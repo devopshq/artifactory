@@ -47,13 +47,38 @@ python3 -mpip install dohq-artifactory
 
 ```python
 from artifactory import ArtifactoryPath
+
+# API_KEY
 path = ArtifactoryPath(
     "http://my-artifactory/artifactory/myrepo/restricted-path",
     apikey='MY_API_KEY')
 
+# User and password OR API_KEY
 path = ArtifactoryPath(
     "http://my-artifactory/artifactory/myrepo/restricted-path",
     auth=('USERNAME', 'PASSWORD or API_KEY'))
+
+# Other authentication types
+from requests.auth import HTTPDigestAuth
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/myrepo/restricted-path",
+    auth=('USERNAME', 'PASSWORD'),
+    auth_type=HTTPDigestAuth,
+    
+    )
+
+from requests.auth import HTTPBasicAuth
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/myrepo/restricted-path",
+    auth=('USERNAME', 'PASSWORD'),
+    auth_type=HTTPBasicAuth,
+    )
+
+# Load username, password from global config if exist:
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/myrepo/restricted-path",
+    auth_type=HTTPBasicAuth,
+    )
 
 path.touch()
 ```
@@ -410,7 +435,7 @@ permission.update() # Update!!
 ## Common
 All `AdminObject`  support:
 ```python
-artifactory_.find_user('username')
+user = artifactory_.find_user('username')
 print(user.raw) # JSON response from Artifactory
 
 new_repo = RepositoryLocal(artifactory, 'reponame')
