@@ -344,6 +344,10 @@ class _ArtifactoryFlavour(pathlib._Flavour):
         before it, including '/artifactory/' itself is treated as drive.
         The next folder is treated as root, and everything else is taken
         for relative path.
+
+        If '/artifactory/' is not in the URI. Everything before the path
+        component is treated as drive. The first folder of the path is
+        treated as root, and everything else is taken for relative path.
         """
         drv = ''
         root = ''
@@ -353,8 +357,20 @@ class _ArtifactoryFlavour(pathlib._Flavour):
             mark = without_http_prefix(base).rstrip(sep) + sep
             parts = part.split(mark)
         else:
-            mark = sep + 'artifactory' + sep
-            parts = part.split(mark)
+            url = urllib3.util.parse_url(part)
+            if url.path is None or url.path == sep:
+                if url.scheme:
+                    return part.rstrip(sep), '', ''
+                return '', '', part
+            elif 'artifactory' in url.path:
+                mark = sep + 'artifactory' + sep
+                parts = part.split(mark)
+            else:
+                drv = part.split(url.path)[0]
+                path_parts = url.path.strip(sep).split(sep)
+                root = sep + path_parts[0] + sep
+                rest = sep.join(path_parts[1:])
+                return drv, root, rest
 
         if len(parts) >= 2:
             drv = parts[0] + mark.rstrip(sep)
