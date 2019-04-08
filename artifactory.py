@@ -358,11 +358,16 @@ class _ArtifactoryFlavour(pathlib._Flavour):
             parts = part.split(mark)
         else:
             url = urllib3.util.parse_url(part)
+
+            if (without_http_prefix(part).strip("/") == part.strip("/") and
+                    url.path and not url.path.strip("/").startswith("artifactory")):
+                return '', '', part
+
             if url.path is None or url.path == sep:
                 if url.scheme:
                     return part.rstrip(sep), '', ''
                 return '', '', part
-            elif 'artifactory' in url.path:
+            elif url.path.lstrip("/").startswith("artifactory"):
                 mark = sep + 'artifactory' + sep
                 parts = part.split(mark)
             else:
