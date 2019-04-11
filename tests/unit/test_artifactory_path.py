@@ -89,6 +89,37 @@ class ArtifactoryFlavorTest(unittest.TestCase):
         check("https://artifactory.a.b.c.d/artifactory/foo/bar",
               ('https://artifactory.a.b.c.d/artifactory', '/foo/', 'bar'))
 
+    def test_splitroot_custom_drv(self):
+        """
+        https://github.com/devopshq/artifactory/issues/31
+        """
+        check = self._check_splitroot
+
+        check("https://artifactory.example.com",
+              ('https://artifactory.example.com', '', ''))
+        check("https://artifactory.example.com/",
+              ('https://artifactory.example.com', '', ''))
+        check("https://artifactory.example.com/root",
+              ('https://artifactory.example.com', '/root/', ''))
+        check("https://artifactory.example.com/root/",
+              ('https://artifactory.example.com', '/root/', ''))
+        check("https://artifactory.example.com/root/parts",
+              ('https://artifactory.example.com', '/root/', 'parts'))
+        check("https://artifactory.example.com/root/parts/",
+              ('https://artifactory.example.com', '/root/', 'parts'))
+        check("https://artifacts.example.com",
+              ('https://artifacts.example.com', '', ''))
+        check("https://artifacts.example.com/",
+              ('https://artifacts.example.com', '', ''))
+        check("https://artifacts.example.com/root",
+              ('https://artifacts.example.com', '/root/', ''))
+        check("https://artifacts.example.com/root/",
+              ('https://artifacts.example.com', '/root/', ''))
+        check("https://artifacts.example.com/root/parts",
+              ('https://artifacts.example.com', '/root/', 'parts'))
+        check("https://artifacts.example.com/root/parts/",
+              ('https://artifacts.example.com', '/root/', 'parts'))
+
     def test_splitroot_custom_root(self):
         check = self._check_splitroot
 
