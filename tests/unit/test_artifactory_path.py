@@ -88,6 +88,9 @@ class ArtifactoryFlavorTest(unittest.TestCase):
               ('http://artifactory.local/artifactory', '/foo/', 'bar'))
         check("https://artifactory.a.b.c.d/artifactory/foo/bar",
               ('https://artifactory.a.b.c.d/artifactory', '/foo/', 'bar'))
+        check("https://artifactory.a.b.c.d/artifactory/foo/artifactory/bar",
+              ('https://artifactory.a.b.c.d/artifactory', '/foo/',
+               'artifactory/bar'))
 
     def test_splitroot_custom_drv(self):
         """
@@ -119,6 +122,8 @@ class ArtifactoryFlavorTest(unittest.TestCase):
               ('https://artifacts.example.com', '/root/', 'parts'))
         check("https://artifacts.example.com/root/parts/",
               ('https://artifacts.example.com', '/root/', 'parts'))
+        check("https://artifacts.example.com/root/artifactory/parts/",
+              ('https://artifacts.example.com', '/root/', 'artifactory/parts'))
 
     def test_splitroot_custom_root(self):
         check = self._check_splitroot
@@ -137,6 +142,8 @@ class ArtifactoryFlavorTest(unittest.TestCase):
               ('http://custom/root', '/foo/', 'bar'))
         check("https://custom/root/foo/baz",
               ('https://custom/root', '/foo/', 'baz'))
+        check("https://custom/root/foo/with/artifactory/folder/baz",
+              ('https://custom/root', '/foo/', 'with/artifactory/folder/baz'))
 
     def test_parse_parts(self):
         check = self._check_parse_parts
@@ -159,6 +166,11 @@ class ArtifactoryFlavorTest(unittest.TestCase):
         check(['http://example.com/artifactory/foo/bar/artifactory'],
               ('http://example.com/artifactory', '/foo/',
                ['http://example.com/artifactory/foo/', 'bar', 'artifactory']))
+
+        check(['http://example.com/artifactory/foo/bar/artifactory/fi'],
+              ('http://example.com/artifactory', '/foo/',
+               ['http://example.com/artifactory/foo/', 'bar', 'artifactory',
+                'fi']))
 
 
 class PureArtifactoryPathTest(unittest.TestCase):
@@ -224,6 +236,23 @@ class PureArtifactoryPathTest(unittest.TestCase):
         b = P("http://b/artifactory/reponame/f")
         c = b / "path.txt"
         self.assertEqual(str(c), "http://b/artifactory/reponame/f/path.txt")
+
+    def test_join_with_artifactory_folder(self):
+        P = self.cls
+
+        b = P("http://b/artifactory/reponame/path/with/artifactory/folder")
+        c = b / "path.txt"
+        self.assertEqual(str(c), "http://b/artifactory/reponame/path/with/artifactory/folder/path.txt")
+
+    def test_join_with_multiple_folder_and_artifactory_substr_in_it(self):
+        """
+        https://github.com/devopshq/artifactory/issues/58
+        """
+        P = self.cls
+
+        b = P("http://b/artifactory/reponame")
+        c = b / "path/with/multiple/subdir/and/artifactory/path.txt"
+        self.assertEqual(str(c), "http://b/artifactory/reponame/path/with/multiple/subdir/and/artifactory/path.txt")
 
 
 class ArtifactoryAccessorTest(unittest.TestCase):
