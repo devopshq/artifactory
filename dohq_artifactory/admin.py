@@ -244,7 +244,7 @@ class Group(AdminObject):
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
         """
         self.name = response['name']
-        self.description = response['description']
+        self.description = response.get('description', None)
         self.autoJoin = response['autoJoin']
         self.realm = response['realm']
         self.realmAttributes = response.get('realmAttributes', None)
