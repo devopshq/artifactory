@@ -356,6 +356,8 @@ class _ArtifactoryFlavour(pathlib._Flavour):
         if base and without_http_prefix(part).startswith(without_http_prefix(base)):
             mark = without_http_prefix(base).rstrip(sep) + sep
             parts = part.split(mark)
+        elif sep not in part:
+            return '', '', part
         else:
             url = urllib3.util.parse_url(part)
 
