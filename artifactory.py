@@ -356,13 +356,20 @@ class _ArtifactoryFlavour(pathlib._Flavour):
         if base and without_http_prefix(part).startswith(without_http_prefix(base)):
             mark = without_http_prefix(base).rstrip(sep) + sep
             parts = part.split(mark)
+        elif sep not in part:
+            return '', '', part
         else:
             url = urllib3.util.parse_url(part)
+
+            if (without_http_prefix(part).strip("/") == part.strip("/") and
+                    url.path and not url.path.strip("/").startswith("artifactory")):
+                return '', '', part
+
             if url.path is None or url.path == sep:
                 if url.scheme:
                     return part.rstrip(sep), '', ''
                 return '', '', part
-            elif 'artifactory' in url.path:
+            elif url.path.lstrip("/").startswith("artifactory"):
                 mark = sep + 'artifactory' + sep
                 parts = part.split(mark)
             else:
@@ -729,7 +736,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         """
         Copy artifact from src to dst
         """
-        url = '/'.join([src.drive,
+        url = '/'.join([src.drive.rstrip('/'),
                         'api/copy',
                         str(src.relative_to(src.drive)).rstrip('/')])
 
@@ -749,7 +756,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         """
         Move artifact from src to dst
         """
-        url = '/'.join([src.drive,
+        url = '/'.join([src.drive.rstrip('/'),
                         'api/move',
                         str(src.relative_to(src.drive)).rstrip('/')])
 
@@ -768,7 +775,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         """
         Get artifact properties and return them as a dictionary.
         """
-        url = '/'.join([pathobj.drive,
+        url = '/'.join([pathobj.drive.rstrip('/'),
                         'api/storage',
                         str(pathobj.relative_to(pathobj.drive)).strip('/')])
 
@@ -793,7 +800,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         """
         Set artifact properties
         """
-        url = '/'.join([pathobj.drive,
+        url = '/'.join([pathobj.drive.rstrip('/'),
                         'api/storage',
                         str(pathobj.relative_to(pathobj.drive)).strip('/')])
 
@@ -820,7 +827,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if isinstance(props, str):
             props = (props,)
 
-        url = '/'.join([pathobj.drive,
+        url = '/'.join([pathobj.drive.rstrip('/'),
                         'api/storage',
                         str(pathobj.relative_to(pathobj.drive)).strip('/')])
 
@@ -1266,7 +1273,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         http://example.com/artifactory/published/production/product-1.0.0.tar.gz
         http://example.com/artifactory/published/production/product-1.0.0.tar.pom
         """
-        if self.drive == dst.drive:
+        if self.drive.rstrip('/') == dst.drive.rstrip('/'):
             self._accessor.copy(self, dst, suppress_layouts=suppress_layouts)
         else:
             with self.open() as fobj:
@@ -1276,7 +1283,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         Move artifact from this path to destinaiton.
         """
-        if self.drive != dst.drive:
+        if self.drive.rstrip('/') != dst.drive.rstrip('/'):
             raise NotImplementedError(
                 "Moving between instances is not implemented yet")
 
@@ -1338,7 +1345,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         :param args:
         :return:
         """
-        aql_query_url = '{}/api/search/aql'.format(self.drive)
+        aql_query_url = '{}/api/search/aql'.format(self.drive.rstrip('/'))
         aql_query_text = self.create_aql_text(*args)
         r = self.session.post(aql_query_url, data=aql_query_text)
         r.raise_for_status()
@@ -1369,7 +1376,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         if result_type not in ('file', 'folder'):
             raise RuntimeError("Path object with type '{}' doesn't support. File or folder only".format(result_type))
 
-        result_path = "{}/{repo}/{path}/{name}".format(self.drive, **result)
+        result_path = "{}/{repo}/{path}/{name}".format(self.drive.rstrip('/'), **result)
         obj = ArtifactoryPath(result_path, auth=self.auth, verify=self.verify, cert=self.cert, session=self.session)
         return obj
 
