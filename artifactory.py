@@ -209,6 +209,17 @@ def sha1sum(filename):
     return sha1.hexdigest()
 
 
+def sha256sum(filename):
+    """
+    Calculates sha256 hash of a file
+    """
+    sha256 = hashlib.sha256()
+    with open(filename, 'rb') as f:
+        for chunk in iter(lambda: f.read(128 * sha256.block_size), b''):
+            sha256.update(chunk)
+    return sha256.hexdigest()
+
+
 def chunks(data, size):
     """
     Get chink for dict, copy as-is from https://stackoverflow.com/a/8290508/6753144
@@ -446,6 +457,7 @@ ArtifactoryFileStat = collections.namedtuple(
      'mime_type',
      'size',
      'sha1',
+     'sha256',
      'md5',
      'is_dir',
      'children'])
@@ -531,6 +543,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
           mime_type -- MIME type of the file
           size -- file size
           sha1 -- SHA1 digest of the file
+          sha256 -- SHA256 digest of the file
           md5 -- MD5 digest of the file
           is_dir -- 'True' if path is a directory
           children -- list of children names
@@ -553,6 +566,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             mime_type=jsn.get('mimeType', None),
             size=int(jsn.get('size', '0')),
             sha1=jsn.get('checksums', {'sha1': None})['sha1'],
+            sha256=jsn.get('checksums', {'sha256': None})['sha256'],
             md5=jsn.get('checksums', {'md5': None})['md5'],
             is_dir=is_dir,
             children=children)
@@ -702,7 +716,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         return raw
 
-    def deploy(self, pathobj, fobj, md5=None, sha1=None, parameters=None):
+    def deploy(self, pathobj, fobj, md5=None, sha1=None, sha256=None, parameters=None):
         """
         Uploads a given file-like object
         HTTP chunked encoding will be attempted
@@ -721,6 +735,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             headers['X-Checksum-Md5'] = md5
         if sha1:
             headers['X-Checksum-Sha1'] = sha1
+        if sha256:
+            headers['X-Checksum-Sha256'] = sha256
 
         text, code = self.rest_put_stream(url,
                                           fobj,
@@ -1174,16 +1190,18 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         raise NotImplementedError()
 
-    def deploy(self, fobj, md5=None, sha1=None, parameters={}):
+    def deploy(self, fobj, md5=None, sha1=None, sha256=None, parameters={}):
         """
         Upload the given file object to this path
         """
-        return self._accessor.deploy(self, fobj, md5, sha1, parameters)
+        return self._accessor.deploy(self, fobj, md5=md5, sha1=sha1, sha256=sha256,
+                                     parameters=parameters)
 
     def deploy_file(self,
                     file_name,
                     calc_md5=True,
                     calc_sha1=True,
+                    calc_sha256=True,
                     parameters={}):
         """
         Upload the given file to this path
@@ -1192,6 +1210,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             md5 = md5sum(file_name)
         if calc_sha1:
             sha1 = sha1sum(file_name)
+        if calc_sha256:
+            sha256 = sha256sum(file_name)
 
         target = self
 
@@ -1199,7 +1219,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             target = self / pathlib.Path(file_name).name
 
         with open(file_name, 'rb') as fobj:
-            target.deploy(fobj, md5, sha1, parameters)
+            target.deploy(fobj, md5=md5, sha1=sha1, sha256=sha256,
+                          parameters=parameters)
 
     def deploy_deb(self,
                    file_name,
