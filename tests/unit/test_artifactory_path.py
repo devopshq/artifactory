@@ -274,10 +274,12 @@ class ArtifactoryAccessorTest(unittest.TestCase):
                 "size" : "26776462",
                 "checksums" : {
                     "sha1" : "fc6c9e8ba6eaca4fa97868ac900570282133c095",
+                    "sha256" : "fc6c9e8ba6eaca4fa97868ac900570282133c095fc6c9e8ba6eaca4fa97868ac900570282133c095",
                     "md5" : "2af7d54a09e9c36d704cb3a2de28aff3"
                 },
                 "originalChecksums" : {
                     "sha1" : "fc6c9e8ba6eaca4fa97868ac900570282133c095",
+                    "sha256" : "fc6c9e8ba6eaca4fa97868ac900570282133c095fc6c9e8ba6eaca4fa97868ac900570282133c095",
                     "md5" : "2af7d54a09e9c36d704cb3a2de28aff3"
                 },
                 "uri" : "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
@@ -326,6 +328,7 @@ class ArtifactoryAccessorTest(unittest.TestCase):
         self.assertEqual(s.mime_type, "application/octet-stream")
         self.assertEqual(s.size, 26776462)
         self.assertEqual(s.sha1, "fc6c9e8ba6eaca4fa97868ac900570282133c095")
+        self.assertEqual(s.sha256, "fc6c9e8ba6eaca4fa97868ac900570282133c095fc6c9e8ba6eaca4fa97868ac900570282133c095")
         self.assertEqual(s.md5, "2af7d54a09e9c36d704cb3a2de28aff3")
         self.assertEqual(s.is_dir, False)
 
@@ -342,6 +345,7 @@ class ArtifactoryAccessorTest(unittest.TestCase):
         self.assertEqual(s.mime_type, None)
         self.assertEqual(s.size, 0)
         self.assertEqual(s.sha1, None)
+        self.assertEqual(s.sha256, None)
         self.assertEqual(s.md5, None)
         self.assertEqual(s.is_dir, True)
 
