@@ -558,6 +558,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if 'children' in jsn:
             children = [child['uri'][1:] for child in jsn['children']]
 
+        checksums = jsn.get('checksums', {})
+
         stat = ArtifactoryFileStat(
             ctime=dateutil.parser.parse(jsn['created']),
             mtime=dateutil.parser.parse(jsn['lastModified']),
@@ -565,9 +567,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             modified_by=jsn.get('modifiedBy', None),
             mime_type=jsn.get('mimeType', None),
             size=int(jsn.get('size', '0')),
-            sha1=jsn.get('checksums', {'sha1': None})['sha1'],
-            sha256=jsn.get('checksums', {'sha256': None})['sha256'],
-            md5=jsn.get('checksums', {'md5': None})['md5'],
+            sha1=checksums.get('sha1', None),
+            sha256=checksums.get('sha256', None),
+            md5=checksums.get('md5', None),
             is_dir=is_dir,
             children=children)
 
