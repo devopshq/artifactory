@@ -342,9 +342,9 @@ class RepositoryLocal(Repository):
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
         """
         self.name = response['key']
-        self.description = response['description']
-        self.layoutName = response['repoLayoutRef']
-        self.archiveBrowsingEnabled = response['archiveBrowsingEnabled']
+        self.description = response.get('description')
+        self.layoutName = response.get('repoLayoutRef')
+        self.archiveBrowsingEnabled = response.get('archiveBrowsingEnabled')
 
 
 class RepositoryVirtual(AdminObject):
