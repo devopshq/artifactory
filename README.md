@@ -1,10 +1,13 @@
 # Python interface library for Jfrog Artifactory #
 
+
 [![docs](https://img.shields.io/readthedocs/pip.svg)](https://devopshq.github.io/artifactory/)[![dohq-artifactory build Status](https://travis-ci.org/devopshq/artifactory.svg?branch=master)](https://travis-ci.org/devopshq/artifactory) [![dohq-artifactory code quality](https://api.codacy.com/project/badge/Grade/ce32469db9d948bcb56d50532e0c0005)](https://www.codacy.com/app/tim55667757/artifactory/dashboard) [![dohq-artifactory on PyPI](https://img.shields.io/pypi/v/dohq-artifactory.svg)](https://pypi.python.org/pypi/dohq-artifactory) [![dohq-artifactory license](https://img.shields.io/pypi/l/dohq-artifactory.svg)](https://github.com/devopshq/artifactory/blob/master/LICENSE)
 
 This module is intended to serve as a logical descendant of [pathlib](https://docs.python.org/3/library/pathlib.html), a Python 3 module for object-oriented path manipulations. As such, it implements everything as closely as possible to the origin with few exceptions, such as stat().
 
-# Tables of Contents 
+![](https://img.shields.io/badge/status-supported-green.svg)`dohq-artifactory` is a live python package for Jfrog Artifactory. It was forked from outdated [parallels/artifactory](https://github.com/parallels/artifactory) and support all functional from the original package.
+
+# Tables of Contents
 - [Install](#install)
 - [Usage](#usage)
     - [Authentication](#authentication)
@@ -38,7 +41,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
 ```bash
 python3 -mpip install dohq-artifactory
 ```
-# Usage 
+# Usage
 
 ## Authentication ##
 `dohq-artifactory` support this way to authentication:
@@ -64,7 +67,7 @@ path = ArtifactoryPath(
     "http://my-artifactory/artifactory/myrepo/restricted-path",
     auth=('USERNAME', 'PASSWORD'),
     auth_type=HTTPDigestAuth,
-    
+
     )
 
 from requests.auth import HTTPBasicAuth
@@ -114,7 +117,7 @@ Download artifact to a local filesystem:
 from artifactory import ArtifactoryPath
 path = ArtifactoryPath(
     "http://repo.jfrog.org/artifactory/distributions/org/apache/tomcat/apache-tomcat-7.0.11.tar.gz")
-    
+
 with path.open() as fd:
     with open("tomcat.tar.gz", "wb") as out:
         out.write(fd.read())
@@ -138,7 +141,7 @@ Deploy a debian package ```myapp-1.0.deb```
 from artifactory import ArtifactoryPath
 path = ArtifactoryPath(
     "http://my-artifactory/artifactory/ubuntu-local/pool")
-path.deploy_deb('./myapp-1.0.deb', 
+path.deploy_deb('./myapp-1.0.deb',
                 distribution='trusty',
                 component='main',
                 architecture='amd64')
@@ -274,7 +277,7 @@ artifact_pathlib_list = list(map(aql.from_aql, artifacts_list))
 
 
 ## FileStat
-You can get hash (`md5`, `sha1`), create and change date:
+You can get hash (`md5`, `sha1`, `sha256`), create and change date:
 
 ```python
 from artifactory import ArtifactoryPath
@@ -286,6 +289,7 @@ stat = ArtifactoryPath.stat(path)
 print(stat)
 print(stat.md5)
 print(stat.sha1)
+print(stat.sha256)
 print(stat.ctime)
 print(stat.is_dir)
 print(stat.size)
@@ -480,7 +484,7 @@ path.touch()
 
 
 ## SSL Cert Verification Options ##
-See [Requests - SSL verification](http://docs.python-requests.org/en/latest/user/advanced/#ssl-cert-verification) for more details.  
+See [Requests - SSL verification](http://docs.python-requests.org/en/latest/user/advanced/#ssl-cert-verification) for more details.
 
 ```python
 from artifactory import ArtifactoryPath
@@ -491,7 +495,7 @@ path = ArtifactoryPath(
 ```python
 from artifactory import ArtifactoryPath
 path = ArtifactoryPath(
-    "http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0", 
+    "http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0",
     verify=True)
 ```
 Specify a local cert to use as client side certificate
@@ -502,7 +506,7 @@ path = ArtifactoryPath(
     "http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0",
     cert="/path_to_file/server.pem")
 ```
-Disable host cert verification 
+Disable host cert verification
 
 ```python
 from artifactory import ArtifactoryPath
@@ -511,7 +515,7 @@ path = ArtifactoryPath(
     verify=False)
 ```
 
-**Note:** If host cert verification is disabled urllib3 will throw a [InsecureRequestWarning](https://urllib3.readthedocs.org/en/latest/security.html#insecurerequestwarning).  
+**Note:** If host cert verification is disabled urllib3 will throw a [InsecureRequestWarning](https://urllib3.readthedocs.org/en/latest/security.html#insecurerequestwarning).
 To disable these warning, one needs to call urllib3.disable_warnings().
 ```python
 import requests.packages.urllib3 as urllib3
@@ -552,7 +556,7 @@ password = @dmin
 cert = ~/mycert
 ```
 
-Whether or not you specify ```http://``` or ```https://``` prefix is not essential. The module will first try to locate the best match and then try to match URLs without prefixes. So if in the config you specify ```https://my-instance.local``` and call ```ArtifactoryPath``` with ```http://my-instance.local```, it will still do the right thing. 
+Whether or not you specify ```http://``` or ```https://``` prefix is not essential. The module will first try to locate the best match and then try to match URLs without prefixes. So if in the config you specify ```https://my-instance.local``` and call ```ArtifactoryPath``` with ```http://my-instance.local```, it will still do the right thing.
 
 
 # Contribute
@@ -561,6 +565,3 @@ Whether or not you specify ```http://``` or ```https://``` prefix is not essenti
 # Advertising
 - [artifactory-du](https://github.com/devopshq/artifactory-du) - estimate file space usage. Summarize disk usage in JFrog Artifactory of the set of FILEs, recursively for directories.
 - [artifacotyr-cleanup-rules](https://github.com/devopshq/artifactory-du/issues/2) - python-script for Artifactory intelligence cleanup rules with config.
-
-
-

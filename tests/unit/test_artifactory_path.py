@@ -274,10 +274,12 @@ class ArtifactoryAccessorTest(unittest.TestCase):
                 "size" : "26776462",
                 "checksums" : {
                     "sha1" : "fc6c9e8ba6eaca4fa97868ac900570282133c095",
+                    "sha256" : "fc6c9e8ba6eaca4fa97868ac900570282133c095fc6c9e8ba6eaca4fa97868ac900570282133c095",
                     "md5" : "2af7d54a09e9c36d704cb3a2de28aff3"
                 },
                 "originalChecksums" : {
                     "sha1" : "fc6c9e8ba6eaca4fa97868ac900570282133c095",
+                    "sha256" : "fc6c9e8ba6eaca4fa97868ac900570282133c095fc6c9e8ba6eaca4fa97868ac900570282133c095",
                     "md5" : "2af7d54a09e9c36d704cb3a2de28aff3"
                 },
                 "uri" : "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
@@ -326,6 +328,7 @@ class ArtifactoryAccessorTest(unittest.TestCase):
         self.assertEqual(s.mime_type, "application/octet-stream")
         self.assertEqual(s.size, 26776462)
         self.assertEqual(s.sha1, "fc6c9e8ba6eaca4fa97868ac900570282133c095")
+        self.assertEqual(s.sha256, "fc6c9e8ba6eaca4fa97868ac900570282133c095fc6c9e8ba6eaca4fa97868ac900570282133c095")
         self.assertEqual(s.md5, "2af7d54a09e9c36d704cb3a2de28aff3")
         self.assertEqual(s.is_dir, False)
 
@@ -342,8 +345,51 @@ class ArtifactoryAccessorTest(unittest.TestCase):
         self.assertEqual(s.mime_type, None)
         self.assertEqual(s.size, 0)
         self.assertEqual(s.sha1, None)
+        self.assertEqual(s.sha256, None)
         self.assertEqual(s.md5, None)
         self.assertEqual(s.is_dir, True)
+
+    def test_stat_no_sha256(self):
+        a = self.cls()
+        P = artifactory.ArtifactoryPath
+
+        # Regular File
+        p = P("http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz")
+        file_stat = """
+            {
+                "repo" : "ext-release-local",
+                "path" : "/org/company/tool/1.0/tool-1.0.tar.gz",
+                "created" : "2014-02-24T21:20:59.999+04:00",
+                "createdBy" : "someuser",
+                "lastModified" : "2014-02-24T21:20:36.000+04:00",
+                "modifiedBy" : "anotheruser",
+                "lastUpdated" : "2014-02-24T21:20:36.000+04:00",
+                "downloadUri" : "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz",
+                "mimeType" : "application/octet-stream",
+                "size" : "26776462",
+                "checksums" : {
+                    "sha1" : "fc6c9e8ba6eaca4fa97868ac900570282133c095",
+                    "md5" : "2af7d54a09e9c36d704cb3a2de28aff3"
+                },
+                "originalChecksums" : {
+                    "sha1" : "fc6c9e8ba6eaca4fa97868ac900570282133c095",
+                    "md5" : "2af7d54a09e9c36d704cb3a2de28aff3"
+                },
+                "uri" : "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+            }
+        """
+
+        a.rest_get = MM(return_value=(file_stat, 200))
+
+        s = a.stat(p)
+        self.assertEqual(s.ctime, dateutil.parser.parse("2014-02-24T21:20:59.999+04:00"))
+        self.assertEqual(s.mtime, dateutil.parser.parse("2014-02-24T21:20:36.000+04:00"))
+        self.assertEqual(s.created_by, "someuser")
+        self.assertEqual(s.modified_by, "anotheruser")
+        self.assertEqual(s.mime_type, "application/octet-stream")
+        self.assertEqual(s.size, 26776462)
+        self.assertEqual(s.sha1, "fc6c9e8ba6eaca4fa97868ac900570282133c095")
+        self.assertEqual(s.sha256, None)
 
     def test_listdir(self):
         a = self.cls()
