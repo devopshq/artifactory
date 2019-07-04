@@ -1208,12 +1208,9 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         Upload the given file to this path
         """
-        if calc_md5:
-            md5 = md5sum(file_name)
-        if calc_sha1:
-            sha1 = sha1sum(file_name)
-        if calc_sha256:
-            sha256 = sha256sum(file_name)
+        md5 = md5sum(file_name) if calc_md5 else None
+        sha1 = sha1sum(file_name) if calc_sha1 else None
+        sha256 = sha256sum(file_name) if calc_sha256 else None
 
         target = self
 
