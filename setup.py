@@ -7,7 +7,7 @@ try:
 except ImportError:
     from distutils.core import setup
 
-__version__ = '0.4.111'  # identify main version of dohq-artifactory
+__version__ = '0.4.112'  # identify main version of dohq-artifactory
 
 print("dohq-artifactory build version = {}".format(__version__))
 
@@ -36,7 +36,7 @@ setup(
     url='https://devopshq.github.io/artifactory/',
     download_url='https://github.com/devopshq/artifactory',
     install_requires=[
-        'pathlib',
+        'pathlib ; python_version<"3.4"',
         'requests',
         'python-dateutil'
     ],
