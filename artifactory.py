@@ -68,6 +68,8 @@ def read_config(config_path=default_config_path):
       password = @dmin
       verify = false
       cert = ~/path-to-cert
+      http_proxy = http://<host ip>:<host port>
+      https_proxy = http://<host ip>:<host port>
 
     config-path - specifies where to read the config from
     """
@@ -83,15 +85,23 @@ def read_config(config_path=default_config_path):
     result = {}
 
     for section in p.sections():
+        proxies=dict()
         username = p.get(section, 'username') if p.has_option(section, 'username') else None
         password = p.get(section, 'password') if p.has_option(section, 'password') else None
         verify = p.getboolean(section, 'verify') if p.has_option(section, 'verify') else True
         cert = p.get(section, 'cert') if p.has_option(section, 'cert') else None
+        if p.has_option(section, 'http_proxy') :
+            proxies['http_proxy'] = p.get(section, 'http_proxy')
+        if p.has_option(section, 'https_proxy') :
+            proxies['https_proxy'] = p.get(section, 'https_proxy')
+        if len(proxies) < 1:
+            proxies=None
 
         result[section] = {'username': username,
                            'password': password,
                            'verify': verify,
-                           'cert': cert}
+                           'cert': cert,
+                           'proxies': proxies}
         # certificate path may contain '~', and we'd better expand it properly
         if result[section]['cert']:
             result[section]['cert'] = \
@@ -468,48 +478,48 @@ class _ArtifactoryAccessor(pathlib._Accessor):
     Implements operations with Artifactory REST API
     """
 
-    def rest_get(self, url, params=None, headers=None, session=None, verify=True, cert=None):
+    def rest_get(self, url, params=None, headers=None, session=None, verify=True, cert=None, proxies=None):
         """
         Perform a GET request to url with requests.session
         """
-        res = session.get(url, params=params, headers=headers, verify=verify, cert=cert)
+        res = session.get(url, params=params, headers=headers, verify=verify, cert=cert, proxies=proxies)
         return res.text, res.status_code
 
-    def rest_put(self, url, params=None, headers=None, session=None, verify=True, cert=None):
+    def rest_put(self, url, params=None, headers=None, session=None, verify=True, cert=None, proxies=None):
         """
         Perform a PUT request to url with requests.session
         """
-        res = session.put(url, params=params, headers=headers, verify=verify, cert=cert)
+        res = session.put(url, params=params, headers=headers, verify=verify, cert=cert, proxies=proxies)
         return res.text, res.status_code
 
-    def rest_post(self, url, params=None, headers=None, session=None, verify=True, cert=None):
+    def rest_post(self, url, params=None, headers=None, session=None, verify=True, cert=None, proxies=None):
         """
         Perform a POST request to url with requests.session
         """
-        res = session.post(url, params=params, headers=headers, verify=verify, cert=cert)
+        res = session.post(url, params=params, headers=headers, verify=verify, cert=cert, proxies=proxies)
         return res.text, res.status_code
 
-    def rest_del(self, url, params=None, session=None, verify=True, cert=None):
+    def rest_del(self, url, params=None, session=None, verify=True, cert=None, proxies=None):
         """
         Perform a DELETE request to url with requests.session
         """
-        res = session.delete(url, params=params, verify=verify, cert=cert)
+        res = session.delete(url, params=params, verify=verify, cert=cert, proxies=proxies)
         return res.text, res.status_code
 
-    def rest_put_stream(self, url, stream, headers=None, session=None, verify=True, cert=None):
+    def rest_put_stream(self, url, stream, headers=None, session=None, verify=True, cert=None, proxies=None):
         """
         Perform a chunked PUT request to url with requests.session
         This is specifically to upload files.
         """
-        res = session.put(url, headers=headers, data=stream, verify=verify, cert=cert)
+        res = session.put(url, headers=headers, data=stream, verify=verify, cert=cert, proxies=proxies)
         return res.text, res.status_code
 
-    def rest_get_stream(self, url, session=None, verify=True, cert=None):
+    def rest_get_stream(self, url, session=None, verify=True, cert=None, proxies=None):
         """
         Perform a chunked GET request to url with requests.session
         This is specifically to download files.
         """
-        res = session.get(url, stream=True, verify=verify, cert=cert)
+        res = session.get(url, stream=True, verify=verify, cert=cert, proxies=proxies)
         return res.raw, res.status_code
 
     def get_stat_json(self, pathobj):
@@ -522,7 +532,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                         str(pathobj.relative_to(pathobj.drive)).strip('/')])
 
         text, code = self.rest_get(url, session=pathobj.session, verify=pathobj.verify,
-                                   cert=pathobj.cert)
+                                   cert=pathobj.cert, proxies=pathobj.proxies)
         if code == 404 and "Unable to find item" in text:
             raise OSError(2, "No such file or directory: '%s'" % url)
         if code != 200:
@@ -624,7 +634,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             raise OSError(17, "File exists: '%s'" % str(pathobj))
 
         url = str(pathobj) + '/'
-        text, code = self.rest_put(url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert)
+        text, code = self.rest_put(url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert, proxies=pathobj.proxies)
 
         if not code == 201:
             raise RuntimeError("%s %d" % (text, code))
@@ -640,7 +650,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         url = str(pathobj) + '/'
 
-        text, code = self.rest_del(url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert)
+        text, code = self.rest_del(url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert, proxies=pathobj.proxies)
 
         if code not in [200, 202, 204]:
             raise RuntimeError("Failed to delete directory: '%s'" % text)
@@ -656,7 +666,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         url = str(pathobj)
         text, code = self.rest_del(url, session=pathobj.session, verify=pathobj.verify,
-                                   cert=pathobj.cert)
+                                   cert=pathobj.cert, proxies=pathobj.proxies)
 
         if code not in [200, 202, 204]:
             raise RuntimeError("Failed to delete file: %d '%s'" % (code, text))
@@ -672,7 +682,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             return
 
         url = str(pathobj)
-        text, code = self.rest_put(url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert)
+        text, code = self.rest_put(url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert, proxies=pathobj.proxies)
 
         if not code == 201:
             raise RuntimeError("%s %d" % (text, code))
@@ -711,7 +721,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         """
         url = str(pathobj)
         raw, code = self.rest_get_stream(url, session=pathobj.session, verify=pathobj.verify,
-                                         cert=pathobj.cert)
+                                         cert=pathobj.cert, proxies=pathobj.proxies)
 
         if not code == 200:
             raise RuntimeError("%d" % code)
@@ -745,7 +755,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                                           headers=headers,
                                           session=pathobj.session,
                                           verify=pathobj.verify,
-                                          cert=pathobj.cert)
+                                          cert=pathobj.cert,
+                                          proxies=pathobj.proxies)
 
         if code not in [200, 201]:
             raise RuntimeError("%s" % text)
@@ -765,7 +776,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                                     params=params,
                                     session=src.session,
                                     verify=src.verify,
-                                    cert=src.cert)
+                                    cert=src.cert,
+                                    proxies=pathobj.proxies)
 
         if code not in [200, 201]:
             raise RuntimeError("%s" % text)
@@ -784,7 +796,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                                     params=params,
                                     session=src.session,
                                     verify=src.verify,
-                                    cert=src.cert)
+                                    cert=src.cert,
+                                    proxies=pathobj.proxies)
 
         if code not in [200, 201]:
             raise RuntimeError("%s" % text)
@@ -803,7 +816,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                                    params=params,
                                    session=pathobj.session,
                                    verify=pathobj.verify,
-                                   cert=pathobj.cert)
+                                   cert=pathobj.cert,
+                                   proxies=pathobj.proxies)
 
         if code == 404 and "Unable to find item" in text:
             raise OSError(2, "No such file or directory: '%s'" % url)
@@ -831,7 +845,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                                    params=params,
                                    session=pathobj.session,
                                    verify=pathobj.verify,
-                                   cert=pathobj.cert)
+                                   cert=pathobj.cert,
+                                   proxies=pathobj.proxies)
 
         if code == 404 and "Unable to find item" in text:
             raise OSError(2, "No such file or directory: '%s'" % url)
@@ -858,7 +873,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                                    params=params,
                                    session=pathobj.session,
                                    verify=pathobj.verify,
-                                   cert=pathobj.cert)
+                                   cert=pathobj.cert,
+                                   proxies=pathobj.proxies)
 
         if code == 404 and "Unable to find item" in text:
             raise OSError(2, "No such file or directory: '%s'" % url)
@@ -917,7 +933,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
     """
     # Pathlib limits what members can be present in 'Path' class,
     # so authentication information has to be added via __slots__
-    __slots__ = ('auth', 'verify', 'cert', 'session')
+    __slots__ = ('auth', 'verify', 'cert', 'session', 'proxies')
 
     def __new__(cls, *args, **kwargs):
         """
@@ -947,9 +963,13 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         obj.cert = kwargs.get('cert', None)
         obj.session = kwargs.get('session', None)
+        obj.proxies= kwargs.get('proxies', None)
 
         if obj.cert is None and cfg_entry:
             obj.cert = cfg_entry['cert']
+
+        if obj.proxies is None and cfg_entry:
+            obj.proxies = cfg_entry['proxies']
 
         if 'verify' in kwargs:
             obj.verify = kwargs.get('verify')
@@ -963,6 +983,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             obj.session.auth = obj.auth
             obj.session.cert = obj.cert
             obj.session.verify = obj.verify
+            if obj.proxies is not None:
+                obj.session.proxies.update(obj.proxies)
 
         return obj
 
@@ -982,6 +1004,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.verify = self.verify
         obj.cert = self.cert
         obj.session = self.session
+        obj.proxies= self.proxies
         return obj
 
     def with_name(self, name):
@@ -993,6 +1016,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.verify = self.verify
         obj.cert = self.cert
         obj.session = self.session
+        obj.proxies= self.proxies
         return obj
 
     def with_suffix(self, suffix):
@@ -1004,6 +1028,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.verify = self.verify
         obj.cert = self.cert
         obj.session = self.session
+        obj.proxies= self.proxies
         return obj
 
     def relative_to(self, *other):
@@ -1017,6 +1042,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.verify = self.verify
         obj.cert = self.cert
         obj.session = self.session
+        obj.proxies= self.proxies
         return obj
 
     def joinpath(self, *args):
@@ -1031,6 +1057,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.verify = self.verify
         obj.cert = self.cert
         obj.session = self.session
+        obj.proxies= self.proxies
         return obj
 
     def __truediv__(self, key):
@@ -1042,6 +1069,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.verify = self.verify
         obj.cert = self.cert
         obj.session = self.session
+        obj.proxies= self.proxies
         return obj
 
     def __rtruediv__(self, key):
@@ -1053,6 +1081,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.verify = self.verify
         obj.cert = self.cert
         obj.session = self.session
+        obj.proxies= self.proxies
         return obj
 
     if sys.version_info < (3,):
@@ -1065,6 +1094,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.verify = self.verify
         obj.cert = self.cert
         obj.session = self.session
+        obj.proxies= self.proxies
         return obj
 
     def _make_child_relpath(self, args):
@@ -1073,6 +1103,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.verify = self.verify
         obj.cert = self.cert
         obj.session = self.session
+        obj.proxies= self.proxies
         return obj
 
     def __iter__(self):
