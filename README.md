@@ -536,11 +536,19 @@ permission.update()  # Update!!
 ```
 
 ## Token
+https://www.jfrog.com/confluence/display/RTF5X/Access+Tokens#AccessTokens-RESTAPI
 ```python
+from requests.auth import HTTPBasicAuth
+from artifactory import ArtifactoryPath
 from dohq_artifactory import Token
 
 session = ArtifactoryPath('https://artifactory_dns/artifactory', auth=('admin', 'admin_password'), auth_type=HTTPBasicAuth, verify=False)
 
+# Read token for readers group
+group_name="readers"
+scope = "api:* member-of-groups:"+group_name
+token = Token(session,  scope=scope)
+token.read()
 
 # Create token for member of the readers
 group_name="readers"
