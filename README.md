@@ -24,6 +24,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
     - [RepositoryLocal](#repositorylocal)
     - [RepositoryVirtual](#virtualrepository)
     - [PermissionTarget](#permissiontarget)
+    - [Token](#token)
     - [Common](#common)
 - [FAQ](docs/FAQ.md)
 - [Advanced](#advanced)
@@ -429,6 +430,26 @@ permission.add_user(user_object, PermissionTarget.ROLE_ADMIN)
 permission.add_group('groupname, PermissionTarget.ROLE_READ)
 
 permission.update() # Update!!
+
+```
+
+## Token
+```python
+from dohq_artifactory import Token
+
+session = ArtifactoryPath('https://artifactory_dns/artifactory', auth=('admin', 'admin_password'), auth_type=HTTPBasicAuth, verify=False)
+
+
+# Create token for member of the readers
+group_name="readers"
+scope = "api:* member-of-groups:"+group_name
+subject=group_name
+token = Token(session, scope=scope, username=subject, expires_in=31557600, refreshable=True)
+response=token.create()
+
+print("Readonly token:")
+print("Username: "+token.username)
+print("Token: "+token.token['access_token'])
 
 ```
 
