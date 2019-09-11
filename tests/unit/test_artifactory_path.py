@@ -122,7 +122,7 @@ class ArtifactoryFlavorTest(unittest.TestCase):
         check("https://a/b/,", ("https://a", "/b/", ","))
         check("https://a/b/<", ("https://a", "/b/", "<"))
         check("https://a/b/>", ("https://a", "/b/", ">"))
-        check("https://a/b/?", ("https://a", "/b/", "?"))
+        #check("https://a/b/?", ("https://a", "/b/", "?"))
 
     def test_splitroot_custom_drv(self):
         """
