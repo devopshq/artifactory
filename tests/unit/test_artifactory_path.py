@@ -118,7 +118,7 @@ class ArtifactoryFlavorTest(unittest.TestCase):
         check(":", ("", "", ":"))
         check(";", ("", "", ";"))
         check("'", ("", "", "'"))
-        check('/"', ("", "", '"'))
+        check('"', ("", "", '"'))
         check(",", ("", "", ","))
         check("<", ("", "", "<"))
         check(">", ("", "", ">"))
