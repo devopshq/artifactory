@@ -91,9 +91,36 @@ class ArtifactoryFlavorTest(unittest.TestCase):
         check("https://artifactory.a.b.c.d/artifactory/foo/artifactory/bar",
               ('https://artifactory.a.b.c.d/artifactory', '/foo/',
                'artifactory/bar'))
+
+    def test_special_characters(self):
         # https://github.com/devopshq/artifactory/issues/90
-        check("https://artifactory.jfrog.com/artifactory/repo-local/f:le~w:+h-$pe(:@|_n@me",
-              ("https://artifactlry.jfrog.com/artifactory", "/repo-local/", "f:le~w:+h-$pe(:@|_n@me"))
+        check = self._check_splitroot
+        check("https://a/b/`", ("https://a/b", "", "`"))
+        check("https://a/b/~", ("https://a/b", "", "~"))
+        check("https://a/b/!", ("https://a/b", "", "!"))
+        check("https://a/b/@", ("https://a/b", "", "@"))
+        check("https://a/b/#", ("https://a/b", "", "#"))
+        check("https://a/b/$", ("https://a/b", "", "$"))
+        check("https://a/b/%", ("https://a/b", "", "%"))
+        check("https://a/b/^", ("https://a/b", "", "^"))
+        check("https://a/b/&", ("https://a/b", "", "&"))
+        check("https://a/b/*", ("https://a/b", "", "*"))
+        check("https://a/b/(", ("https://a/b", "", "("))
+        check("https://a/b/)", ("https://a/b", "", ")"))
+        check("https://a/b/[", ("https://a/b", "", "["))
+        check("https://a/b/]", ("https://a/b", "", "]"))
+        check("https://a/b/{", ("https://a/b", "", "{"))
+        check("https://a/b/}", ("https://a/b", "", "}"))
+        check("https://a/b/|", ("https://a/b", "", "|"))
+        check("https://a/b/\\", ("https://a/b", "", "\\"))
+        check("https://a/b/:", ("https://a/b", "", ":"))
+        check("https://a/b/;", ("https://a/b", "", ";"))
+        check("https://a/b/'", ("https://a/b", "", "'"))
+        check('https://a/b/"', ("https://a/b", "", '"'))
+        check("https://a/b/,", ("https://a/b", "", ","))
+        check("https://a/b/<", ("https://a/b", "", "<"))
+        check("https://a/b/>", ("https://a/b", "", ">"))
+        check("https://a/b/?", ("https://a/b", "", "?"))
 
     def test_splitroot_custom_drv(self):
         """
