@@ -92,6 +92,38 @@ class ArtifactoryFlavorTest(unittest.TestCase):
               ('https://artifactory.a.b.c.d/artifactory', '/foo/',
                'artifactory/bar'))
 
+    def test_special_characters(self):
+        """
+        https://github.com/devopshq/artifactory/issues/90
+        """
+        check = self._check_splitroot
+        check("https://a/b/`", ("https://a", "/b/", "`"))
+        check("https://a/b/~", ("https://a", "/b/", "~"))
+        check("https://a/b/!", ("https://a", "/b/", "!"))
+        check("https://a/b/@", ("https://a", "/b/", "@"))
+        #check("https://a/b/#", ("https://a", "/b/", "#"))
+        check("https://a/b/$", ("https://a", "/b/", "$"))
+        check("https://a/b/%", ("https://a", "/b/", "%"))
+        check("https://a/b/^", ("https://a", "/b/", "^"))
+        check("https://a/b/&", ("https://a", "/b/", "&"))
+        check("https://a/b/*", ("https://a", "/b/", "*"))
+        check("https://a/b/(", ("https://a", "/b/", "("))
+        check("https://a/b/)", ("https://a", "/b/", ")"))
+        check("https://a/b/[", ("https://a", "/b/", "["))
+        check("https://a/b/]", ("https://a", "/b/", "]"))
+        check("https://a/b/{", ("https://a", "/b/", "{"))
+        check("https://a/b/}", ("https://a", "/b/", "}"))
+        check("https://a/b/|", ("https://a", "/b/", "|"))
+        check("https://a/b/\\", ("https://a", "/b/", "\\"))
+        check("https://a/b/:", ("https://a", "/b/", ":"))
+        check("https://a/b/;", ("https://a", "/b/", ";"))
+        check("https://a/b/'", ("https://a", "/b/", "'"))
+        check('https://a/b/"', ("https://a", "/b/", '"'))
+        check("https://a/b/,", ("https://a", "/b/", ","))
+        check("https://a/b/<", ("https://a", "/b/", "<"))
+        check("https://a/b/>", ("https://a", "/b/", ">"))
+        #check("https://a/b/?", ("https://a", "/b/", "?"))
+
     def test_splitroot_custom_drv(self):
         """
         https://github.com/devopshq/artifactory/issues/31

@@ -36,6 +36,7 @@ from itertools import islice
 
 import dateutil.parser
 import requests
+import urllib.parse
 
 from dohq_artifactory.admin import User, Group, RepositoryLocal, PermissionTarget, RepositoryVirtual
 from dohq_artifactory.auth import XJFrogArtApiAuth
@@ -384,8 +385,10 @@ class _ArtifactoryFlavour(pathlib._Flavour):
                 mark = sep + 'artifactory' + sep
                 parts = part.split(mark)
             else:
-                drv = part.split(url.path)[0]
-                path_parts = url.path.strip(sep).split(sep)
+                path = self._get_path(part)
+
+                drv = part.split(path)[0]
+                path_parts = path.strip(sep).split(sep)
                 root = sep + path_parts[0] + sep
                 rest = sep.join(path_parts[1:])
                 return drv, root, rest
@@ -410,6 +413,40 @@ class _ArtifactoryFlavour(pathlib._Flavour):
             root = sep + root + sep
 
         return drv, root, part
+
+    def _get_path(self, url):
+        """
+        Get path of a url and return without percent-encoding
+
+        http://example.com/dir/file.html
+        path = /dir/file.html
+
+        http://example.com/dir/inval:d-ch@rs.html
+        path = /dir/inval:d-ch@rs.html
+            != /dir/inval%3Ad-ch%40rs.html
+
+        :param url: Full URL to parse
+        :return: path: /dir/file.html
+        """
+        parsed_url = urllib3.util.parse_url(url)
+
+        path = parsed_url.path
+
+        if path in url:
+            # URL doesn't contain percent-encoded byptes
+            # http://example.com/dir/file.html
+            # No further processing necessary
+            return path
+
+        unquoted_path = urllib.parse.unquote(parsed_url.path)
+        if unquoted_path in url:
+            # URL contained /?#@: and is percent-encoded by urllib3.util.parse_url()
+            # http://example.com/d:r/f:le.html became http://example.com/d%3Ar/f%3Ale.html
+            # Decode back to http://example.com/d:r/f:le.html using urllib.parse.unquote()
+            return unquoted_path
+
+        # Is this ever reached?
+        raise ValueError("Can't parse URL {}".format(url))
 
     def casefold(self, string):
         """
