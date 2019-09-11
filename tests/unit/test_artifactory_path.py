@@ -91,6 +91,9 @@ class ArtifactoryFlavorTest(unittest.TestCase):
         check("https://artifactory.a.b.c.d/artifactory/foo/artifactory/bar",
               ('https://artifactory.a.b.c.d/artifactory', '/foo/',
                'artifactory/bar'))
+        # https://github.com/devopshq/artifactory/issues/90
+        check("https://artifactory.jfrog.com/artifactory/repo-local/f:le~w:+h-$pe(:@|_n@me",
+              ("https://artifactlry.jfrog.com/artifactory", "/repo-local/", "f:le~w:+h-$pe(:@|_n@me"))
 
     def test_splitroot_custom_drv(self):
         """
