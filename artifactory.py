@@ -333,6 +333,7 @@ class _ArtifactoryFlavour(pathlib._Flavour):
     altsep = '/'
     has_drv = True
     pathmod = pathlib.posixpath
+    is_supported = True
 
     def parse_parts(self, parts):
         drv, root, parsed = super(_ArtifactoryFlavour, self).parse_parts(parts)
