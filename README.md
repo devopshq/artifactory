@@ -564,4 +564,4 @@ Whether or not you specify ```http://``` or ```https://``` prefix is not essenti
 
 # Advertising
 - [artifactory-du](https://github.com/devopshq/artifactory-du) - estimate file space usage. Summarize disk usage in JFrog Artifactory of the set of FILEs, recursively for directories.
-- [artifacotyr-cleanup-rules](https://github.com/devopshq/artifactory-du/issues/2) - python-script for Artifactory intelligence cleanup rules with config.
+- [artifacotry-cleanup-rules](https://github.com/devopshq/artifactory-du/issues/2) - python-script for Artifactory intelligence cleanup rules with config.
