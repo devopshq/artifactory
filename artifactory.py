@@ -310,7 +310,7 @@ def encode_properties(parameters):
         else:
             value = escape_chars(parameters[param])
 
-        result.append("%s=%s" % (param, value))
+        result.append("=".join((param, value)))
 
     return ';'.join(result)
 
@@ -333,8 +333,7 @@ class _ArtifactoryFlavour(pathlib._Flavour):
     altsep = '/'
     has_drv = True
     pathmod = pathlib.posixpath
-
-    is_supported = (True)
+    is_supported = True
 
     def parse_parts(self, parts):
         drv, root, parsed = super(_ArtifactoryFlavour, self).parse_parts(parts)
@@ -1451,36 +1450,31 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj = User(self, name, email='', password=None)
         if obj.read():
             return obj
-        else:
-            return None
+        return None
 
     def find_group(self, name):
         obj = Group(self, name)
         if obj.read():
             return obj
-        else:
-            return None
+        return None
 
     def find_repository_local(self, name):
         obj = RepositoryLocal(self, name, packageType=None)
         if obj.read():
             return obj
-        else:
-            return None
+        return None
 
     def find_repository_virtual(self, name):
         obj = RepositoryVirtual(self, name, packageType=None)
         if obj.read():
             return obj
-        else:
-            return None
+        return None
 
     def find_permission_target(self, name):
         obj = PermissionTarget(self, name)
         if obj.read():
             return obj
-        else:
-            return None
+        return None
 
 
 def walk(pathobj, topdown=True):
