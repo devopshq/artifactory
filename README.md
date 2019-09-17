@@ -46,6 +46,11 @@ Install latest development version (Warning! It may contains some errors!):
 ```bash
 pip install dohq-artifactory --upgrade --pre
 ```
+Or specify version, e.g.:
+```bash
+pip install dohq-artifactory==0.5.dev243
+```
+
 # Usage
 
 ## Authentication ##
