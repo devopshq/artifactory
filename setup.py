@@ -22,7 +22,11 @@ if 'TRAVIS_BUILD_NUMBER' in os.environ and 'TRAVIS_BRANCH' in os.environ:
         os.environ['TRAVIS_BUILD_NUMBER'],
     )
 
-    devStatus = '5 - Production/Stable' if 'release' in os.environ['TRAVIS_BRANCH'] or os.environ['TRAVIS_BRANCH'] == 'master' else devStatus
+    if 'release' in os.environ['TRAVIS_BRANCH'] or os.environ['TRAVIS_BRANCH'] == 'master':
+        devStatus = '5 - Production/Stable'
+
+    else:
+        devStatus = devStatus
 
 else:
     print("This is local build")
