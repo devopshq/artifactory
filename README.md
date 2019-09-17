@@ -38,8 +38,13 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
 - [Advertising](#advertising)
 
 # Install #
+Upgrade/install to the newest available version:
 ```bash
-python3 -mpip install dohq-artifactory
+pip install dohq-artifactory --upgrade
+```
+Install latest development version (Warning! It may contains some errors!):
+```bash
+pip install dohq-artifactory --upgrade --pre
 ```
 # Usage
 
