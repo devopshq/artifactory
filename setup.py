@@ -10,6 +10,7 @@ import os
 
 
 __version__ = '0.5'
+devStatus = '4 - Beta'  # default build status, see: https://pypi.python.org/pypi?%3Aaction=list_classifiers
 
 if 'TRAVIS_BUILD_NUMBER' in os.environ and 'TRAVIS_BRANCH' in os.environ:
     print("This is TRAVIS-CI build")
@@ -20,6 +21,8 @@ if 'TRAVIS_BUILD_NUMBER' in os.environ and 'TRAVIS_BRANCH' in os.environ:
         '' if 'release' in os.environ['TRAVIS_BRANCH'] or os.environ['TRAVIS_BRANCH'] == 'master' else 'dev',
         os.environ['TRAVIS_BUILD_NUMBER'],
     )
+
+    devStatus = '5 - Production/Stable' if 'release' in os.environ['TRAVIS_BRANCH'] or os.environ['TRAVIS_BRANCH'] == 'master' else devStatus
 
 else:
     print("This is local build")
@@ -36,7 +39,7 @@ setup(
     author='Alexey Burov',
     author_email='aburov@ptsecurity.com',
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: {}'.format(devStatus),
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
