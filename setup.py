@@ -6,10 +6,32 @@ try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
+import os
 
-__version__ = '0.4.108'  # identify main version of dohq-artifactory
 
-print("dohq-artifactory build version = {}".format(__version__))
+__version__ = '0.5'
+devStatus = '4 - Beta'  # default build status, see: https://pypi.python.org/pypi?%3Aaction=list_classifiers
+
+if 'TRAVIS_BUILD_NUMBER' in os.environ and 'TRAVIS_BRANCH' in os.environ:
+    print("This is TRAVIS-CI build")
+    print("TRAVIS_BUILD_NUMBER = {}".format(os.environ['TRAVIS_BUILD_NUMBER']))
+    print("TRAVIS_BRANCH = {}".format(os.environ['TRAVIS_BRANCH']))
+
+    __version__ += '.{}{}'.format(
+        '' if 'release' in os.environ['TRAVIS_BRANCH'] or os.environ['TRAVIS_BRANCH'] == 'master' else 'dev',
+        os.environ['TRAVIS_BUILD_NUMBER'],
+    )
+
+    if 'release' in os.environ['TRAVIS_BRANCH'] or os.environ['TRAVIS_BRANCH'] == 'master':
+        devStatus = '5 - Production/Stable'
+
+    else:
+        devStatus = devStatus
+
+else:
+    print("This is local build")
+    __version__ += '.dev0'  # set version as major.minor.localbuild if local build: python setup.py install
+
 
 setup(
     name='dohq-artifactory',
@@ -21,7 +43,7 @@ setup(
     author='Alexey Burov',
     author_email='aburov@ptsecurity.com',
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: {}'.format(devStatus),
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
@@ -36,7 +58,7 @@ setup(
     url='https://devopshq.github.io/artifactory/',
     download_url='https://github.com/devopshq/artifactory',
     install_requires=[
-        'pathlib',
+        'pathlib ; python_version<"3.4"',
         'requests',
         'python-dateutil'
     ],

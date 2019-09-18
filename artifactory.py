@@ -36,6 +36,7 @@ from itertools import islice
 
 import dateutil.parser
 import requests
+import urllib.parse
 
 from dohq_artifactory.admin import User, Group, RepositoryLocal, PermissionTarget, RepositoryVirtual
 from dohq_artifactory.auth import XJFrogArtApiAuth
@@ -209,6 +210,17 @@ def sha1sum(filename):
     return sha1.hexdigest()
 
 
+def sha256sum(filename):
+    """
+    Calculates sha256 hash of a file
+    """
+    sha256 = hashlib.sha256()
+    with open(filename, 'rb') as f:
+        for chunk in iter(lambda: f.read(128 * sha256.block_size), b''):
+            sha256.update(chunk)
+    return sha256.hexdigest()
+
+
 def chunks(data, size):
     """
     Get chink for dict, copy as-is from https://stackoverflow.com/a/8290508/6753144
@@ -298,7 +310,7 @@ def encode_properties(parameters):
         else:
             value = escape_chars(parameters[param])
 
-        result.append("%s=%s" % (param, value))
+        result.append("=".join((param, value)))
 
     return ';'.join(result)
 
@@ -321,8 +333,7 @@ class _ArtifactoryFlavour(pathlib._Flavour):
     altsep = '/'
     has_drv = True
     pathmod = pathlib.posixpath
-
-    is_supported = (True)
+    is_supported = True
 
     def parse_parts(self, parts):
         drv, root, parsed = super(_ArtifactoryFlavour, self).parse_parts(parts)
@@ -356,6 +367,8 @@ class _ArtifactoryFlavour(pathlib._Flavour):
         if base and without_http_prefix(part).startswith(without_http_prefix(base)):
             mark = without_http_prefix(base).rstrip(sep) + sep
             parts = part.split(mark)
+        elif sep not in part:
+            return '', '', part
         else:
             url = urllib3.util.parse_url(part)
 
@@ -371,8 +384,10 @@ class _ArtifactoryFlavour(pathlib._Flavour):
                 mark = sep + 'artifactory' + sep
                 parts = part.split(mark)
             else:
-                drv = part.split(url.path)[0]
-                path_parts = url.path.strip(sep).split(sep)
+                path = self._get_path(part)
+
+                drv = part.split(path)[0]
+                path_parts = path.strip(sep).split(sep)
                 root = sep + path_parts[0] + sep
                 rest = sep.join(path_parts[1:])
                 return drv, root, rest
@@ -397,6 +412,40 @@ class _ArtifactoryFlavour(pathlib._Flavour):
             root = sep + root + sep
 
         return drv, root, part
+
+    def _get_path(self, url):
+        """
+        Get path of a url and return without percent-encoding
+
+        http://example.com/dir/file.html
+        path = /dir/file.html
+
+        http://example.com/dir/inval:d-ch@rs.html
+        path = /dir/inval:d-ch@rs.html
+            != /dir/inval%3Ad-ch%40rs.html
+
+        :param url: Full URL to parse
+        :return: path: /dir/file.html
+        """
+        parsed_url = urllib3.util.parse_url(url)
+
+        path = parsed_url.path
+
+        if path in url:
+            # URL doesn't contain percent-encoded byptes
+            # http://example.com/dir/file.html
+            # No further processing necessary
+            return path
+
+        unquoted_path = urllib.parse.unquote(parsed_url.path)
+        if unquoted_path in url:
+            # URL contained /?#@: and is percent-encoded by urllib3.util.parse_url()
+            # http://example.com/d:r/f:le.html became http://example.com/d%3Ar/f%3Ale.html
+            # Decode back to http://example.com/d:r/f:le.html using urllib.parse.unquote()
+            return unquoted_path
+
+        # Is this ever reached?
+        raise ValueError("Can't parse URL {}".format(url))
 
     def casefold(self, string):
         """
@@ -444,6 +493,7 @@ ArtifactoryFileStat = collections.namedtuple(
      'mime_type',
      'size',
      'sha1',
+     'sha256',
      'md5',
      'is_dir',
      'children'])
@@ -529,6 +579,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
           mime_type -- MIME type of the file
           size -- file size
           sha1 -- SHA1 digest of the file
+          sha256 -- SHA256 digest of the file
           md5 -- MD5 digest of the file
           is_dir -- 'True' if path is a directory
           children -- list of children names
@@ -543,6 +594,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if 'children' in jsn:
             children = [child['uri'][1:] for child in jsn['children']]
 
+        checksums = jsn.get('checksums', {})
+
         stat = ArtifactoryFileStat(
             ctime=dateutil.parser.parse(jsn['created']),
             mtime=dateutil.parser.parse(jsn['lastModified']),
@@ -550,8 +603,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             modified_by=jsn.get('modifiedBy', None),
             mime_type=jsn.get('mimeType', None),
             size=int(jsn.get('size', '0')),
-            sha1=jsn.get('checksums', {'sha1': None})['sha1'],
-            md5=jsn.get('checksums', {'md5': None})['md5'],
+            sha1=checksums.get('sha1', None),
+            sha256=checksums.get('sha256', None),
+            md5=checksums.get('md5', None),
             is_dir=is_dir,
             children=children)
 
@@ -700,7 +754,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         return raw
 
-    def deploy(self, pathobj, fobj, md5=None, sha1=None, parameters=None):
+    def deploy(self, pathobj, fobj, md5=None, sha1=None, sha256=None, parameters=None):
         """
         Uploads a given file-like object
         HTTP chunked encoding will be attempted
@@ -719,6 +773,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             headers['X-Checksum-Md5'] = md5
         if sha1:
             headers['X-Checksum-Sha1'] = sha1
+        if sha256:
+            headers['X-Checksum-Sha256'] = sha256
 
         text, code = self.rest_put_stream(url,
                                           fobj,
@@ -734,7 +790,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         """
         Copy artifact from src to dst
         """
-        url = '/'.join([src.drive,
+        url = '/'.join([src.drive.rstrip('/'),
                         'api/copy',
                         str(src.relative_to(src.drive)).rstrip('/')])
 
@@ -754,7 +810,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         """
         Move artifact from src to dst
         """
-        url = '/'.join([src.drive,
+        url = '/'.join([src.drive.rstrip('/'),
                         'api/move',
                         str(src.relative_to(src.drive)).rstrip('/')])
 
@@ -773,7 +829,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         """
         Get artifact properties and return them as a dictionary.
         """
-        url = '/'.join([pathobj.drive,
+        url = '/'.join([pathobj.drive.rstrip('/'),
                         'api/storage',
                         str(pathobj.relative_to(pathobj.drive)).strip('/')])
 
@@ -798,7 +854,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         """
         Set artifact properties
         """
-        url = '/'.join([pathobj.drive,
+        url = '/'.join([pathobj.drive.rstrip('/'),
                         'api/storage',
                         str(pathobj.relative_to(pathobj.drive)).strip('/')])
 
@@ -825,7 +881,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if isinstance(props, str):
             props = (props,)
 
-        url = '/'.join([pathobj.drive,
+        url = '/'.join([pathobj.drive.rstrip('/'),
                         'api/storage',
                         str(pathobj.relative_to(pathobj.drive)).strip('/')])
 
@@ -1172,24 +1228,25 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         raise NotImplementedError()
 
-    def deploy(self, fobj, md5=None, sha1=None, parameters={}):
+    def deploy(self, fobj, md5=None, sha1=None, sha256=None, parameters={}):
         """
         Upload the given file object to this path
         """
-        return self._accessor.deploy(self, fobj, md5, sha1, parameters)
+        return self._accessor.deploy(self, fobj, md5=md5, sha1=sha1, sha256=sha256,
+                                     parameters=parameters)
 
     def deploy_file(self,
                     file_name,
                     calc_md5=True,
                     calc_sha1=True,
+                    calc_sha256=True,
                     parameters={}):
         """
         Upload the given file to this path
         """
-        if calc_md5:
-            md5 = md5sum(file_name)
-        if calc_sha1:
-            sha1 = sha1sum(file_name)
+        md5 = md5sum(file_name) if calc_md5 else None
+        sha1 = sha1sum(file_name) if calc_sha1 else None
+        sha256 = sha256sum(file_name) if calc_sha256 else None
 
         target = self
 
@@ -1197,7 +1254,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             target = self / pathlib.Path(file_name).name
 
         with open(file_name, 'rb') as fobj:
-            target.deploy(fobj, md5, sha1, parameters)
+            target.deploy(fobj, md5=md5, sha1=sha1, sha256=sha256,
+                          parameters=parameters)
 
     def deploy_deb(self,
                    file_name,
@@ -1271,7 +1329,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         http://example.com/artifactory/published/production/product-1.0.0.tar.gz
         http://example.com/artifactory/published/production/product-1.0.0.tar.pom
         """
-        if self.drive == dst.drive:
+        if self.drive.rstrip('/') == dst.drive.rstrip('/'):
             self._accessor.copy(self, dst, suppress_layouts=suppress_layouts)
         else:
             with self.open() as fobj:
@@ -1281,7 +1339,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         Move artifact from this path to destinaiton.
         """
-        if self.drive != dst.drive:
+        if self.drive.rstrip('/') != dst.drive.rstrip('/'):
             raise NotImplementedError(
                 "Moving between instances is not implemented yet")
 
@@ -1343,7 +1401,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         :param args:
         :return:
         """
-        aql_query_url = '{}/api/search/aql'.format(self.drive)
+        aql_query_url = '{}/api/search/aql'.format(self.drive.rstrip('/'))
         aql_query_text = self.create_aql_text(*args)
         r = self.session.post(aql_query_url, data=aql_query_text)
         r.raise_for_status()
@@ -1374,7 +1432,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         if result_type not in ('file', 'folder'):
             raise RuntimeError("Path object with type '{}' doesn't support. File or folder only".format(result_type))
 
-        result_path = "{}/{repo}/{path}/{name}".format(self.drive, **result)
+        result_path = "{}/{repo}/{path}/{name}".format(self.drive.rstrip('/'), **result)
         obj = ArtifactoryPath(result_path, auth=self.auth, verify=self.verify, cert=self.cert, session=self.session)
         return obj
 
@@ -1392,36 +1450,31 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj = User(self, name, email='', password=None)
         if obj.read():
             return obj
-        else:
-            return None
+        return None
 
     def find_group(self, name):
         obj = Group(self, name)
         if obj.read():
             return obj
-        else:
-            return None
+        return None
 
     def find_repository_local(self, name):
         obj = RepositoryLocal(self, name, packageType=None)
         if obj.read():
             return obj
-        else:
-            return None
+        return None
 
     def find_repository_virtual(self, name):
         obj = RepositoryVirtual(self, name, packageType=None)
         if obj.read():
             return obj
-        else:
-            return None
+        return None
 
     def find_permission_target(self, name):
         obj = PermissionTarget(self, name)
         if obj.read():
             return obj
-        else:
-            return None
+        return None
 
 
 def walk(pathobj, topdown=True):
