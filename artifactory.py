@@ -662,7 +662,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         url = str(pathobj) + '/'
         text, code = self.rest_put(url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert)
 
-        if not code == 201:
+        if code != 201:
             raise RuntimeError("%s %d" % (text, code))
 
     def rmdir(self, pathobj):
@@ -749,7 +749,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         raw, code = self.rest_get_stream(url, session=pathobj.session, verify=pathobj.verify,
                                          cert=pathobj.cert)
 
-        if not code == 200:
+        if code != 200:
             raise RuntimeError(code)
 
         return raw
