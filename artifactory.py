@@ -50,7 +50,7 @@ try:
 except ImportError:
     import ConfigParser as configparser
 
-default_config_path = '~/.artifactory_python.cfg'
+default_config_path =  os.path.expanduser('~') + '/.artifactory_python.cfg'
 global_config = None
 
 
