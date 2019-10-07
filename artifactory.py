@@ -283,7 +283,7 @@ def encode_matrix_parameters(parameters):
         else:
             value = parameters[param]
 
-        result.append("%s=%s" % (param, value))
+        result.append('='.join((param, value)))
 
     return ';'.join(result)
 
@@ -598,13 +598,13 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         stat = ArtifactoryFileStat(
             ctime=dateutil.parser.parse(jsn['created']),
             mtime=dateutil.parser.parse(jsn['lastModified']),
-            created_by=jsn.get('createdBy', None),
-            modified_by=jsn.get('modifiedBy', None),
-            mime_type=jsn.get('mimeType', None),
+            created_by=jsn.get('createdBy'),
+            modified_by=jsn.get('modifiedBy'),
+            mime_type=jsn.get('mimeType'),
             size=int(jsn.get('size', '0')),
-            sha1=checksums.get('sha1', None),
-            sha256=checksums.get('sha256', None),
-            md5=checksums.get('md5', None),
+            sha1=checksums.get('sha1'),
+            sha256=checksums.get('sha256'),
+            md5=checksums.get('md5'),
             is_dir=is_dir,
             children=children)
 
@@ -661,7 +661,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         url = str(pathobj) + '/'
         text, code = self.rest_put(url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert)
 
-        if not code == 201:
+        if code != 201:
             raise RuntimeError("%s %d" % (text, code))
 
     def rmdir(self, pathobj):
@@ -677,7 +677,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         text, code = self.rest_del(url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert)
 
-        if code not in [200, 202, 204]:
+        if code not in (200, 202, 204):
             raise RuntimeError("Failed to delete directory: '%s'" % text)
 
     def unlink(self, pathobj):
@@ -693,7 +693,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         text, code = self.rest_del(url, session=pathobj.session, verify=pathobj.verify,
                                    cert=pathobj.cert)
 
-        if code not in [200, 202, 204]:
+        if code not in (200, 202, 204):
             raise RuntimeError("Failed to delete file: %d '%s'" % (code, text))
 
     def touch(self, pathobj):
@@ -709,7 +709,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         url = str(pathobj)
         text, code = self.rest_put(url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert)
 
-        if not code == 201:
+        if code != 201:
             raise RuntimeError("%s %d" % (text, code))
 
     def owner(self, pathobj):
@@ -748,8 +748,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         raw, code = self.rest_get_stream(url, session=pathobj.session, verify=pathobj.verify,
                                          cert=pathobj.cert)
 
-        if not code == 200:
-            raise RuntimeError("%d" % code)
+        if code != 200:
+            raise RuntimeError(code)
 
         return raw
 
@@ -782,8 +782,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                                           verify=pathobj.verify,
                                           cert=pathobj.cert)
 
-        if code not in [200, 201]:
-            raise RuntimeError("%s" % text)
+        if code not in (200, 201):
+            raise RuntimeError(text)
 
     def copy(self, src, dst, suppress_layouts=False):
         """
@@ -802,8 +802,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                                     verify=src.verify,
                                     cert=src.cert)
 
-        if code not in [200, 201]:
-            raise RuntimeError("%s" % text)
+        if code not in (200, 201):
+            raise RuntimeError(text)
 
     def move(self, src, dst):
         """
@@ -821,8 +821,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                                     verify=src.verify,
                                     cert=src.cert)
 
-        if code not in [200, 201]:
-            raise RuntimeError("%s" % text)
+        if code not in (200, 201):
+            raise RuntimeError(text)
 
     def get_properties(self, pathobj):
         """
@@ -967,10 +967,10 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         cfg_entry = get_global_config_entry(obj.drive)
 
         # Auth section
-        apikey = kwargs.get('apikey', None)
-        auth_type = kwargs.get('auth_type', None)
+        apikey = kwargs.get('apikey')
+        auth_type = kwargs.get('auth_type')
         if apikey is None:
-            auth = kwargs.get('auth', None)
+            auth = kwargs.get('auth')
             obj.auth = auth if auth_type is None else auth_type(*auth)
         else:
             logging.debug('Use XJFrogApiAuth')
@@ -980,8 +980,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             auth = (cfg_entry['username'], cfg_entry['password'])
             obj.auth = auth if auth_type is None else auth_type(*auth)
 
-        obj.cert = kwargs.get('cert', None)
-        obj.session = kwargs.get('session', None)
+        obj.cert = kwargs.get('cert')
+        obj.session = kwargs.get('session')
 
         if obj.cert is None and cfg_entry:
             obj.cert = cfg_entry['cert']
@@ -1483,7 +1483,8 @@ def walk(pathobj, topdown=True):
     The only difference is that this function takes and returns Path objects
     in places where original implementation will return strings
     """
-    dirs, nondirs = [], []
+    dirs = []
+    nondirs = []
     for child in pathobj:
         relpath = str(child.relative_to(str(pathobj)))
         if relpath.startswith('/'):
