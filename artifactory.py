@@ -385,8 +385,7 @@ class _ArtifactoryFlavour(pathlib._Flavour):
                 parts = part.split(mark)
             else:
                 path = self._get_path(part)
-
-                drv = part.split(path)[0]
+                drv = part.rsplit(path, 1)[0]
                 path_parts = path.strip(sep).split(sep)
                 root = sep + path_parts[0] + sep
                 rest = sep.join(path_parts[1:])
