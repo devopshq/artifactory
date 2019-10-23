@@ -417,14 +417,14 @@ repo.delete()
 ## PermissionTarget
 Docs: https://www.jfrog.com/confluence/display/RTF/Managing+Permissions
 
-Supported this role:
+Supports these roles:
 - PermissionTarget.ROLE_ADMIN = `ADMIN + DELETE + DEPLOY + ANNOTATE + READ`
 - PermissionTarget.ROLE_DELETE = `DELETE + DEPLOY + ANNOTATE + READ`
 - PermissionTarget.ROLE_DEPLOY = `DEPLOY + ANNOTATE + READ`
 - PermissionTarget.ROLE_ANNOTATE = `ANNOTATE + READ`
 - PermissionTarget.ROLE_READ = `READ`
 
-And right:
+And for more modular control:
 - `PermissionTarget.ADMIN` - Allows changing the permission settings for other users on this permission target
 - `PermissionTarget.DELETE` - Allows deletion or overwriting of artifacts
 - `PermissionTarget.DEPLOY` - Allows deploying artifacts and deploying to caches (i.e. populating caches with remote artifacts)
