@@ -440,7 +440,7 @@ permission.add_repository('repo1', 'repo2')
 
 # Add group or user with permission
 permission.add_user(user_object, PermissionTarget.ROLE_ADMIN)
-permission.add_group('groupname, PermissionTarget.ROLE_READ)
+permission.add_group('groupname', PermissionTarget.ROLE_READ)
 
 permission.update() # Update!!
 
