@@ -125,8 +125,8 @@ class ArtifactoryFlavorTest(unittest.TestCase):
         #check("https://a/b/?", ("https://a", "/b/", "?"))
 
     def test_splitroot_custom_drv(self):
-        """
-        https://github.com/devopshq/artifactory/issues/31
+        """https://github.com/devopshq/artifactory/issues/31 and
+        https://github.com/devopshq/artifactory/issues/108
         """
         check = self._check_splitroot
 
