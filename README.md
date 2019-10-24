@@ -570,7 +570,7 @@ Whether or not you specify ```http://``` or ```https://```, the prefix is not es
 
 
 # Contribute
-[About contribute](docs/CONTRIBUTE.md)
+[About contributing and testing](docs/CONTRIBUTE.md)
 
 # Advertising
 - [artifactory-du](https://github.com/devopshq/artifactory-du) - estimate file space usage. Summarize disk usage in JFrog Artifactory of the set of FILEs, recursively for directories.
