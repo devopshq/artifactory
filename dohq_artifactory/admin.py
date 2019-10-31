@@ -410,6 +410,63 @@ class RepositoryVirtual(AdminObject):
         return [self._artifactory.find_repository_local(x) for x in self._repositories]
 
 
+class RepositoryRemote(Repository):
+    _uri = 'repositories'
+
+    def __init__(self, artifactory, name, url=None, packageType=Repository.GENERIC, dockerApiVersion=Repository.V1):
+        super(RepositoryRemote, self).__init__(artifactory)
+        self.name = name
+        self.description = ''
+        self.packageType = packageType
+        self.repoLayoutRef = 'maven-2-default'
+        self.archiveBrowsingEnabled = True
+        self.dockerApiVersion = dockerApiVersion
+        self.url = url
+
+    def _create_json(self):
+        """
+        JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
+        """
+        data_json = {
+            "rclass": "remote",
+            "key": self.name,
+            "description": self.description,
+            "packageType": self.packageType,
+            "notes": "",
+            "includesPattern": "**/*",
+            "excludesPattern": "",
+            "repoLayoutRef": self.repoLayoutRef,
+            "dockerApiVersion": self.dockerApiVersion,
+            "checksumPolicyType": "client-checksums",
+            "handleReleases": True,
+            "handleSnapshots": True,
+            "maxUniqueSnapshots": 0,
+            "snapshotVersionBehavior": "unique",
+            "suppressPomConsistencyChecks": True,
+            "blackedOut": False,
+            "propertySets": [],
+            "archiveBrowsingEnabled": self.archiveBrowsingEnabled,
+            "yumRootDepth": 0,
+            "url": self.url,
+            "debianTrivialLayout" : False,
+            "maxUniqueTags": 0,
+            "xrayIndex" : False,
+            "calculateYumMetadata" : False,
+            "enableFileListsIndexing" : False,
+            "optionalIndexCompressionFormats" : ["bz2", "lzma", "xz"],
+            "downloadRedirect" : False
+        }
+        return data_json
+
+    def _read_response(self, response):
+        """
+        JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
+        """
+        self.name = response['key']
+        self.description = response.get('description')
+        self.layoutName = response.get('repoLayoutRef')
+        self.archiveBrowsingEnabled = response.get('archiveBrowsingEnabled')
+
 class PermissionTarget(AdminObject):
     _uri = 'security/permissions'
 

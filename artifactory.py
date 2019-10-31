@@ -38,7 +38,7 @@ import dateutil.parser
 import requests
 import urllib.parse
 
-from dohq_artifactory.admin import User, Group, RepositoryLocal, PermissionTarget, RepositoryVirtual
+from dohq_artifactory.admin import User, Group, RepositoryLocal, PermissionTarget, RepositoryVirtual, RepositoryRemote
 from dohq_artifactory.auth import XJFrogArtApiAuth
 
 try:
@@ -1465,6 +1465,12 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     def find_repository_virtual(self, name):
         obj = RepositoryVirtual(self, name, packageType=None)
+        if obj.read():
+            return obj
+        return None
+
+    def find_repository_remote(self, name):
+        obj = RepositoryRemote(self, name, packageType=None)
         if obj.read():
             return obj
         return None
