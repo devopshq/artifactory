@@ -448,13 +448,13 @@ class RepositoryRemote(Repository):
             "archiveBrowsingEnabled": self.archiveBrowsingEnabled,
             "yumRootDepth": 0,
             "url": self.url,
-            "debianTrivialLayout" : False,
+            "debianTrivialLayout": False,
             "maxUniqueTags": 0,
-            "xrayIndex" : False,
-            "calculateYumMetadata" : False,
-            "enableFileListsIndexing" : False,
-            "optionalIndexCompressionFormats" : ["bz2", "lzma", "xz"],
-            "downloadRedirect" : False
+            "xrayIndex": False,
+            "calculateYumMetadata": False,
+            "enableFileListsIndexing": False,
+            "optionalIndexCompressionFormats": ["bz2", "lzma", "xz"],
+            "downloadRedirect": False
         }
         return data_json
 
@@ -466,6 +466,7 @@ class RepositoryRemote(Repository):
         self.description = response.get('description')
         self.layoutName = response.get('repoLayoutRef')
         self.archiveBrowsingEnabled = response.get('archiveBrowsingEnabled')
+
 
 class PermissionTarget(AdminObject):
     _uri = 'security/permissions'
