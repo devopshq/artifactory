@@ -32,6 +32,7 @@ import pathlib
 import sys
 import urllib.parse
 from itertools import islice
+import urllib.parse
 
 import dateutil.parser
 import requests
@@ -137,27 +138,6 @@ def without_http_prefix(url):
     return url
 
 
-def get_base_url(config, url):
-    """
-    Look through config and try to find best matching base for 'url'
-
-    config - result of read_config() or read_global_config()
-    url - artifactory url to search the base for
-    """
-    if not config:
-        return None
-
-    # First, try to search for the best match
-    for item in config:
-        if url.startswith(item):
-            return item
-
-    # Then search for indirect match
-    for item in config:
-        if without_http_prefix(url).startswith(without_http_prefix(item)):
-            return item
-
-
 def get_config_entry(config, url):
     """
     Look through config and try to find best matching entry for 'url'
@@ -176,7 +156,7 @@ def get_config_entry(config, url):
     for item in config:
         if without_http_prefix(item) == without_http_prefix(url):
             return config[item]
-
+    return None
 
 def get_global_config_entry(url):
     """
@@ -187,6 +167,33 @@ def get_global_config_entry(url):
     read_global_config()
     return get_config_entry(global_config, url)
 
+def get_base_url(config, url):
+    """
+    Look through config and try to find best matching base for 'url'
+
+    config - result of read_config() or read_global_config()
+    url - artifactory url to search the base for
+    """
+    if not config:
+        split_url = pathlib.PurePosixPath(url)
+        if len(split_url.parts) < 3:
+            return None
+        return urllib.parse.urljoin('//'.join((split_url.parts[0], split_url.parts[1])), split_url.parts[2])
+
+    # First, try to search for the best match
+    for item in config:
+        if url.startswith(item):
+            return item
+
+    # Then search for indirect match
+    for item in config:
+        if without_http_prefix(url).startswith(without_http_prefix(item)):
+            return item
+
+    split_url = pathlib.PurePosixPath(url)
+    if len(split_url.parts) < 3:
+        return None
+    return urllib.parse.urljoin('//'.join((split_url.parts[0], split_url.parts[1])), split_url.parts[2])
 
 def get_global_base_url(url):
     """
@@ -236,7 +243,7 @@ def chunks(data, size):
     Get chink for dict, copy as-is from https://stackoverflow.com/a/8290508/6753144
     """
     it = iter(data)
-    for i in range(0, len(data), size):
+    for _ in range(0, len(data), size):
         yield {k: data[k] for k in islice(it, size)}
 
 
