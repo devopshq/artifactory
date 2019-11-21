@@ -157,8 +157,8 @@ path.deploy_deb('./myapp-1.0.deb',
                 architecture='amd64')
 ```
 
-## Copy Artifacts ##
-Copy artifact from this path to destinaiton.
+## Copy Artifacts
+Copy artifact from this path to destination.
 If files are on the same instance of artifactory, lightweight (local)
 copying will be attempted.
 
@@ -213,7 +213,18 @@ http://example.com/artifactory/published/production/product-1.0.0.tar.pom
 """
 ```
 
-## Remove Artifacts ##
+## Move Artifacts
+Move artifact from this path to destination.
+
+```python
+from artifactory import ArtifactoryPath
+source = ArtifactoryPath("http://example.com/artifactory/builds/product/product/1.0.0/")
+dest = ArtifactoryPath("http://example.com/artifactory/published/production/")
+
+source.move(dest)
+```
+
+## Remove Artifacts
 ```python
 from artifactory import ArtifactoryPath
 path = ArtifactoryPath(
