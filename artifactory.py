@@ -687,7 +687,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         # TODO: Why do we forbid remove folder?
         # if stat.is_dir:
-        #     raise OSError(1, "Operation not permitted: '%s'" % str(pathobj))
+        #     raise IsADirectoryError(1, "Operation not permitted: {!r}".format(pathobj))
 
         url = str(pathobj)
         text, code = self.rest_del(url, session=pathobj.session, verify=pathobj.verify,
