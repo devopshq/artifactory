@@ -125,8 +125,8 @@ class ArtifactoryFlavorTest(unittest.TestCase):
         #check("https://a/b/?", ("https://a", "/b/", "?"))
 
     def test_splitroot_custom_drv(self):
-        """
-        https://github.com/devopshq/artifactory/issues/31
+        """https://github.com/devopshq/artifactory/issues/31 and
+        https://github.com/devopshq/artifactory/issues/108
         """
         check = self._check_splitroot
 
@@ -156,6 +156,8 @@ class ArtifactoryFlavorTest(unittest.TestCase):
               ('https://artifacts.example.com', '/root/', 'parts'))
         check("https://artifacts.example.com/root/artifactory/parts/",
               ('https://artifacts.example.com', '/root/', 'artifactory/parts'))
+        check("https://artifacts.example.com/artifacts",
+              ('https://artifacts.example.com', '/artifacts/', ''))
 
     def test_splitroot_custom_root(self):
         check = self._check_splitroot
