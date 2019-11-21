@@ -478,11 +478,11 @@ class PermissionTarget(AdminObject):
     ANNOTATE = 'n'
     READ = 'r'
 
-    ROLE_ADMIN = [ADMIN, DELETE, DEPLOY, ANNOTATE, READ]
-    ROLE_DELETE = [DELETE, DEPLOY, ANNOTATE, READ]
-    ROLE_DEPLOY = [DEPLOY, ANNOTATE, READ]
-    ROLE_ANNOTATE = [ANNOTATE, READ]
-    ROLE_READ = [READ]
+    ROLE_ADMIN = (ADMIN, DELETE, DEPLOY, ANNOTATE, READ)
+    ROLE_DELETE = (DELETE, DEPLOY, ANNOTATE, READ)
+    ROLE_DEPLOY = (DEPLOY, ANNOTATE, READ)
+    ROLE_ANNOTATE = (ANNOTATE, READ)
+    ROLE_READ = (READ)
 
     def __init__(self, artifactory, name):
         super(PermissionTarget, self).__init__(artifactory)
