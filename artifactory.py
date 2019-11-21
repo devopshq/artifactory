@@ -694,7 +694,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                                    cert=pathobj.cert)
 
         if code not in (200, 202, 204):
-            raise RuntimeError("Failed to delete file: %d '%s'" % (code, text))
+            raise FileNotFoundError("Failed to delete file: {} {!r}".format(code, text))
 
     def touch(self, pathobj):
         """
