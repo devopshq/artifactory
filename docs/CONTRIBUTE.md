@@ -27,6 +27,8 @@ pytest -munit
 # Install `pre-commit` hooks after clone:
 pre-commit install
 pre-commit run --all-files
+
+tox
 ```
 
 ## Tests
