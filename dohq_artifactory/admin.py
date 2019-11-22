@@ -266,9 +266,7 @@ class GroupLDAP(Group):
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
         """
         data_json = super(GroupLDAP, self)._create_json()
-        data_json.update(
-            {"realmAttributes": self.realmAttributes, "external": True,}
-        )
+        data_json.update({"realmAttributes": self.realmAttributes, "external": True})
         return data_json
 
 
@@ -523,7 +521,7 @@ class PermissionTarget(AdminObject):
             "includesPattern": self.includesPattern,
             "excludesPattern": self.excludesPattern,
             "repositories": self._repositories,
-            "principals": {"users": self._users, "groups": self._groups,},
+            "principals": {"users": self._users, "groups": self._groups},
         }
         return data_json
 

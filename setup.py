@@ -66,5 +66,5 @@ setup(
     install_requires=['pathlib ; python_version<"3.4"', "requests", "python-dateutil"],
     zip_safe=False,
     package_data={"": ["README.md"]},
-    packages=["dohq_artifactory",],
+    packages=["dohq_artifactory"],
 )
