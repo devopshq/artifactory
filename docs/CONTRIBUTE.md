@@ -11,6 +11,13 @@ Development takes place on GitHub, where the git-flow branch structure is used:
 * ``develop`` - is used for development of the next release. **Pull request must be in this branch**
 * ``feature/XXX`` - feature branches are used for development of new features before they are merged to ``develop``.
 
+## pre-commit hooks
+Install `pre-commit` hooks after clone:
+```bash
+pre-commit install
+pre-commit run --all-files
+```
+
 ## Tests
 We have two type of test.
 

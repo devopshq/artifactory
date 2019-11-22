@@ -8,13 +8,11 @@ class XJFrogArtApiAuth(AuthBase):
         self.apikey = apikey
 
     def __eq__(self, other):
-        return all([
-            self.apikey == getattr(other, 'apikey', None),
-        ])
+        return all([self.apikey == getattr(other, "apikey", None),])
 
     def __ne__(self, other):
         return not self == other
 
     def __call__(self, r):
-        r.headers['X-JFrog-Art-Api'] = self.apikey
+        r.headers["X-JFrog-Art-Api"] = self.apikey
         return r

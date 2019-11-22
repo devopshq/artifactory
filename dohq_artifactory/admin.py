@@ -10,7 +10,7 @@ def rest_delay():
 
 
 def generate_password(pw_len=16):
-    alphabet_lower = 'abcdefghijklmnopqrstuvwxyz'
+    alphabet_lower = "abcdefghijklmnopqrstuvwxyz"
     alphabet_upper = alphabet_lower.upper()
     alphabet_len = len(alphabet_lower)
     pwlist = []
@@ -31,7 +31,7 @@ def generate_password(pw_len=16):
 
     random.shuffle(pwlist)
 
-    result = ''.join(pwlist)
+    result = "".join(pwlist)
 
     return result
 
@@ -60,7 +60,7 @@ class AdminObject(object):
         Create object
         :return: None
         """
-        logging.debug('Create {x.__class__.__name__} [{x.name}]'.format(x=self))
+        logging.debug("Create {x.__class__.__name__} [{x.name}]".format(x=self))
         self._create_and_update()
 
     def _create_and_update(self):
@@ -70,11 +70,13 @@ class AdminObject(object):
         """
         data_json = self._create_json()
         data_json.update(self.additional_params)
-        request_url = self._artifactory.drive + '/api/{uri}/{x.name}'.format(uri=self._uri, x=self)
+        request_url = self._artifactory.drive + "/api/{uri}/{x.name}".format(
+            uri=self._uri, x=self
+        )
         r = self._session.put(
             request_url,
             json=data_json,
-            headers={'Content-Type': 'application/json'},
+            headers={"Content-Type": "application/json"},
             auth=self._auth,
         )
         r.raise_for_status()
@@ -96,17 +98,18 @@ class AdminObject(object):
         True if object exist,
         False else
         """
-        logging.debug('Read {x.__class__.__name__} [{x.name}]'.format(x=self))
-        request_url = self._artifactory.drive + '/api/{uri}/{x.name}'.format(uri=self._uri, x=self)
-        r = self._session.get(
-            request_url,
-            auth=self._auth,
+        logging.debug("Read {x.__class__.__name__} [{x.name}]".format(x=self))
+        request_url = self._artifactory.drive + "/api/{uri}/{x.name}".format(
+            uri=self._uri, x=self
         )
+        r = self._session.get(request_url, auth=self._auth,)
         if 404 == r.status_code or 400 == r.status_code:
-            logging.debug('{x.__class__.__name__} [{x.name}] does not exist'.format(x=self))
+            logging.debug(
+                "{x.__class__.__name__} [{x.name}] does not exist".format(x=self)
+            )
             return False
         else:
-            logging.debug('{x.__class__.__name__} [{x.name}] exist'.format(x=self))
+            logging.debug("{x.__class__.__name__} [{x.name}] exist".format(x=self))
             r.raise_for_status()
             response = r.json()
             self.raw = response
@@ -118,7 +121,7 @@ class AdminObject(object):
         Update object
         :return: None
         """
-        logging.debug('Create {x.__class__.__name__} [{x.name}]'.format(x=self))
+        logging.debug("Create {x.__class__.__name__} [{x.name}]".format(x=self))
         self._create_and_update()
 
     def delete(self):
@@ -126,18 +129,17 @@ class AdminObject(object):
         Remove object
         :return: None
         """
-        logging.debug('Remove {x.__class__.__name__} [{x.name}]'.format(x=self))
-        request_url = self._artifactory.drive + '/api/{uri}/{x.name}'.format(uri=self._uri, x=self)
-        r = self._session.delete(
-            request_url,
-            auth=self._auth,
+        logging.debug("Remove {x.__class__.__name__} [{x.name}]".format(x=self))
+        request_url = self._artifactory.drive + "/api/{uri}/{x.name}".format(
+            uri=self._uri, x=self
         )
+        r = self._session.delete(request_url, auth=self._auth,)
         r.raise_for_status()
         rest_delay()
 
 
 class User(AdminObject):
-    _uri = 'security/users'
+    _uri = "security/users"
 
     def __init__(self, artifactory, name, email=None, password=None):
         super(User, self).__init__(artifactory)
@@ -159,10 +161,10 @@ class User(AdminObject):
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
         """
         data_json = {
-            'name': self.name,
-            'email': self.email,
-            'password': self.password,
-            'admin': self.admin,
+            "name": self.name,
+            "email": self.email,
+            "password": self.password,
+            "admin": self.admin,
             "profileUpdatable": self.profileUpdatable,
             "internalPasswordDisabled": self.internalPasswordDisabled,
             "groups": self._groups,
@@ -174,14 +176,16 @@ class User(AdminObject):
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
         """
         # self.password = ''  # never returned
-        self.name = response['name']
-        self.email = response['email']
-        self.admin = response['admin']
-        self.profileUpdatable = response['profileUpdatable']
-        self.internalPasswordDisabled = response['internalPasswordDisabled']
-        self._groups = response['groups'] if 'groups' in response else []
-        self._lastLoggedIn = response['lastLoggedIn'] if 'lastLoggedIn' in response else []
-        self._realm = response['realm'] if 'realm' in response else []
+        self.name = response["name"]
+        self.email = response["email"]
+        self.admin = response["admin"]
+        self.profileUpdatable = response["profileUpdatable"]
+        self.internalPasswordDisabled = response["internalPasswordDisabled"]
+        self._groups = response["groups"] if "groups" in response else []
+        self._lastLoggedIn = (
+            response["lastLoggedIn"] if "lastLoggedIn" in response else []
+        )
+        self._realm = response["realm"] if "realm" in response else []
 
     def add_to_group(self, group):
         if isinstance(group, Group):
@@ -191,13 +195,12 @@ class User(AdminObject):
     @property
     def encryptedPassword(self):
         if self.password is None:
-            raise ArtifactoryException('Please, set [self.password] before query encryptedPassword')
-        logging.debug('User get encrypted password [{x.name}]'.format(x=self))
-        request_url = self._artifactory.drive + '/api/security/encryptedPassword'
-        r = self._session.get(
-            request_url,
-            auth=(self.name, self.password),
-        )
+            raise ArtifactoryException(
+                "Please, set [self.password] before query encryptedPassword"
+            )
+        logging.debug("User get encrypted password [{x.name}]".format(x=self))
+        request_url = self._artifactory.drive + "/api/security/encryptedPassword"
+        r = self._session.get(request_url, auth=(self.name, self.password),)
         r.raise_for_status()
         encryptedPassword = r.text
         return encryptedPassword
@@ -216,15 +219,15 @@ class User(AdminObject):
 
 
 class Group(AdminObject):
-    _uri = 'security/groups'
+    _uri = "security/groups"
 
     def __init__(self, artifactory, name):
         super(Group, self).__init__(artifactory)
 
         self.name = name
-        self.description = ''
+        self.description = ""
         self.autoJoin = False
-        self.realm = 'artifactory'
+        self.realm = "artifactory"
         self.realmAttributes = None
 
     def _create_json(self):
@@ -243,11 +246,11 @@ class Group(AdminObject):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
         """
-        self.name = response['name']
-        self.description = response.get('description', None)
-        self.autoJoin = response['autoJoin']
-        self.realm = response['realm']
-        self.realmAttributes = response.get('realmAttributes', None)
+        self.name = response["name"]
+        self.description = response.get("description", None)
+        self.autoJoin = response["autoJoin"]
+        self.realm = response["realm"]
+        self.realmAttributes = response.get("realmAttributes", None)
 
 
 class GroupLDAP(Group):
@@ -255,7 +258,7 @@ class GroupLDAP(Group):
         # Must be lower case: https://www.jfrog.com/confluence/display/RTF/LDAP+Groups#LDAPGroups-UsingtheRESTAPI
         name = name.lower()
         super(GroupLDAP, self).__init__(artifactory, name)
-        self.realm = 'ldap'
+        self.realm = "ldap"
         self.realmAttributes = realmAttributes
 
     def _create_json(self):
@@ -263,10 +266,9 @@ class GroupLDAP(Group):
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
         """
         data_json = super(GroupLDAP, self)._create_json()
-        data_json.update({
-            'realmAttributes': self.realmAttributes,
-            'external': True,
-        })
+        data_json.update(
+            {"realmAttributes": self.realmAttributes, "external": True,}
+        )
         return data_json
 
 
@@ -299,14 +301,20 @@ class Repository(AdminObject):
 
 
 class RepositoryLocal(Repository):
-    _uri = 'repositories'
+    _uri = "repositories"
 
-    def __init__(self, artifactory, name, packageType=Repository.GENERIC, dockerApiVersion=Repository.V1):
+    def __init__(
+        self,
+        artifactory,
+        name,
+        packageType=Repository.GENERIC,
+        dockerApiVersion=Repository.V1,
+    ):
         super(RepositoryLocal, self).__init__(artifactory)
         self.name = name
-        self.description = ''
+        self.description = ""
         self.packageType = packageType
-        self.repoLayoutRef = 'maven-2-default'
+        self.repoLayoutRef = "maven-2-default"
         self.archiveBrowsingEnabled = True
         self.dockerApiVersion = dockerApiVersion
 
@@ -341,10 +349,10 @@ class RepositoryLocal(Repository):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
         """
-        self.name = response['key']
-        self.description = response.get('description')
-        self.layoutName = response.get('repoLayoutRef')
-        self.archiveBrowsingEnabled = response.get('archiveBrowsingEnabled')
+        self.name = response["key"]
+        self.description = response.get("description")
+        self.layoutName = response.get("repoLayoutRef")
+        self.archiveBrowsingEnabled = response.get("archiveBrowsingEnabled")
 
 
 class RepositoryVirtual(AdminObject):
@@ -369,7 +377,9 @@ class RepositoryVirtual(AdminObject):
     SBT = "sbt"
     YUM = "yum"
 
-    def __init__(self, artifactory, name, repositories=None, packageType=Repository.GENERIC):
+    def __init__(
+        self, artifactory, name, repositories=None, packageType=Repository.GENERIC
+    ):
         super(RepositoryVirtual, self).__init__(artifactory)
         self.name = name
         self.description = ""
@@ -396,9 +406,13 @@ class RepositoryVirtual(AdminObject):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
         """
-        rclass = response['rclass']
+        rclass = response["rclass"]
         if rclass != "virtual":
-            raise ArtifactoryException("Repositiry '{}' have '{}', but expect 'virtual'".format(self.name, rclass))
+            raise ArtifactoryException(
+                "Repositiry '{}' have '{}', but expect 'virtual'".format(
+                    self.name, rclass
+                )
+            )
 
         self.name = response["key"]
         self.description = response["description"]
@@ -411,14 +425,21 @@ class RepositoryVirtual(AdminObject):
 
 
 class RepositoryRemote(Repository):
-    _uri = 'repositories'
+    _uri = "repositories"
 
-    def __init__(self, artifactory, name, url=None, packageType=Repository.GENERIC, dockerApiVersion=Repository.V1):
+    def __init__(
+        self,
+        artifactory,
+        name,
+        url=None,
+        packageType=Repository.GENERIC,
+        dockerApiVersion=Repository.V1,
+    ):
         super(RepositoryRemote, self).__init__(artifactory)
         self.name = name
-        self.description = ''
+        self.description = ""
         self.packageType = packageType
-        self.repoLayoutRef = 'maven-2-default'
+        self.repoLayoutRef = "maven-2-default"
         self.archiveBrowsingEnabled = True
         self.dockerApiVersion = dockerApiVersion
         self.url = url
@@ -454,7 +475,7 @@ class RepositoryRemote(Repository):
             "calculateYumMetadata": False,
             "enableFileListsIndexing": False,
             "optionalIndexCompressionFormats": ["bz2", "lzma", "xz"],
-            "downloadRedirect": False
+            "downloadRedirect": False,
         }
         return data_json
 
@@ -462,33 +483,33 @@ class RepositoryRemote(Repository):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
         """
-        self.name = response['key']
-        self.description = response.get('description')
-        self.layoutName = response.get('repoLayoutRef')
-        self.archiveBrowsingEnabled = response.get('archiveBrowsingEnabled')
+        self.name = response["key"]
+        self.description = response.get("description")
+        self.layoutName = response.get("repoLayoutRef")
+        self.archiveBrowsingEnabled = response.get("archiveBrowsingEnabled")
 
 
 class PermissionTarget(AdminObject):
-    _uri = 'security/permissions'
+    _uri = "security/permissions"
 
     # Docs: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
-    ADMIN = 'm'
-    DELETE = 'd'
-    DEPLOY = 'w'
-    ANNOTATE = 'n'
-    READ = 'r'
+    ADMIN = "m"
+    DELETE = "d"
+    DEPLOY = "w"
+    ANNOTATE = "n"
+    READ = "r"
 
     ROLE_ADMIN = (ADMIN, DELETE, DEPLOY, ANNOTATE, READ)
     ROLE_DELETE = (DELETE, DEPLOY, ANNOTATE, READ)
     ROLE_DEPLOY = (DEPLOY, ANNOTATE, READ)
     ROLE_ANNOTATE = (ANNOTATE, READ)
-    ROLE_READ = (READ)
+    ROLE_READ = READ
 
     def __init__(self, artifactory, name):
         super(PermissionTarget, self).__init__(artifactory)
         self.name = name
-        self.includesPattern = '**'
-        self.excludesPattern = ''
+        self.includesPattern = "**"
+        self.excludesPattern = ""
         self._repositories = []
         self._users = {}
         self._groups = {}
@@ -502,10 +523,7 @@ class PermissionTarget(AdminObject):
             "includesPattern": self.includesPattern,
             "excludesPattern": self.excludesPattern,
             "repositories": self._repositories,
-            "principals": {
-                'users': self._users,
-                'groups': self._groups,
-            }
+            "principals": {"users": self._users, "groups": self._groups,},
         }
         return data_json
 
@@ -513,15 +531,15 @@ class PermissionTarget(AdminObject):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
         """
-        self.name = response['name']
-        self.includesPattern = response['includesPattern']
-        self.excludesPattern = response['excludesPattern']
-        self._repositories = response.get('repositories', [])
-        if 'principals' in response:
-            if 'users' in response['principals']:
-                self._users = response['principals']['users']
-            if 'groups' in response['principals']:
-                self._groups = response['principals']['groups']
+        self.name = response["name"]
+        self.includesPattern = response["includesPattern"]
+        self.excludesPattern = response["excludesPattern"]
+        self._repositories = response.get("repositories", [])
+        if "principals" in response:
+            if "users" in response["principals"]:
+                self._users = response["principals"]["users"]
+            if "groups" in response["principals"]:
+                self._groups = response["principals"]["groups"]
 
     def add_repository(self, *args):
         self._repositories.extend([x if isinstance(x, str) else x.name for x in args])
