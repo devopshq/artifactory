@@ -726,7 +726,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         # TODO: Why do we forbid remove folder?
         # if stat.is_dir:
-        #     raise OSError(1, "Operation not permitted: '%s'" % str(pathobj))
+        #     raise IsADirectoryError(1, "Operation not permitted: {!r}".format(pathobj))
 
         url = str(pathobj)
         text, code = self.rest_del(
@@ -734,7 +734,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         )
 
         if code not in (200, 202, 204):
-            raise RuntimeError("Failed to delete file: %d '%s'" % (code, text))
+            raise FileNotFoundError("Failed to delete file: {} {!r}".format(code, text))
 
     def touch(self, pathobj):
         """
