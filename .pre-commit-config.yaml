@@ -4,6 +4,11 @@ repos:
     hooks:
       - id: black
         language_version: python3.7
+  - repo: https://github.com/asottile/blacken-docs
+    rev: v1.3.0
+    hooks:
+      - id: blacken-docs
+        additional_dependencies: [black]
   -   repo: https://github.com/asottile/reorder_python_imports
       rev: v1.8.0
       hooks:
