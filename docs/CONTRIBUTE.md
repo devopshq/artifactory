@@ -1,6 +1,14 @@
 # Table of Contents
+
+<!-- toc -->
+
 - [Development](#development)
+  * [Prepare development environment](#prepare-development-environment)
 - [Tests](#tests)
+  * [Unit](#unit)
+  * [Integration](#integration)
+
+<!-- tocstop -->
 
 We will be grateful to see you in the ranks of the contributors! We have [some issues](https://github.com/devopshq/artifactory/issues).
 

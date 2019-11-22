@@ -8,3 +8,15 @@ repos:
       rev: v1.8.0
       hooks:
       -   id: reorder-python-imports
+  - repo: https://github.com/Lucas-C/pre-commit-hooks-nodejs
+    rev: v1.1.0
+    hooks:
+      - id: markdown-toc
+        name: README.md
+        files: ^README.md$
+      - id: markdown-toc
+        name: FAQ.md
+        files: FAQ.md$
+      - id: markdown-toc
+        name: CONTRIBUTE.md
+        files: CONTRIBUTE.md$

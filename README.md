@@ -8,35 +8,40 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
 ![](https://img.shields.io/badge/status-supported-green.svg)`dohq-artifactory` is a live python package for Jfrog Artifactory. It was forked from outdated [parallels/artifactory](https://github.com/parallels/artifactory) and supports all functionality from the original package.
 
 # Tables of Contents
+
+<!-- toc -->
+
 - [Install](#install)
 - [Usage](#usage)
-    - [Authentication](#authentication)
-    - [Walking Directory Tree](#walking-directory-tree)
-    - [Downloading Artifacts](#downloading-artifacts)
-    - [Uploading Artifacts](#uploading-artifacts)
-    - [Copy Artifacts](#copy-artifacts)
-    - [Remove Artifacts](#remove-artifacts)
-    - [Artifact properties](#artifact-properties)
-    - [Artifactory Query Language](#artifactory-query-language)
-    - [FileStat](#filestat)
+  * [Authentication](#authentication)
+  * [Walking Directory Tree](#walking-directory-tree)
+  * [Downloading Artifacts](#downloading-artifacts)
+  * [Uploading Artifacts](#uploading-artifacts)
+  * [Copy Artifacts](#copy-artifacts)
+  * [Move Artifacts](#move-artifacts)
+  * [Remove Artifacts](#remove-artifacts)
+  * [Artifact properties](#artifact-properties)
+  * [Artifactory Query Language](#artifactory-query-language)
+  * [FileStat](#filestat)
 - [Admin area](#admin-area)
-    - [User](#user)
-    - [Group](#group)
-        - [ Internal](#internal)
-        - [ GroupLDAP](#groupldap)
-    - [RepositoryLocal](#repositorylocal)
-    - [RepositoryVirtual](#repositoryvirtual)
-    - [RepositoryRemote](#repositoryremote)
-    - [PermissionTarget](#permissiontarget)
-    - [Common](#common)
-- [FAQ](docs/FAQ.md)
+  * [User](#user)
+  * [Group](#group)
+    + [Internal](#internal)
+    + [GroupLDAP](#groupldap)
+  * [RepositoryLocal](#repositorylocal)
+  * [RepositoryVirtual](#repositoryvirtual)
+  * [RepositoryRemote](#repositoryremote)
+  * [PermissionTarget](#permissiontarget)
+  * [Common](#common)
 - [Advanced](#advanced)
-    - [Session](#session)
-    - [SSL Cert Verification Options](#ssl-cert-verification-options)
-    - [Global Configuration File](#global-config-file)
-    - [Troubleshooting](#troubleshooting)
+  * [Session](#session)
+  * [SSL Cert Verification Options](#ssl-cert-verification-options)
+  * [Troubleshooting](#troubleshooting)
+  * [Global Configuration File](#global-configuration-file)
 - [Contribute](#contribute)
 - [Advertising](#advertising)
+
+<!-- tocstop -->
 
 # Install #
 Upgrade/install to the newest available version:
