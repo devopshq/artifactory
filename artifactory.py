@@ -10,7 +10,6 @@
 # ==================================================================
 #
 # pylint: disable=no-self-use, maybe-no-member
-
 """ artifactory: a python module for interfacing with JFrog Artifactory
 
 This module is intended to serve as a logical descendant of pathlib
@@ -23,7 +22,6 @@ There are PureArtifactoryPath and ArtifactoryPath that can be used
 to manipulate artifactory paths. See pathlib docs for details how
 pure paths can be used.
 """
-
 import collections
 import errno
 import hashlib
@@ -32,20 +30,18 @@ import logging
 import os
 import pathlib
 import sys
+import urllib.parse
 from itertools import islice
 
 import dateutil.parser
 import requests
-import urllib.parse
 
-from dohq_artifactory.admin import (
-    User,
-    Group,
-    RepositoryLocal,
-    PermissionTarget,
-    RepositoryVirtual,
-    RepositoryRemote,
-)
+from dohq_artifactory.admin import Group
+from dohq_artifactory.admin import PermissionTarget
+from dohq_artifactory.admin import RepositoryLocal
+from dohq_artifactory.admin import RepositoryRemote
+from dohq_artifactory.admin import RepositoryVirtual
+from dohq_artifactory.admin import User
 from dohq_artifactory.auth import XJFrogArtApiAuth
 
 try:

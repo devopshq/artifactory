@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
-from dohq_artifactory.admin import User, Group, RepositoryLocal, PermissionTarget
+from dohq_artifactory.admin import Group
+from dohq_artifactory.admin import PermissionTarget
+from dohq_artifactory.admin import RepositoryLocal
+from dohq_artifactory.admin import User
 
 
 class TestUser:

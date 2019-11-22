@@ -4,7 +4,10 @@ import sys
 
 import pytest
 
-from dohq_artifactory import RepositoryLocal, PermissionTarget, User, Group
+from dohq_artifactory import Group
+from dohq_artifactory import PermissionTarget
+from dohq_artifactory import RepositoryLocal
+from dohq_artifactory import User
 
 if sys.version_info[0] < 3:
     import ConfigParser as configparser
