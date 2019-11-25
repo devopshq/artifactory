@@ -1,6 +1,10 @@
+-e .
+
 pathlib; python_version<"3.4"
 requests
 python-dateutil
 pytest
 mock
 flake8
+pre-commit
+tox

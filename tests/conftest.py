@@ -4,7 +4,10 @@ import sys
 
 import pytest
 
-from dohq_artifactory import RepositoryLocal, PermissionTarget, User, Group
+from dohq_artifactory import Group
+from dohq_artifactory import PermissionTarget
+from dohq_artifactory import RepositoryLocal
+from dohq_artifactory import User
 
 if sys.version_info[0] < 3:
     import ConfigParser as configparser
@@ -21,7 +24,7 @@ def pytest_collection_modifyitems(items):
     :return:
     """
     for item in items:
-        if not hasattr(item, 'module'):  # e.g.: DoctestTextfile
+        if not hasattr(item, "module"):  # e.g.: DoctestTextfile
             continue
         module_path = os.path.relpath(
             item.module.__file__,
@@ -33,14 +36,12 @@ def pytest_collection_modifyitems(items):
         elif module_root_dir.startswith("unit"):
             item.add_marker(pytest.mark.unit)
         else:
-            raise RuntimeError(
-                "Unknown test type (filename = {})".format(module_path)
-            )
+            raise RuntimeError("Unknown test type (filename = {})".format(module_path))
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def art_uri():
-    config_path = os.path.join(os.path.dirname(__file__), 'test.cfg')
+    config_path = os.path.join(os.path.dirname(__file__), "test.cfg")
     config = configparser.ConfigParser()
     config.read(config_path)
 
@@ -48,9 +49,9 @@ def art_uri():
     yield uri
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def art_auth():
-    config_path = os.path.join(os.path.dirname(__file__), 'test.cfg')
+    config_path = os.path.join(os.path.dirname(__file__), "test.cfg")
     config = configparser.ConfigParser()
     config.read(config_path)
 
@@ -60,7 +61,7 @@ def art_auth():
     yield auth
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def artifactory(art_uri, art_auth):
     artifactory_ = ArtifactoryPath(art_uri, auth=art_auth)
     yield artifactory_
@@ -68,7 +69,7 @@ def artifactory(art_uri, art_auth):
 
 @pytest.fixture()
 def repo1(artifactory):
-    name = 'repo1'
+    name = "repo1"
     repo_ = artifactory.find_repository_local(name)
     if repo_ is not None:
         repo_.delete()
@@ -80,7 +81,7 @@ def repo1(artifactory):
 
 @pytest.fixture()
 def repo2(artifactory):
-    name = 'repo2'
+    name = "repo2"
     repo_ = artifactory.find_repository_local(name)
     if repo_ is not None:
         repo_.delete()
@@ -98,7 +99,7 @@ def integration_artifactory_path_repo(artifactory):
     :return:
     """
     # Create repo if not exist
-    name = 'integration-artifactory-path-repo'
+    name = "integration-artifactory-path-repo"
     repo_ = artifactory.find_repository_local(name)
     if repo_ is None:
         repo_ = RepositoryLocal(artifactory=artifactory, name=name)
@@ -106,13 +107,14 @@ def integration_artifactory_path_repo(artifactory):
 
     # Remove all file from repo
     repo_path = ArtifactoryPath(str(artifactory) + "/" + name, auth=artifactory.auth)
-    for path_ in repo_path.glob('*'):
+    for path_ in repo_path.glob("*"):
         path_.unlink()
     yield repo_
 
+
 @pytest.fixture()
 def permission(artifactory):
-    name = 'fixture_permission'
+    name = "fixture_permission"
     # Remove if exist
     permission_ = artifactory.find_permission_target(name)
     if permission_ is not None:
@@ -126,7 +128,7 @@ def permission(artifactory):
 
 @pytest.fixture()
 def user1(artifactory):
-    name = 'user1'
+    name = "user1"
     user = artifactory.find_user(name)
     if user is not None:
         user.delete()
@@ -138,7 +140,7 @@ def user1(artifactory):
 
 @pytest.fixture()
 def user2(artifactory):
-    name = 'user2'
+    name = "user2"
     user = artifactory.find_user(name)
     if user is not None:
         user.delete()
@@ -150,7 +152,7 @@ def user2(artifactory):
 
 @pytest.fixture()
 def group1(artifactory):
-    name = 'group1'
+    name = "group1"
     group = artifactory.find_group(name)
     if group is not None:
         group.delete()

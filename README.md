@@ -8,34 +8,40 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
 ![](https://img.shields.io/badge/status-supported-green.svg)`dohq-artifactory` is a live python package for Jfrog Artifactory. It was forked from outdated [parallels/artifactory](https://github.com/parallels/artifactory) and supports all functionality from the original package.
 
 # Tables of Contents
+
+<!-- toc -->
+
 - [Install](#install)
 - [Usage](#usage)
-    - [Authentication](#authentication)
-    - [Walking Directory Tree](#walking-directory-tree)
-    - [Downloading Artifacts](#downloading-artifacts)
-    - [Uploading Artifacts](#uploading-artifacts)
-    - [Copy Artifacts](#copy-artifacts)
-    - [Remove Artifacts](#remove-artifacts)
-    - [Artifact properties](#artifact-properties)
-    - [Artifactory Query Language](#artifactory-query-language)
-    - [FileStat](#filestat)
+  * [Authentication](#authentication)
+  * [Walking Directory Tree](#walking-directory-tree)
+  * [Downloading Artifacts](#downloading-artifacts)
+  * [Uploading Artifacts](#uploading-artifacts)
+  * [Copy Artifacts](#copy-artifacts)
+  * [Move Artifacts](#move-artifacts)
+  * [Remove Artifacts](#remove-artifacts)
+  * [Artifact properties](#artifact-properties)
+  * [Artifactory Query Language](#artifactory-query-language)
+  * [FileStat](#filestat)
 - [Admin area](#admin-area)
-    - [User](#user)
-    - [Group](#group)
-        - [ Internal](#internal)
-        - [ GroupLDAP](#groupldap)
-    - [RepositoryLocal](#repositorylocal)
-    - [RepositoryVirtual](#virtualrepository)
-    - [PermissionTarget](#permissiontarget)
-    - [Common](#common)
-- [FAQ](docs/FAQ.md)
+  * [User](#user)
+  * [Group](#group)
+    + [Internal](#internal)
+    + [GroupLDAP](#groupldap)
+  * [RepositoryLocal](#repositorylocal)
+  * [RepositoryVirtual](#repositoryvirtual)
+  * [RepositoryRemote](#repositoryremote)
+  * [PermissionTarget](#permissiontarget)
+  * [Common](#common)
 - [Advanced](#advanced)
-    - [Session](#session)
-    - [SSL Cert Verification Options](#ssl-cert-verification-options)
-    - [Global Configuration File](#global-config-file)
-    - [Troubleshooting](#troubleshooting)
+  * [Session](#session)
+  * [SSL Cert Verification Options](#ssl-cert-verification-options)
+  * [Troubleshooting](#troubleshooting)
+  * [Global Configuration File](#global-configuration-file)
 - [Contribute](#contribute)
 - [Advertising](#advertising)
+
+<!-- tocstop -->
 
 # Install #
 Upgrade/install to the newest available version:
@@ -46,6 +52,11 @@ Install latest development version (Warning! It may contains some errors!):
 ```bash
 pip install dohq-artifactory --upgrade --pre
 ```
+Or specify version, e.g.:
+```bash
+pip install dohq-artifactory==0.5.dev243
+```
+
 # Usage
 
 ## Authentication ##
@@ -58,35 +69,36 @@ from artifactory import ArtifactoryPath
 
 # API_KEY
 path = ArtifactoryPath(
-    "http://my-artifactory/artifactory/myrepo/restricted-path",
-    apikey='MY_API_KEY')
+    "http://my-artifactory/artifactory/myrepo/restricted-path", apikey="MY_API_KEY"
+)
 
 # User and password OR API_KEY
 path = ArtifactoryPath(
     "http://my-artifactory/artifactory/myrepo/restricted-path",
-    auth=('USERNAME', 'PASSWORD or API_KEY'))
+    auth=("USERNAME", "PASSWORD or API_KEY"),
+)
 
 # Other authentication types
 from requests.auth import HTTPDigestAuth
+
 path = ArtifactoryPath(
     "http://my-artifactory/artifactory/myrepo/restricted-path",
-    auth=('USERNAME', 'PASSWORD'),
+    auth=("USERNAME", "PASSWORD"),
     auth_type=HTTPDigestAuth,
-
-    )
+)
 
 from requests.auth import HTTPBasicAuth
+
 path = ArtifactoryPath(
     "http://my-artifactory/artifactory/myrepo/restricted-path",
-    auth=('USERNAME', 'PASSWORD'),
+    auth=("USERNAME", "PASSWORD"),
     auth_type=HTTPBasicAuth,
-    )
+)
 
 # Load username, password from global config if exist:
 path = ArtifactoryPath(
-    "http://my-artifactory/artifactory/myrepo/restricted-path",
-    auth_type=HTTPBasicAuth,
-    )
+    "http://my-artifactory/artifactory/myrepo/restricted-path", auth_type=HTTPBasicAuth,
+)
 
 path.touch()
 ```
@@ -97,8 +109,8 @@ Get directory listing:
 
 ```python
 from artifactory import ArtifactoryPath
-path = ArtifactoryPath(
-    "http://repo.jfrog.org/artifactory/gradle-ivy-local")
+
+path = ArtifactoryPath("http://repo.jfrog.org/artifactory/gradle-ivy-local")
 for p in path:
     print(p)
 ```
@@ -107,8 +119,8 @@ Find all `.gz` files in current dir, recursively:
 
 ```python
 from artifactory import ArtifactoryPath
-path = ArtifactoryPath(
-    "http://repo.jfrog.org/artifactory/distributions/org/")
+
+path = ArtifactoryPath("http://repo.jfrog.org/artifactory/distributions/org/")
 
 for p in path.glob("**/*.gz"):
     print(p)
@@ -120,8 +132,10 @@ Download artifact to a local filesystem:
 
 ```python
 from artifactory import ArtifactoryPath
+
 path = ArtifactoryPath(
-    "http://repo.jfrog.org/artifactory/distributions/org/apache/tomcat/apache-tomcat-7.0.11.tar.gz")
+    "http://repo.jfrog.org/artifactory/distributions/org/apache/tomcat/apache-tomcat-7.0.11.tar.gz"
+)
 
 with path.open() as fd:
     with open("tomcat.tar.gz", "wb") as out:
@@ -134,26 +148,27 @@ Deploy a regular file ```myapp-1.0.tar.gz```
 
 ```python
 from artifactory import ArtifactoryPath
+
 path = ArtifactoryPath(
-    "http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0")
+    "http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0"
+)
 path.mkdir()
 
-path.deploy_file('./myapp-1.0.tar.gz')
+path.deploy_file("./myapp-1.0.tar.gz")
 ```
 Deploy a debian package ```myapp-1.0.deb```
 
 ```python
 from artifactory import ArtifactoryPath
-path = ArtifactoryPath(
-    "http://my-artifactory/artifactory/ubuntu-local/pool")
-path.deploy_deb('./myapp-1.0.deb',
-                distribution='trusty',
-                component='main',
-                architecture='amd64')
+
+path = ArtifactoryPath("http://my-artifactory/artifactory/ubuntu-local/pool")
+path.deploy_deb(
+    "./myapp-1.0.deb", distribution="trusty", component="main", architecture="amd64"
+)
 ```
 
-## Copy Artifacts ##
-Copy artifact from this path to destinaiton.
+## Copy Artifacts
+Copy artifact from this path to destination.
 If files are on the same instance of artifactory, lightweight (local)
 copying will be attempted.
 
@@ -171,6 +186,7 @@ we copy the contents of a build over to the production folder?
 
 ```python
 from artifactory import ArtifactoryPath
+
 source = ArtifactoryPath("http://example.com/artifactory/builds/product/product/1.0.0/")
 dest = ArtifactoryPath("http://example.com/artifactory/published/production/")
 
@@ -183,11 +199,13 @@ is placed in the destination repo.
 
 source.copy(dest)
 for p in dest:
-    print(p)
+    print (p)
 # http://example.com/artifactory/published/production/foo-0.0.1.gz
 # http://example.com/artifactory/published/production/foo-0.0.1.pom
 
-for p in ArtifactoryPath("http://example.com/artifactory/published/product/product/1.0.0.tar"):
+for p in ArtifactoryPath(
+    "http://example.com/artifactory/published/product/product/1.0.0.tar"
+):
     print p
 # http://example.com/artifactory/published/product/product/1.0.0/product-1.0.0.tar.gz
 # http://example.com/artifactory/published/product/product/1.0.0/product-1.0.0.tar.pom
@@ -199,7 +217,7 @@ directly inside our dest as we intended.
 
 source.copy(dest, suppress_layouts=True)
 for p in dest:
-    print(p)
+    print (p)
 """
 http://example.com/artifactory/published/production/foo-0.0.1.gz
 http://example.com/artifactory/published/production/foo-0.0.1.pom
@@ -208,11 +226,25 @@ http://example.com/artifactory/published/production/product-1.0.0.tar.pom
 """
 ```
 
-## Remove Artifacts ##
+## Move Artifacts
+Move artifact from this path to destination.
+
 ```python
 from artifactory import ArtifactoryPath
+
+source = ArtifactoryPath("http://example.com/artifactory/builds/product/product/1.0.0/")
+dest = ArtifactoryPath("http://example.com/artifactory/published/production/")
+
+source.move(dest)
+```
+
+## Remove Artifacts
+```python
+from artifactory import ArtifactoryPath
+
 path = ArtifactoryPath(
-    "http://repo.jfrog.org/artifactory/distributions/org/apache/tomcat/apache-tomcat-7.0.11.tar.gz")
+    "http://repo.jfrog.org/artifactory/distributions/org/apache/tomcat/apache-tomcat-7.0.11.tar.gz"
+)
 
 if path.exists():
     path.unlink()
@@ -222,19 +254,21 @@ if path.exists():
 You can get and set (or remove) properties from artifact:
 ```python
 from artifactory import ArtifactoryPath
+
 path = ArtifactoryPath(
-    "http://repo.jfrog.org/artifactory/distributions/org/apache/tomcat/apache-tomcat-7.0.11.tar.gz")
+    "http://repo.jfrog.org/artifactory/distributions/org/apache/tomcat/apache-tomcat-7.0.11.tar.gz"
+)
 
 # Get properties
 properties = path.properties
 print(properties)
 
 # Update one properties or add if does not exist
-properties['qa'] = 'tested'
+properties["qa"] = "tested"
 path.properties = properties
 
 # Remove properties
-properties.pop('release')
+properties.pop("release")
 path.properties = properties
 ```
 
@@ -243,7 +277,10 @@ You can use [Artifactory Query Language](https://www.jfrog.com/confluence/displa
 
 ```python
 from artifactory import ArtifactoryPath
-aql = ArtifactoryPath( "http://my-artifactory/artifactory") # path to artifactory, NO repo
+
+aql = ArtifactoryPath(
+    "http://my-artifactory/artifactory"
+)  # path to artifactory, NO repo
 
 # dict support
 # Send query:
@@ -257,18 +294,15 @@ artifacts = aql.aql("items.find()", ".include", ["name", "repo"])
 
 #  support complex query
 # items.find({"$and": [{"repo": {"$eq": "repo"}}, {"$or": [{"path": {"$match": "*path1"}}, {"path": {"$match": "*path2"}}]}]})
-args = ["items.find", {"$and": [
+args = [
+    "items.find",
     {
-        "repo": {"$eq": "repo"}
-    },
-    {
-        "$or": [
-            {"path": {"$match": "*path1"}},
-            {"path": {"$match": "*path2"}},
+        "$and": [
+            {"repo": {"$eq": "repo"}},
+            {"$or": [{"path": {"$match": "*path1"}}, {"path": {"$match": "*path2"}},]},
         ]
     },
 ]
-}]
 
 # artifacts_list contains raw data (list of dict)
 # Send query:
@@ -286,8 +320,10 @@ You can get hash (`md5`, `sha1`, `sha256`), create date, and change date:
 
 ```python
 from artifactory import ArtifactoryPath
+
 path = ArtifactoryPath(
-    "http://repo.jfrog.org/artifactory/distributions/org/apache/tomcat/apache-tomcat-7.0.11.tar.gz")
+    "http://repo.jfrog.org/artifactory/distributions/org/apache/tomcat/apache-tomcat-7.0.11.tar.gz"
+)
 
 # Get FileStat
 stat = ArtifactoryPath.stat(path)
@@ -304,7 +340,10 @@ print(stat.size)
 You can manipulate with user\group\repository and permission. First, create `ArtifactoryPath` object without a repository
 ```python
 from artifactory import ArtifactoryPath
-artifactory_ = ArtifactoryPath('https://artifactory.example.com/artifactory', auth=('user', 'password'))
+
+artifactory_ = ArtifactoryPath(
+    "https://artifactory.example.com/artifactory", auth=("user", "password")
+)
 ```
 
 You can see detailed use of `AdminObject` in file `.\tests\integration\test_admin.py`
@@ -312,26 +351,31 @@ You can see detailed use of `AdminObject` in file `.\tests\integration\test_admi
 ```python
 # Find or create first way
 from dohq_artifactory import generate_password, User
-user = artifactory_.find_user('username')
+
+user = artifactory_.find_user("username")
 if user is None:
     # User does not exist
-    user = User(artifactory_, 'username', 'username@example.com', password=generate_password())
+    user = User(
+        artifactory_, "username", "username@example.com", password=generate_password()
+    )
     user.create()
 
 # Find or create - second way
-user = User(artifactory_, 'username')
-if not user.read(): # Return True if user exist
+user = User(artifactory_, "username")
+if not user.read():  # Return True if user exist
     # User does not exist
-    user = User(artifactory_, 'username', 'username@example.com', password=generate_password())
+    user = User(
+        artifactory_, "username", "username@example.com", password=generate_password()
+    )
     user.create()
 
 
 # Add to group
-user.add_to_group('byname')
+user.add_to_group("byname")
 
-group = artifactory_.find_group('groupname')
+group = artifactory_.find_group("groupname")
 user.add_to_group(group)
-user.update() # Don't forget update :)
+user.update()  # Don't forget update :)
 
 enc_pwd = user.encryptedPassword
 
@@ -347,11 +391,12 @@ user.delete()
 ```python
 # Find
 from dohq_artifactory import generate_password, Group
-group = artifactory_.find_group('groupname')
+
+group = artifactory_.find_group("groupname")
 
 # Create
 if group is None:
-    group = Group(artifactory_, 'groupname')
+    group = Group(artifactory_, "groupname")
     group.create()
 
 # You can re-read from Artifactory
@@ -366,8 +411,12 @@ https://www.jfrog.com/confluence/display/RTF/LDAP+Groups#LDAPGroups-UsingtheREST
 ```python
 # Full DN path in artifactory
 dn = "cn=R.DevOps.TestArtifactory,ou=Groups,dc=example,dc=com"
-attr = "ldapGroupName=r.devops.testartifactory;groupsStrategy=STATIC;groupDn={}".format(dn)
-test_group = GroupLDAP(artifactory=artifactory_, name='r.devops.testartifactory', realmAttributes=attr)
+attr = "ldapGroupName=r.devops.testartifactory;groupsStrategy=STATIC;groupDn={}".format(
+    dn
+)
+test_group = GroupLDAP(
+    artifactory=artifactory_, name="r.devops.testartifactory", realmAttributes=attr
+)
 test_group.create()
 ```
 
@@ -375,12 +424,13 @@ test_group.create()
 ```python
 # Find
 from dohq_artifactory import generate_password, RepositoryLocal
-repo = artifactory_.find_repository_local('reponame')
+
+repo = artifactory_.find_repository_local("reponame")
 
 # Create
 if repo is None:
     # or RepositoryLocal.PYPI, RepositoryLocal.NUGET, etc
-    repo = RepositoryLocal(artifactory_, 'reponame',packageType=RepositoryLocal.DEBIAN)
+    repo = RepositoryLocal(artifactory_, "reponame", packageType=RepositoryLocal.DEBIAN)
     repo.create()
 
 # You can re-read from Artifactory
@@ -393,18 +443,48 @@ repo.delete()
 ```python
 # Find
 from dohq_artifactory import RepositoryVirtual
-repo = artifactory_.find_repository_virtual('pypi.all')
+
+repo = artifactory_.find_repository_virtual("pypi.all")
 
 # Create
 if repo is None:
     # or RepositoryVirtual.PYPI, RepositoryLocal.NUGET, etc
-    repo = RepositoryVirtual(artifactory_, 'pypi.all', repositories=['pypi.snapshot', 'pypi.release'], packageType=RepositoryVirtual.PYPI)
+    repo = RepositoryVirtual(
+        artifactory_,
+        "pypi.all",
+        repositories=["pypi.snapshot", "pypi.release"],
+        packageType=RepositoryVirtual.PYPI,
+    )
     repo.create()
 
 # You can re-read from Artifactory
 repo.read()
 
-local_repos = repo.repositories # return List<RepositiryLocal>
+local_repos = repo.repositories  # return List<RepositiryLocal>
+
+repo.delete()
+```
+
+## RepositoryRemote
+```python
+# Find
+from dohq_artifactory import RepositoryRemote
+
+repo = artifactory_.find_repository_virtual("pypi.all")
+
+# Create
+if repo is None:
+    # or RepositoryRemote.PYPI, RepositoryRemote.NUGET, etc
+    repo = RepositoryRemote(
+        artifactory_,
+        "pypi.all",
+        url="https://files.pythonhosted.org",
+        packageType=RepositoryVirtual.PYPI,
+    )
+    repo.create()
+
+# You can re-read from Artifactory
+repo.read()
 
 repo.delete()
 ```
@@ -412,14 +492,14 @@ repo.delete()
 ## PermissionTarget
 Docs: https://www.jfrog.com/confluence/display/RTF/Managing+Permissions
 
-Supported this role:
+Supports these roles:
 - PermissionTarget.ROLE_ADMIN = `ADMIN + DELETE + DEPLOY + ANNOTATE + READ`
 - PermissionTarget.ROLE_DELETE = `DELETE + DEPLOY + ANNOTATE + READ`
 - PermissionTarget.ROLE_DEPLOY = `DEPLOY + ANNOTATE + READ`
 - PermissionTarget.ROLE_ANNOTATE = `ANNOTATE + READ`
 - PermissionTarget.ROLE_READ = `READ`
 
-And right:
+And for more modular control:
 - `PermissionTarget.ADMIN` - Allows changing the permission settings for other users on this permission target
 - `PermissionTarget.DELETE` - Allows deletion or overwriting of artifacts
 - `PermissionTarget.DEPLOY` - Allows deploying artifacts and deploying to caches (i.e. populating caches with remote artifacts)
@@ -428,41 +508,41 @@ And right:
 
 ```python
 from dohq_artifactory import PermissionTarget
-permission = artifactory_.find_permission_target('rule')
+
+permission = artifactory_.find_permission_target("rule")
 
 # Add repo as string or RepositoryLocal object
-permission.add_repository('repo1', 'repo2')
+permission.add_repository("repo1", "repo2")
 
 # Add group or user with permission
 permission.add_user(user_object, PermissionTarget.ROLE_ADMIN)
-permission.add_group('groupname, PermissionTarget.ROLE_READ)
+permission.add_group("groupname", PermissionTarget.ROLE_READ)
 
-permission.update() # Update!!
-
+permission.update()  # Update!!
 ```
 
 ## Common
 All `AdminObject`  support:
 ```python
-user = artifactory_.find_user('username')
-print(user.raw) # JSON response from Artifactory
+user = artifactory_.find_user("username")
+print(user.raw)  # JSON response from Artifactory
 
-new_repo = RepositoryLocal(artifactory, 'reponame')
+new_repo = RepositoryLocal(artifactory, "reponame")
 # If some key you can't find in object, you can use this:
-new_repo.additional_params['property_sets'] = ['my', 'properties_sets']
+new_repo.additional_params["property_sets"] = ["my", "properties_sets"]
 new_repo.create()
 
 # All object support CRUD operations:
-obj.read() # Return True if user exist (and read from Artifactory), else return False
+obj.read()  # Return True if user exist (and read from Artifactory), else return False
 obj.create()
 obj.update()
 obj.delete()
 
 # ArtifactoryPath have different find_ method:
-artifactory_.find_user('name')
-artifactory_.find_group('name')
-artifactory_.find_repository_local('name')
-artifactory_.find_permission_target('name')
+artifactory_.find_user("name")
+artifactory_.find_group("name")
+artifactory_.find_repository_local("name")
+artifactory_.find_permission_target("name")
 ```
 
 # Advanced
@@ -474,16 +554,17 @@ To re-use the established connection, you can pass ```session``` parameter to Ar
 ```python
 from artifactory import ArtifactoryPath
 import requests
+
 ses = requests.Session()
-ses.auth = ('username', 'password')
+ses.auth = ("username", "password")
 path = ArtifactoryPath(
-    "http://my-artifactory/artifactory/myrepo/my-path-1",
-    sesssion=ses)
+    "http://my-artifactory/artifactory/myrepo/my-path-1", sesssion=ses
+)
 path.touch()
 
 path = ArtifactoryPath(
-    "http://my-artifactory/artifactory/myrepo/my-path-2",
-    sesssion=ses)
+    "http://my-artifactory/artifactory/myrepo/my-path-2", sesssion=ses
+)
 path.touch()
 ```
 
@@ -493,37 +574,44 @@ See [Requests - SSL verification](http://docs.python-requests.org/en/latest/user
 
 ```python
 from artifactory import ArtifactoryPath
+
 path = ArtifactoryPath(
-    "http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0")
+    "http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0"
+)
 ```
 ... is the same as
 ```python
 from artifactory import ArtifactoryPath
+
 path = ArtifactoryPath(
-    "http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0",
-    verify=True)
+    "http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0", verify=True
+)
 ```
 Specify a local cert to use as client side certificate
 
 ```python
 from artifactory import ArtifactoryPath
+
 path = ArtifactoryPath(
     "http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0",
-    cert="/path_to_file/server.pem")
+    cert="/path_to_file/server.pem",
+)
 ```
 Disable host cert verification
 
 ```python
 from artifactory import ArtifactoryPath
+
 path = ArtifactoryPath(
-    "http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0",
-    verify=False)
+    "http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0", verify=False
+)
 ```
 
 **Note:** If host cert verification is disabled, `urllib3` will throw a [InsecureRequestWarning](https://urllib3.readthedocs.org/en/latest/security.html#insecurerequestwarning).
 To disable these warning, one needs to call `urllib3.disable_warnings()`.
 ```python
 import requests.packages.urllib3 as urllib3
+
 urllib3.disable_warnings()
 ```
 
@@ -531,13 +619,17 @@ urllib3.disable_warnings()
 Use [logging](https://docs.python.org/3/library/logging.html) for debug:
 ```python
 def init_logging():
-    logger_format_string = '%(thread)5s %(module)-20s %(levelname)-8s %(message)s'
-    logging.basicConfig(level=logging.DEBUG, format=logger_format_string, stream=sys.stdout)
+    logger_format_string = "%(thread)5s %(module)-20s %(levelname)-8s %(message)s"
+    logging.basicConfig(
+        level=logging.DEBUG, format=logger_format_string, stream=sys.stdout
+    )
+
 
 init_logging()
 path = ArtifactoryPath(
     "http://my-artifactory/artifactory/myrepo/restricted-path",
-    auth=('USERNAME', 'PASSWORD or API_KEY'))
+    auth=("USERNAME", "PASSWORD or API_KEY"),
+)
 
 path.touch()
 ```
@@ -565,7 +657,7 @@ Whether or not you specify ```http://``` or ```https://```, the prefix is not es
 
 
 # Contribute
-[About contribute](docs/CONTRIBUTE.md)
+[About contributing and testing](docs/CONTRIBUTE.md)
 
 # Advertising
 - [artifactory-du](https://github.com/devopshq/artifactory-du) - estimate file space usage. Summarize disk usage in JFrog Artifactory of the set of FILEs, recursively for directories.

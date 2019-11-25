@@ -9,62 +9,62 @@ except ImportError:
 import os
 
 
-__version__ = '0.5'
-devStatus = '4 - Beta'  # default build status, see: https://pypi.python.org/pypi?%3Aaction=list_classifiers
+__version__ = "0.6"
+devStatus = "4 - Beta"  # default build status, see: https://pypi.python.org/pypi?%3Aaction=list_classifiers
 
-if 'TRAVIS_BUILD_NUMBER' in os.environ and 'TRAVIS_BRANCH' in os.environ:
+if "TRAVIS_BUILD_NUMBER" in os.environ and "TRAVIS_BRANCH" in os.environ:
     print("This is TRAVIS-CI build")
-    print("TRAVIS_BUILD_NUMBER = {}".format(os.environ['TRAVIS_BUILD_NUMBER']))
-    print("TRAVIS_BRANCH = {}".format(os.environ['TRAVIS_BRANCH']))
+    print("TRAVIS_BUILD_NUMBER = {}".format(os.environ["TRAVIS_BUILD_NUMBER"]))
+    print("TRAVIS_BRANCH = {}".format(os.environ["TRAVIS_BRANCH"]))
 
-    __version__ += '.{}{}'.format(
-        '' if 'release' in os.environ['TRAVIS_BRANCH'] or os.environ['TRAVIS_BRANCH'] == 'master' else 'dev',
-        os.environ['TRAVIS_BUILD_NUMBER'],
+    __version__ += ".{}{}".format(
+        ""
+        if "release" in os.environ["TRAVIS_BRANCH"]
+        or os.environ["TRAVIS_BRANCH"] == "master"
+        else "dev",
+        os.environ["TRAVIS_BUILD_NUMBER"],
     )
 
-    if 'release' in os.environ['TRAVIS_BRANCH'] or os.environ['TRAVIS_BRANCH'] == 'master':
-        devStatus = '5 - Production/Stable'
+    if (
+        "release" in os.environ["TRAVIS_BRANCH"]
+        or os.environ["TRAVIS_BRANCH"] == "master"
+    ):
+        devStatus = "5 - Production/Stable"
 
     else:
         devStatus = devStatus
 
 else:
     print("This is local build")
-    __version__ += '.dev0'  # set version as major.minor.localbuild if local build: python setup.py install
+    __version__ += ".dev0"  # set version as major.minor.localbuild if local build: python setup.py install
 
 
 setup(
-    name='dohq-artifactory',
+    name="dohq-artifactory",
     version=__version__,
-    py_modules=['artifactory'],
-    license='MIT License',
-    description='A Python interface to Artifactory',
-    long_description='See full documentation here: https://devopshq.github.io/artifactory/',
-    author='Alexey Burov',
-    author_email='aburov@ptsecurity.com',
+    py_modules=["artifactory"],
+    license="MIT License",
+    description="A Python interface to Artifactory",
+    long_description="See full documentation here: https://devopshq.github.io/artifactory/",
+    author="Alexey Burov",
+    author_email="aburov@ptsecurity.com",
     classifiers=[
-        'Development Status :: {}'.format(devStatus),
-        'Intended Audience :: Developers',
-        'License :: OSI Approved :: MIT License',
-        'Operating System :: OS Independent',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.2',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.5',
-        'Topic :: Software Development :: Libraries',
-        'Topic :: System :: Filesystems',
+        "Development Status :: {}".format(devStatus),
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3.2",
+        "Programming Language :: Python :: 3.3",
+        "Programming Language :: Python :: 3.5",
+        "Topic :: Software Development :: Libraries",
+        "Topic :: System :: Filesystems",
     ],
-    url='https://devopshq.github.io/artifactory/',
-    download_url='https://github.com/devopshq/artifactory',
-    install_requires=[
-        'pathlib ; python_version<"3.4"',
-        'requests',
-        'python-dateutil'
-    ],
+    url="https://devopshq.github.io/artifactory/",
+    download_url="https://github.com/devopshq/artifactory",
+    install_requires=['pathlib ; python_version<"3.4"', "requests", "python-dateutil"],
     zip_safe=False,
-    package_data={'': ['README.md']},
-    packages=[
-        'dohq_artifactory',
-    ]
+    package_data={"": ["README.md"]},
+    packages=["dohq_artifactory"],
 )

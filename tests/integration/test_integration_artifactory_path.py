@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 import sys
 import tempfile
 
@@ -18,23 +17,23 @@ class TestArtifactoryPathTest:
     def test_root(self, integration_artifactory_path_repo, art_uri, art_auth):
         P = self.cls
 
-        assert P(art_uri + '/libs-release-local').root == '/libs-release-local/'
+        assert P(art_uri + "/libs-release-local").root == "/libs-release-local/"
 
     def test_isdir(self, integration_artifactory_path_repo, art_uri, art_auth):
         P = self.cls
 
-        assert P(art_uri + '/integration-artifactory-path-repo').is_dir()
-        assert not P(art_uri + '/non-existing-repo').is_dir()
+        assert P(art_uri + "/integration-artifactory-path-repo").is_dir()
+        assert not P(art_uri + "/non-existing-repo").is_dir()
 
     def test_owner(self, integration_artifactory_path_repo, art_uri, art_auth):
         P = self.cls
 
-        assert P(art_uri + '/integration-artifactory-path-repo').owner() == 'nobody'
+        assert P(art_uri + "/integration-artifactory-path-repo").owner() == "nobody"
 
     def test_mkdir(self, integration_artifactory_path_repo, art_uri, art_auth):
         P = self.cls
 
-        p = P(art_uri + '/integration-artifactory-path-repo/foo', auth=art_auth)
+        p = P(art_uri + "/integration-artifactory-path-repo/foo", auth=art_auth)
 
         p.mkdir()
         assert p.is_dir()
@@ -51,7 +50,7 @@ class TestArtifactoryPathTest:
     def test_touch(self, integration_artifactory_path_repo, art_uri, art_auth):
         P = self.cls
 
-        p = P(art_uri + '/integration-artifactory-path-repo/foo', auth=art_auth)
+        p = P(art_uri + "/integration-artifactory-path-repo/foo", auth=art_auth)
 
         p.touch(exist_ok=False)
         p.touch()
@@ -68,19 +67,19 @@ class TestArtifactoryPathTest:
     def test_iterdir(self, integration_artifactory_path_repo, art_uri, art_auth):
         P = self.cls
 
-        p = P(art_uri + '/integration-artifactory-path-repo/foo', auth=art_auth)
+        p = P(art_uri + "/integration-artifactory-path-repo/foo", auth=art_auth)
 
         p.mkdir()
 
-        (p / 'a').touch()
-        (p / 'b').touch()
-        (p / 'c').mkdir()
-        (p / 'c' / 'd').mkdir()
-        (p / 'e').touch()
+        (p / "a").touch()
+        (p / "b").touch()
+        (p / "c").mkdir()
+        (p / "c" / "d").mkdir()
+        (p / "e").touch()
 
         count = 0
         for child in p.iterdir():
-            assert str(child)[-1:] in ['a', 'b', 'c', 'e']
+            assert str(child)[-1:] in ["a", "b", "c", "e"]
             count += 1
 
         assert count == 4
@@ -91,36 +90,36 @@ class TestArtifactoryPathTest:
 
         P = self.cls
 
-        p = P(art_uri + '/integration-artifactory-path-repo/foo', auth=art_auth)
-        p_root = P(art_uri + '/integration-artifactory-path-repo', auth=art_auth)
+        p = P(art_uri + "/integration-artifactory-path-repo/foo", auth=art_auth)
+        p_root = P(art_uri + "/integration-artifactory-path-repo", auth=art_auth)
 
         if p.exists():
             p.rmdir()
         p.mkdir()
 
-        (p / 'a').touch()
-        (p / 'b.txt').touch()
-        (p / 'c').mkdir()
-        (p / 'c' / 'd.txt').mkdir()
-        (p / 'e.bin').touch()
+        (p / "a").touch()
+        (p / "b.txt").touch()
+        (p / "c").mkdir()
+        (p / "c" / "d.txt").mkdir()
+        (p / "e.bin").touch()
 
         count = 0
         for child in p.glob("**/*.txt"):
-            assert str(child)[-5:] in ['b.txt', 'd.txt']
+            assert str(child)[-5:] in ["b.txt", "d.txt"]
             count += 1
 
         assert count == 2
 
         for child in p_root.glob("**/*.txt"):
-            assert str(child)[-5:] in ['b.txt', 'd.txt']
+            assert str(child)[-5:] in ["b.txt", "d.txt"]
 
         p.rmdir()
 
     def test_deploy(self, integration_artifactory_path_repo, art_uri, art_auth):
         P = self.cls
 
-        p = P(art_uri + '/integration-artifactory-path-repo/foo', auth=art_auth)
-        p2 = P(art_uri + '/integration-artifactory-path-repo/foo2', auth=art_auth)
+        p = P(art_uri + "/integration-artifactory-path-repo/foo", auth=art_auth)
+        p2 = P(art_uri + "/integration-artifactory-path-repo/foo2", auth=art_auth)
 
         if p.exists():
             p.unlink()
@@ -149,7 +148,7 @@ class TestArtifactoryPathTest:
     def test_deploy_file(self, integration_artifactory_path_repo, art_uri, art_auth):
         P = self.cls
 
-        p = P(art_uri + '/integration-artifactory-path-repo/foo', auth=art_auth)
+        p = P(art_uri + "/integration-artifactory-path-repo/foo", auth=art_auth)
 
         if p.exists():
             p.unlink()
@@ -172,7 +171,7 @@ class TestArtifactoryPathTest:
     def test_open(self, integration_artifactory_path_repo, art_uri, art_auth):
         P = self.cls
 
-        p = P(art_uri + '/integration-artifactory-path-repo/foo', auth=art_auth)
+        p = P(art_uri + "/integration-artifactory-path-repo/foo", auth=art_auth)
 
         if p.exists():
             p.rmdir()

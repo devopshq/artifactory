@@ -1,0 +1,35 @@
+repos:
+  - repo: https://github.com/psf/black
+    rev: stable
+    hooks:
+      - id: black
+        language_version: python3.7
+  - repo: https://github.com/asottile/blacken-docs
+    rev: v1.3.0
+    hooks:
+      - id: blacken-docs
+        additional_dependencies: [black]
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.4.0
+    hooks:
+      - id: flake8
+  -   repo: https://github.com/asottile/reorder_python_imports
+      rev: v1.8.0
+      hooks:
+      -   id: reorder-python-imports
+  - repo: https://github.com/Lucas-C/pre-commit-hooks-nodejs
+    rev: v1.1.0
+    hooks:
+      - id: markdown-toc
+        name: README.md
+        files: ^README.md$
+      - id: markdown-toc
+        name: FAQ.md
+        files: FAQ.md$
+      - id: markdown-toc
+        name: CONTRIBUTE.md
+        files: CONTRIBUTE.md$
+  - repo: https://github.com/alphagov/verify-travis-pre-commit-hook
+    rev: master
+    hooks:
+      - id: travis-yml-lint
