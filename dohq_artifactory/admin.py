@@ -1,5 +1,4 @@
 import logging
-import random
 import secrets
 import string
 import time
@@ -12,7 +11,7 @@ def rest_delay():
 
 
 def generate_password(pw_len=16):
-    return ''.join(secrets.choice(string.ascii_letters) for i in range(pw_len))
+    return "".join(secrets.choice(string.ascii_letters) for i in range(pw_len))
 
 
 class AdminObject(object):
