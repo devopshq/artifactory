@@ -1,5 +1,7 @@
 import logging
 import random
+import secrets
+import string
 import time
 
 from dohq_artifactory.exception import ArtifactoryException
@@ -10,30 +12,7 @@ def rest_delay():
 
 
 def generate_password(pw_len=16):
-    alphabet_lower = "abcdefghijklmnopqrstuvwxyz"
-    alphabet_upper = alphabet_lower.upper()
-    alphabet_len = len(alphabet_lower)
-    pwlist = []
-
-    for i in range(pw_len // 3):
-        r_0 = random.randrange(alphabet_len)
-        r_1 = random.randrange(alphabet_len)
-        r_2 = random.randrange(10)
-
-        pwlist.append(alphabet_lower[r_0])
-        pwlist.append(alphabet_upper[r_1])
-        pwlist.append(str(r_2))
-
-    for i in range(pw_len - len(pwlist)):
-        r_0 = random.randrange(alphabet_len)
-
-        pwlist.append(alphabet_lower[r_0])
-
-    random.shuffle(pwlist)
-
-    result = "".join(pwlist)
-
-    return result
+    return ''.join(secrets.choice(string.ascii_letters) for i in range(pw_len))
 
 
 class AdminObject(object):
