@@ -176,6 +176,7 @@ def get_config_entry(config, url):
     for item in config:
         if without_http_prefix(item) == without_http_prefix(url):
             return config[item]
+    return None
 
 
 def get_global_config_entry(url):
@@ -236,7 +237,7 @@ def chunks(data, size):
     Get chink for dict, copy as-is from https://stackoverflow.com/a/8290508/6753144
     """
     it = iter(data)
-    for i in range(0, len(data), size):
+    for _ in range(0, len(data), size):
         yield {k: data[k] for k in islice(it, size)}
 
 
