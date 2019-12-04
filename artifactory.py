@@ -583,7 +583,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         """
         url = "/".join(
             [
-                pathobj.drive,
+                pathobj.drive.rstrip("/"),
                 "api/storage",
                 str(pathobj.relative_to(pathobj.drive)).strip("/"),
             ]
