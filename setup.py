@@ -9,7 +9,7 @@ except ImportError:
 import os
 
 
-__version__ = "0.6"
+__version__ = "0.7"
 devStatus = "4 - Beta"  # default build status, see: https://pypi.python.org/pypi?%3Aaction=list_classifiers
 
 if "TRAVIS_BUILD_NUMBER" in os.environ and "TRAVIS_BRANCH" in os.environ:
