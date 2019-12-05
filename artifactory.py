@@ -347,6 +347,9 @@ class _ArtifactoryFlavour(pathlib._Flavour):
     pathmod = pathlib.posixpath
     is_supported = True
 
+    def _get_base_url(self, url):
+        return get_global_base_url(url)
+
     def parse_parts(self, parts):
         drv, root, parsed = super(_ArtifactoryFlavour, self).parse_parts(parts)
         return drv, root, parsed
@@ -377,7 +380,7 @@ class _ArtifactoryFlavour(pathlib._Flavour):
         drv = ""
         root = ""
 
-        base = get_global_base_url(part)
+        base = self._get_base_url(part)
         if base and without_http_prefix(part).startswith(without_http_prefix(base)):
             mark = without_http_prefix(base).rstrip(sep) + sep
             parts = part.split(mark)
@@ -498,7 +501,18 @@ class _ArtifactoryFlavour(pathlib._Flavour):
         return path
 
 
+class _ArtifactorySaaSFlavour(_ArtifactoryFlavour):
+    def _get_base_url(self, url):
+        split_url = pathlib.PurePosixPath(url)
+        if len(split_url.parts) < 3:
+            return None
+        return urllib.parse.urljoin(
+            "//".join((split_url.parts[0], split_url.parts[1])), split_url.parts[2]
+        )
+
+
 _artifactory_flavour = _ArtifactoryFlavour()
+_saas_artifactory_flavour = _ArtifactorySaaSFlavour()
 
 ArtifactoryFileStat = collections.namedtuple(
     "ArtifactoryFileStat",
@@ -1559,6 +1573,33 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         if obj.read():
             return obj
         return None
+
+
+class ArtifactorySaaSPath(ArtifactoryPath):
+    """Class for SaaS Artifactory"""
+
+    _flavour = _saas_artifactory_flavour
+
+    def chmod(self, mode):
+        """
+        Throw NotImplementedError
+        Changing access rights makes no sense for Artifactory.
+        """
+        raise NotImplementedError()
+
+    def lchmod(self, mode):
+        """
+        Throw NotImplementedError
+        Changing access rights makes no sense for Artifactory.
+        """
+        raise NotImplementedError()
+
+    def symlink_to(self, target, target_is_directory=False):
+        """
+        Throw NotImplementedError
+        Artifactory doesn't have symlinks
+        """
+        raise NotImplementedError()
 
 
 def walk(pathobj, topdown=True):
