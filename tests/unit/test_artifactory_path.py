@@ -668,6 +668,34 @@ class ArtifactoryPathTest(unittest.TestCase):
         self.assertEqual(b.path_in_repo, "/folder/path.xml")
 
 
+class ArtifactorySaaSPathTest(unittest.TestCase):
+
+    cls = artifactory.ArtifactorySaaSPath
+
+    def test_basic(self):
+        P = self.cls
+        a = P("https://myartifactorysaas.jfrog.io/myartifactorysaas")
+
+    def test_repo(self):
+        P = self.cls
+        b = P("https://myartifactorysaas.jfrog.io/myartifactorysaas/reponame")
+        self.assertEqual(b.repo, "reponame")
+
+    def test_drive(self):
+        P = self.cls
+        b = P("https://myartifactorysaas.jfrog.io/myartifactorysaas/reponame")
+        self.assertEqual(
+            b.drive, "https://myartifactorysaas.jfrog.io/myartifactorysaas"
+        )
+
+    def test_path_in_repo(self):
+        P = self.cls
+        b = P(
+            "https://myartifactorysaas.jfrog.io/myartifactorysaas/reponame/folder/path.xml"
+        )
+        self.assertEqual(b.path_in_repo, "/folder/path.xml")
+
+
 class TestArtifactoryConfig(unittest.TestCase):
     def test_artifactory_config(self):
         cfg = (
