@@ -14,6 +14,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
 - [Install](#install)
 - [Usage](#usage)
   * [Authentication](#authentication)
+  * [Artifactory SaaS](#artifactory-saas)
   * [Walking Directory Tree](#walking-directory-tree)
   * [Downloading Artifacts](#downloading-artifacts)
   * [Uploading Artifacts](#uploading-artifacts)
@@ -102,6 +103,20 @@ path = ArtifactoryPath(
 
 path.touch()
 ```
+
+## Artifactory SaaS
+If you use Artifactory SaaS solution - use `ArtifactorySaaSPath` class
+```python
+from artifactory import ArtifactorySaaSPath
+
+# API_KEY
+path = ArtifactorySaaSPath(
+    "https://myartifactorysaas.jfrog.io/myartifactorysaas/folder/path.xml",
+    apikey="MY_API_KEY",
+)
+```
+We have to use other class, because as a SaaS service, the URL is different from an on-prem installation and the REST API endpoints.
+
 
 ## Walking Directory Tree ##
 
