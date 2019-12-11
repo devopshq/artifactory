@@ -63,7 +63,7 @@ setup(
     ],
     url="https://devopshq.github.io/artifactory/",
     download_url="https://github.com/devopshq/artifactory",
-    install_requires=['pathlib ; python_version<"3.4"', "requests", "python-dateutil", "python2-secrets"],
+    install_requires=['pathlib ; python_version<"3.4"', "requests", "python-dateutil"],
     zip_safe=False,
     package_data={"": ["README.md"]},
     packages=["dohq_artifactory"],

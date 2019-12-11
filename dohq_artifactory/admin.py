@@ -1,7 +1,8 @@
 import logging
-import secrets
 import string
 import time
+import sys
+import random
 
 from dohq_artifactory.exception import ArtifactoryException
 
@@ -10,8 +11,42 @@ def rest_delay():
     time.sleep(0.5)
 
 
-def generate_password(pw_len=16):
+def _old_function_for_secret(pw_len=16):
+    alphabet_lower = "abcdefghijklmnopqrstuvwxyz"
+    alphabet_upper = alphabet_lower.upper()
+    alphabet_len = len(alphabet_lower)
+    pwlist = []
+
+    for i in range(pw_len // 3):
+        r_0 = random.randrange(alphabet_len)
+        r_1 = random.randrange(alphabet_len)
+        r_2 = random.randrange(10)
+
+        pwlist.append(alphabet_lower[r_0])
+        pwlist.append(alphabet_upper[r_1])
+        pwlist.append(str(r_2))
+
+    for i in range(pw_len - len(pwlist)):
+        r_0 = random.randrange(alphabet_len)
+
+        pwlist.append(alphabet_lower[r_0])
+
+    random.shuffle(pwlist)
+
+    result = "".join(pwlist)
+
+    return result
+
+
+def _new_function_with_secret_module(pw_len=16):
+    import secrets
     return "".join(secrets.choice(string.ascii_letters) for i in range(pw_len))
+
+
+if sys.version_info < (3, 6):
+    generate_password = _old_function_for_secret
+else:
+    generate_password = _new_function_with_secret_module
 
 
 class AdminObject(object):
@@ -80,7 +115,7 @@ class AdminObject(object):
         request_url = self._artifactory.drive + "/api/{uri}/{x.name}".format(
             uri=self._uri, x=self
         )
-        r = self._session.get(request_url, auth=self._auth,)
+        r = self._session.get(request_url, auth=self._auth, )
         if 404 == r.status_code or 400 == r.status_code:
             logging.debug(
                 "{x.__class__.__name__} [{x.name}] does not exist".format(x=self)
@@ -111,7 +146,7 @@ class AdminObject(object):
         request_url = self._artifactory.drive + "/api/{uri}/{x.name}".format(
             uri=self._uri, x=self
         )
-        r = self._session.delete(request_url, auth=self._auth,)
+        r = self._session.delete(request_url, auth=self._auth, )
         r.raise_for_status()
         rest_delay()
 
@@ -178,7 +213,7 @@ class User(AdminObject):
             )
         logging.debug("User get encrypted password [{x.name}]".format(x=self))
         request_url = self._artifactory.drive + "/api/security/encryptedPassword"
-        r = self._session.get(request_url, auth=(self.name, self.password),)
+        r = self._session.get(request_url, auth=(self.name, self.password), )
         r.raise_for_status()
         encryptedPassword = r.text
         return encryptedPassword
@@ -280,11 +315,11 @@ class RepositoryLocal(Repository):
     _uri = "repositories"
 
     def __init__(
-        self,
-        artifactory,
-        name,
-        packageType=Repository.GENERIC,
-        dockerApiVersion=Repository.V1,
+            self,
+            artifactory,
+            name,
+            packageType=Repository.GENERIC,
+            dockerApiVersion=Repository.V1,
     ):
         super(RepositoryLocal, self).__init__(artifactory)
         self.name = name
@@ -354,7 +389,7 @@ class RepositoryVirtual(AdminObject):
     YUM = "yum"
 
     def __init__(
-        self, artifactory, name, repositories=None, packageType=Repository.GENERIC
+            self, artifactory, name, repositories=None, packageType=Repository.GENERIC
     ):
         super(RepositoryVirtual, self).__init__(artifactory)
         self.name = name
@@ -404,12 +439,12 @@ class RepositoryRemote(Repository):
     _uri = "repositories"
 
     def __init__(
-        self,
-        artifactory,
-        name,
-        url=None,
-        packageType=Repository.GENERIC,
-        dockerApiVersion=Repository.V1,
+            self,
+            artifactory,
+            name,
+            url=None,
+            packageType=Repository.GENERIC,
+            dockerApiVersion=Repository.V1,
     ):
         super(RepositoryRemote, self).__init__(artifactory)
         self.name = name
