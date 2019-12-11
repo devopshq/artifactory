@@ -1,6 +1,7 @@
 import logging
-import secrets
+import random
 import string
+import sys
 import time
 
 from dohq_artifactory.exception import ArtifactoryException
@@ -10,8 +11,43 @@ def rest_delay():
     time.sleep(0.5)
 
 
-def generate_password(pw_len=16):
+def _old_function_for_secret(pw_len=16):
+    alphabet_lower = "abcdefghijklmnopqrstuvwxyz"
+    alphabet_upper = alphabet_lower.upper()
+    alphabet_len = len(alphabet_lower)
+    pwlist = []
+
+    for i in range(pw_len // 3):
+        r_0 = random.randrange(alphabet_len)
+        r_1 = random.randrange(alphabet_len)
+        r_2 = random.randrange(10)
+
+        pwlist.append(alphabet_lower[r_0])
+        pwlist.append(alphabet_upper[r_1])
+        pwlist.append(str(r_2))
+
+    for i in range(pw_len - len(pwlist)):
+        r_0 = random.randrange(alphabet_len)
+
+        pwlist.append(alphabet_lower[r_0])
+
+    random.shuffle(pwlist)
+
+    result = "".join(pwlist)
+
+    return result
+
+
+def _new_function_with_secret_module(pw_len=16):
+    import secrets
+
     return "".join(secrets.choice(string.ascii_letters) for i in range(pw_len))
+
+
+if sys.version_info < (3, 6):
+    generate_password = _old_function_for_secret
+else:
+    generate_password = _new_function_with_secret_module
 
 
 class AdminObject(object):
