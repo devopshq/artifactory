@@ -41,7 +41,7 @@ class AdminObject(object):
         logging.debug("Create {x.__class__.__name__} [{x.name}]".format(x=self))
         self._create_and_update(self._session.put)
 
-    def _create_and_update(self, request):
+    def _create_and_update(self, method):
         """
         Create or update request, re-read object from Artifactory
         :return: None
@@ -51,7 +51,7 @@ class AdminObject(object):
         request_url = self._artifactory.drive + "/api/{uri}/{x.name}".format(
             uri=self._uri, x=self
         )
-        r = request(
+        r = method(
             request_url,
             json=data_json,
             headers={"Content-Type": "application/json"},
