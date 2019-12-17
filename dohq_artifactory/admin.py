@@ -161,7 +161,7 @@ class User(AdminObject):
         name,
         email=None,
         password=None,
-        disableUIAccess=True
+        disable_ui=True
     ):
         super(User, self).__init__(artifactory)
 
@@ -171,7 +171,7 @@ class User(AdminObject):
         self.password = password
         self.admin = False
         self.profileUpdatable = True
-        self.disableUIAccess = True
+        self.disableUIAccess = disable_ui
         self.internalPasswordDisabled = False
         self._groups = []
 
