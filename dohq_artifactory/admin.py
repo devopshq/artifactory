@@ -155,7 +155,7 @@ class AdminObject(object):
 class User(AdminObject):
     _uri = "security/users"
 
-    def __init__(self, artifactory, name, email=None, password=None):
+    def __init__(self, artifactory, name, email=None, password=None, disableUIAccess=True):
         super(User, self).__init__(artifactory)
 
         self.name = name
@@ -164,6 +164,7 @@ class User(AdminObject):
         self.password = password
         self.admin = False
         self.profileUpdatable = True
+        self.disableUIAccess = True
         self.internalPasswordDisabled = False
         self._groups = []
 
@@ -180,6 +181,7 @@ class User(AdminObject):
             "password": self.password,
             "admin": self.admin,
             "profileUpdatable": self.profileUpdatable,
+            "disableUIAccess": self.disableUIAccess,
             "internalPasswordDisabled": self.internalPasswordDisabled,
             "groups": self._groups,
         }
@@ -194,6 +196,7 @@ class User(AdminObject):
         self.email = response["email"]
         self.admin = response["admin"]
         self.profileUpdatable = response["profileUpdatable"]
+        self.disableUIAccess = response["disableUIAccess"]
         self.internalPasswordDisabled = response["internalPasswordDisabled"]
         self._groups = response["groups"] if "groups" in response else []
         self._lastLoggedIn = (
