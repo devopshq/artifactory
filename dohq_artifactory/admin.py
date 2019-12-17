@@ -155,14 +155,7 @@ class AdminObject(object):
 class User(AdminObject):
     _uri = "security/users"
 
-    def __init__(
-        self,
-        artifactory,
-        name,
-        email=None,
-        password=None,
-        disable_ui=True
-    ):
+    def __init__(self, artifactory, name, email=None, password=None, disable_ui=True):
         super(User, self).__init__(artifactory)
 
         self.name = name
