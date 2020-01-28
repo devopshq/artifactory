@@ -24,11 +24,13 @@ pure paths can be used.
 """
 import collections
 import errno
+import fnmatch
 import hashlib
 import json
 import logging
 import os
 import pathlib
+import re
 import sys
 import urllib.parse
 from itertools import islice
@@ -349,6 +351,9 @@ class _ArtifactoryFlavour(pathlib._Flavour):
 
     def _get_base_url(self, url):
         return get_global_base_url(url)
+
+    def compile_pattern(self, pattern):
+        return re.compile(fnmatch.translate(pattern), re.IGNORECASE).fullmatch
 
     def parse_parts(self, parts):
         drv, root, parsed = super(_ArtifactoryFlavour, self).parse_parts(parts)
