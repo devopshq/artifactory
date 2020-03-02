@@ -1579,6 +1579,59 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             return obj
         return None
 
+    def get_users(self):
+        request_url = self.drive + "/api/security/users"
+        r = self.session.get(request_url, auth=self.auth)
+        r.raise_for_status()
+        response = r.json()
+        users = []
+        for i in response:
+            user = User(self, i["name"])
+            user.read()
+            users.append(user)
+        return users
+
+    def get_groups(self):
+        request_url = self.drive + "/api/security/groups"
+        r = self.session.get(request_url, auth=self.auth)
+        r.raise_for_status()
+        response = r.json()
+        groups = []
+        for i in response:
+            group = Group(self, i["name"])
+            group.read()
+            groups.append(group)
+        return groups
+
+    def get_repositories(self):
+        request_url = self.drive + "/api/repositories"
+        r = self.session.get(request_url, auth=self.auth)
+        r.raise_for_status()
+        response = r.json()
+        repositories = []
+        for i in response:
+            if i["type"] == "LOCAL":
+                repository = RepositoryLocal(self, i["key"])
+            elif i["type"] == "REMOTE":
+                repository = RepositoryRemote(self, i["key"])
+            elif i["type"] == "VIRTUAL":
+                repository = RepositoryVirtual(self, i["key"])
+            repository.read()
+            repositories.append(repository)
+        return repositories
+
+    def get_permissions(self):
+        request_url = self.drive + "/api/security/permissions"
+        r = self.session.get(request_url, auth=self.auth)
+        r.raise_for_status()
+        response = r.json()
+        permissions = []
+        for i in response:
+            permission = PermissionTarget(self, i["name"])
+            permission.read()
+            permissions.append(permission)
+        return permissions
+
 
 class ArtifactorySaaSPath(ArtifactoryPath):
     """Class for SaaS Artifactory"""
