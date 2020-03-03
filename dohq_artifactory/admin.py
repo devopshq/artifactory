@@ -193,7 +193,7 @@ class User(AdminObject):
         """
         # self.password = ''  # never returned
         self.name = response["name"]
-        self.email = response["email"]
+        self.email = response.get("email", None)
         self.admin = response["admin"]
         self.profileUpdatable = response["profileUpdatable"]
         self.disableUIAccess = response["disableUIAccess"]
