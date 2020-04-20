@@ -314,6 +314,17 @@ class Repository(AdminObject):
     V1 = "V1"
     V2 = "V2"
 
+    @staticmethod
+    def create_by_type(type: str, artifactory, name):
+        if type == "LOCAL":
+            return RepositoryLocal(artifactory, name)
+        elif type == "REMOTE":
+            return RepositoryRemote(artifactory, name)
+        elif type == "VIRTUAL":
+            return RepositoryVirtual(artifactory, name)
+        else:
+            return None
+
 
 class RepositoryLocal(Repository):
     _uri = "repositories"
