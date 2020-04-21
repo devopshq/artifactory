@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from artifactory import ArtifactoryPath
 import os
 import sys
 
@@ -14,7 +15,14 @@ if sys.version_info[0] < 3:
 else:
     import configparser
 
-from artifactory import ArtifactoryPath
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers", "unit: unit tests"
+    )
+    config.addinivalue_line(
+        "markers", "integration: integration tests"
+    )
 
 
 def pytest_collection_modifyitems(items):
