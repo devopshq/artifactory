@@ -377,7 +377,7 @@ class RepositoryLocal(Repository):
         """
         self.name = response["key"]
         self.description = response.get("description")
-        self.layoutName = response.get("repoLayoutRef")
+        self.repoLayoutRef = response.get("repoLayoutRef")
         self.archiveBrowsingEnabled = response.get("archiveBrowsingEnabled")
 
 
@@ -511,7 +511,7 @@ class RepositoryRemote(Repository):
         """
         self.name = response["key"]
         self.description = response.get("description")
-        self.layoutName = response.get("repoLayoutRef")
+        self.repoLayoutRef = response.get("repoLayoutRef")
         self.archiveBrowsingEnabled = response.get("archiveBrowsingEnabled")
 
 
