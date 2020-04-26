@@ -1,5 +1,6 @@
 import logging
 import random
+import requests
 import string
 import sys
 import time
@@ -93,9 +94,14 @@ class AdminObject(object):
             headers={"Content-Type": "application/json"},
             auth=self._auth,
         )
-        r.raise_for_status()
-        rest_delay()
-        self.read()
+        try:
+            r.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            print("Response text: {}".format(e.resonse.text))
+            raise SystemExit(e)
+        else:
+            rest_delay()
+            self.read()
 
     def _read_response(self, response):
         """
@@ -124,11 +130,16 @@ class AdminObject(object):
             return False
         else:
             logging.debug("{x.__class__.__name__} [{x.name}] exist".format(x=self))
-            r.raise_for_status()
-            response = r.json()
-            self.raw = response
-            self._read_response(response)
-            return True
+            try:
+                r.raise_for_status()
+            except requests.exceptions.HTTPError as e:
+                print("Response text: {}".format(e.resonse.text))
+                raise SystemExit(e)
+            else:
+                response = r.json()
+                self.raw = response
+                self._read_response(response)
+                return True
 
     def update(self):
         """
@@ -148,8 +159,13 @@ class AdminObject(object):
             uri=self._uri, x=self
         )
         r = self._session.delete(request_url, auth=self._auth,)
-        r.raise_for_status()
-        rest_delay()
+        try:
+            r.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            print("Response text: {}".format(e.resonse.text))
+            raise SystemExit(e)
+        else:
+            rest_delay()
 
 
 class User(AdminObject):
@@ -218,9 +234,14 @@ class User(AdminObject):
         logging.debug("User get encrypted password [{x.name}]".format(x=self))
         request_url = self._artifactory.drive + "/api/security/encryptedPassword"
         r = self._session.get(request_url, auth=(self.name, self.password),)
-        r.raise_for_status()
-        encryptedPassword = r.text
-        return encryptedPassword
+        try:
+            r.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            print("Response text: {}".format(e.resonse.text))
+            raise SystemExit(e)
+        else:
+            encryptedPassword = r.text
+            return encryptedPassword
 
     @property
     def lastLoggedIn(self):
