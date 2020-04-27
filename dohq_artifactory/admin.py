@@ -12,6 +12,19 @@ def rest_delay():
     time.sleep(0.5)
 
 
+def raise_errors(r):
+    try:
+        r.raise_for_status()
+    except requests.HTTPError as e:
+        if e.response.status_code >= 400:
+            logging.warning("Artifactory returned an error. Response text: {}".format(e.resonse.text))
+            raise ArtifactoryException
+        else:
+            raise e
+    else:
+        pass
+
+
 def _old_function_for_secret(pw_len=16):
     alphabet_lower = "abcdefghijklmnopqrstuvwxyz"
     alphabet_upper = alphabet_lower.upper()
@@ -94,14 +107,9 @@ class AdminObject(object):
             headers={"Content-Type": "application/json"},
             auth=self._auth,
         )
-        try:
-            r.raise_for_status()
-        except requests.exceptions.HTTPError as e:
-            print("Response text: {}".format(e.resonse.text))
-            raise SystemExit(e)
-        else:
-            rest_delay()
-            self.read()
+        raise_errors(r)
+        rest_delay()
+        self.read()
 
     def _read_response(self, response):
         """
@@ -130,16 +138,11 @@ class AdminObject(object):
             return False
         else:
             logging.debug("{x.__class__.__name__} [{x.name}] exist".format(x=self))
-            try:
-                r.raise_for_status()
-            except requests.exceptions.HTTPError as e:
-                print("Response text: {}".format(e.resonse.text))
-                raise SystemExit(e)
-            else:
-                response = r.json()
-                self.raw = response
-                self._read_response(response)
-                return True
+            raise_errors(r)
+            response = r.json()
+            self.raw = response
+            self._read_response(response)
+            return True
 
     def update(self):
         """
@@ -159,13 +162,8 @@ class AdminObject(object):
             uri=self._uri, x=self
         )
         r = self._session.delete(request_url, auth=self._auth,)
-        try:
-            r.raise_for_status()
-        except requests.exceptions.HTTPError as e:
-            print("Response text: {}".format(e.resonse.text))
-            raise SystemExit(e)
-        else:
-            rest_delay()
+        raise_errors(r)
+        rest_delay()
 
 
 class User(AdminObject):
@@ -234,14 +232,9 @@ class User(AdminObject):
         logging.debug("User get encrypted password [{x.name}]".format(x=self))
         request_url = self._artifactory.drive + "/api/security/encryptedPassword"
         r = self._session.get(request_url, auth=(self.name, self.password),)
-        try:
-            r.raise_for_status()
-        except requests.exceptions.HTTPError as e:
-            print("Response text: {}".format(e.resonse.text))
-            raise SystemExit(e)
-        else:
-            encryptedPassword = r.text
-            return encryptedPassword
+        raise_errors(r)
+        encryptedPassword = r.text
+        return encryptedPassword
 
     @property
     def lastLoggedIn(self):
