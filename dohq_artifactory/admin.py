@@ -3,6 +3,7 @@ import random
 import string
 import sys
 import time
+import warnings
 
 from dohq_artifactory.exception import ArtifactoryException
 
@@ -380,6 +381,12 @@ class RepositoryLocal(Repository):
         self.repoLayoutRef = response.get("repoLayoutRef")
         self.archiveBrowsingEnabled = response.get("archiveBrowsingEnabled")
 
+        @property
+        def layoutName(self):
+            warnings.warn("layoutName is deprecated and will be removed. Use repoLayoutRef for the same value.",
+                          DeprecationWarning)
+            return response.get("repoLayoutRef")
+
 
 class RepositoryVirtual(AdminObject):
     _uri = "repositories"
@@ -513,6 +520,12 @@ class RepositoryRemote(Repository):
         self.description = response.get("description")
         self.repoLayoutRef = response.get("repoLayoutRef")
         self.archiveBrowsingEnabled = response.get("archiveBrowsingEnabled")
+
+        @property
+        def layoutName(self):
+            warnings.warn("layoutName is deprecated and will be removed. Use repoLayoutRef for the same value.",
+                          DeprecationWarning)
+            return response.get("repoLayoutRef")
 
 
 class PermissionTarget(AdminObject):
