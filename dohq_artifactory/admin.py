@@ -17,12 +17,9 @@ def raise_errors(r):
         r.raise_for_status()
     except requests.HTTPError as e:
         if e.response.status_code >= 400:
-            logging.warning("Artifactory returned an error. Response text: {}".format(e.resonse.text))
-            raise ArtifactoryException
+            raise ArtifactoryException(e.response.text)
         else:
             raise e
-    else:
-        pass
 
 
 def _old_function_for_secret(pw_len=16):
