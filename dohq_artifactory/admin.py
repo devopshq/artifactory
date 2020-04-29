@@ -1,9 +1,10 @@
 import logging
 import random
-import requests
 import string
 import sys
 import time
+
+import requests
 
 from dohq_artifactory.exception import ArtifactoryException
 

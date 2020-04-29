@@ -1619,7 +1619,9 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         :param lazy: `True` if we don't need anything except object's name
         """
-        return self._get_all(url="/api/security/groups", key="name", cls=Group, lazy=lazy)
+        return self._get_all(
+            url="/api/security/groups", key="name", cls=Group, lazy=lazy
+        )
 
     def get_repositories(self, lazy=False):
         """
@@ -1627,7 +1629,9 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         :param lazy: `True` if we don't need anything except object's name
         """
-        return self._get_all(url="/api/repositories", key="key", cls=Repository, lazy=lazy)
+        return self._get_all(
+            url="/api/repositories", key="key", cls=Repository, lazy=lazy
+        )
 
     def get_permissions(self, lazy=False):
         """
@@ -1635,7 +1639,9 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         :param lazy: `True` if we don't need anything except object's name
         """
-        return self._get_all(url="/api/security/permissions", key="name", cls=PermissionTarget, lazy=lazy)
+        return self._get_all(
+            url="/api/security/permissions", key="name", cls=PermissionTarget, lazy=lazy
+        )
 
 
 class ArtifactorySaaSPath(ArtifactoryPath):
