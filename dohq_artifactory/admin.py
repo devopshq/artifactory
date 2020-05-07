@@ -4,11 +4,23 @@ import string
 import sys
 import time
 
+import requests
+
 from dohq_artifactory.exception import ArtifactoryException
 
 
 def rest_delay():
     time.sleep(0.5)
+
+
+def raise_errors(r):
+    try:
+        r.raise_for_status()
+    except requests.HTTPError as e:
+        if e.response.status_code >= 400:
+            raise ArtifactoryException(e.response.text)
+        else:
+            raise e
 
 
 def _old_function_for_secret(pw_len=16):
@@ -93,7 +105,7 @@ class AdminObject(object):
             headers={"Content-Type": "application/json"},
             auth=self._auth,
         )
-        r.raise_for_status()
+        raise_errors(r)
         rest_delay()
         self.read()
 
@@ -124,7 +136,7 @@ class AdminObject(object):
             return False
         else:
             logging.debug("{x.__class__.__name__} [{x.name}] exist".format(x=self))
-            r.raise_for_status()
+            raise_errors(r)
             response = r.json()
             self.raw = response
             self._read_response(response)
@@ -148,7 +160,7 @@ class AdminObject(object):
             uri=self._uri, x=self
         )
         r = self._session.delete(request_url, auth=self._auth,)
-        r.raise_for_status()
+        raise_errors(r)
         rest_delay()
 
 
@@ -218,7 +230,7 @@ class User(AdminObject):
         logging.debug("User get encrypted password [{x.name}]".format(x=self))
         request_url = self._artifactory.drive + "/api/security/encryptedPassword"
         r = self._session.get(request_url, auth=(self.name, self.password),)
-        r.raise_for_status()
+        raise_errors(r)
         encryptedPassword = r.text
         return encryptedPassword
 
@@ -314,6 +326,17 @@ class Repository(AdminObject):
     V1 = "V1"
     V2 = "V2"
 
+    @staticmethod
+    def create_by_type(type: str, artifactory, name):
+        if type == "LOCAL":
+            return RepositoryLocal(artifactory, name)
+        elif type == "REMOTE":
+            return RepositoryRemote(artifactory, name)
+        elif type == "VIRTUAL":
+            return RepositoryVirtual(artifactory, name)
+        else:
+            return None
+
 
 class RepositoryLocal(Repository):
     _uri = "repositories"
@@ -366,7 +389,7 @@ class RepositoryLocal(Repository):
         """
         self.name = response["key"]
         self.description = response.get("description")
-        self.layoutName = response.get("repoLayoutRef")
+        self.repoLayoutRef = response.get("repoLayoutRef")
         self.archiveBrowsingEnabled = response.get("archiveBrowsingEnabled")
 
 
@@ -500,7 +523,7 @@ class RepositoryRemote(Repository):
         """
         self.name = response["key"]
         self.description = response.get("description")
-        self.layoutName = response.get("repoLayoutRef")
+        self.repoLayoutRef = response.get("repoLayoutRef")
         self.archiveBrowsingEnabled = response.get("archiveBrowsingEnabled")
 
 

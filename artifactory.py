@@ -40,6 +40,7 @@ import requests
 
 from dohq_artifactory.admin import Group
 from dohq_artifactory.admin import PermissionTarget
+from dohq_artifactory.admin import Repository
 from dohq_artifactory.admin import RepositoryLocal
 from dohq_artifactory.admin import RepositoryRemote
 from dohq_artifactory.admin import RepositoryVirtual
@@ -1578,6 +1579,69 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         if obj.read():
             return obj
         return None
+
+    def _get_all(self, lazy: bool, url=None, key="name", cls=None):
+        """
+        Create a list of objects from the given endpoint
+
+        :param url: A URL where to find objects
+        :param lazy: `True` if we don't need anything except object's name
+        :param key: Primary key for objects
+        :param cls: Create objects of this class
+        "return: A list of found objects
+        """
+        request_url = self.drive + url
+        r = self.session.get(request_url, auth=self.auth)
+        r.raise_for_status()
+        response = r.json()
+        results = []
+        for i in response:
+            if cls is Repository:
+                item = Repository.create_by_type(i["type"], self, i[key])
+            else:
+                item = cls(self, i[key])
+            if not lazy:
+                item.read()
+            results.append(item)
+        return results
+
+    def get_users(self, lazy=False):
+        """
+        Get all users
+
+        :param lazy: `True` if we don't need anything except object's name
+        """
+        return self._get_all(url="/api/security/users", key="name", cls=User, lazy=lazy)
+
+    def get_groups(self, lazy=False):
+        """
+        Get all groups
+
+        :param lazy: `True` if we don't need anything except object's name
+        """
+        return self._get_all(
+            url="/api/security/groups", key="name", cls=Group, lazy=lazy
+        )
+
+    def get_repositories(self, lazy=False):
+        """
+        Get all repositories
+
+        :param lazy: `True` if we don't need anything except object's name
+        """
+        return self._get_all(
+            url="/api/repositories", key="key", cls=Repository, lazy=lazy
+        )
+
+    def get_permissions(self, lazy=False):
+        """
+        Get all permissions
+
+        :param lazy: `True` if we don't need anything except object's name
+        """
+        return self._get_all(
+            url="/api/security/permissions", key="name", cls=PermissionTarget, lazy=lazy
+        )
 
 
 class ArtifactorySaaSPath(ArtifactoryPath):

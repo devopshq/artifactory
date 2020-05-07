@@ -4,6 +4,7 @@ import sys
 
 import pytest
 
+from artifactory import ArtifactoryPath
 from dohq_artifactory import Group
 from dohq_artifactory import PermissionTarget
 from dohq_artifactory import RepositoryLocal
@@ -14,7 +15,10 @@ if sys.version_info[0] < 3:
 else:
     import configparser
 
-from artifactory import ArtifactoryPath
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "unit: unit tests")
+    config.addinivalue_line("markers", "integration: integration tests")
 
 
 def pytest_collection_modifyitems(items):
