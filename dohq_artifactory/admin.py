@@ -87,9 +87,9 @@ class AdminObject(object):
         :return: None
         """
         logging.debug("Create {x.__class__.__name__} [{x.name}]".format(x=self))
-        self._create_and_update()
+        self._create_and_update(self._session.put)
 
-    def _create_and_update(self):
+    def _create_and_update(self, method):
         """
         Create or update request, re-read object from Artifactory
         :return: None
@@ -99,7 +99,7 @@ class AdminObject(object):
         request_url = self._artifactory.drive + "/api/{uri}/{x.name}".format(
             uri=self._uri, x=self
         )
-        r = self._session.put(
+        r = method(
             request_url,
             json=data_json,
             headers={"Content-Type": "application/json"},
@@ -148,7 +148,7 @@ class AdminObject(object):
         :return: None
         """
         logging.debug("Create {x.__class__.__name__} [{x.name}]".format(x=self))
-        self._create_and_update()
+        self._create_and_update(self._session.post)
 
     def delete(self):
         """
@@ -600,3 +600,7 @@ class PermissionTarget(AdminObject):
     @property
     def repositories(self):
         return [self._artifactory.find_repository_local(x) for x in self._repositories]
+
+    def update(self):
+        # POST method for permissions is not implemented by artifactory
+        self.create()
