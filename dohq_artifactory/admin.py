@@ -3,8 +3,8 @@ import random
 import string
 import sys
 import time
-import jwt
 
+import jwt
 import requests
 
 from dohq_artifactory.exception import ArtifactoryException
@@ -149,18 +149,15 @@ class AdminObject(object):
         :return:
         List of objects
         """
-        #logging.debug('List {x.__class__.__name__} [{x.name}]'.format(x=self))
-        request_url = self._artifactory.drive + '/api/{uri}'.format(uri=self._uri)
-        response = self._session.get(
-            request_url,
-            auth=self._auth,
-        )
+        # logging.debug('List {x.__class__.__name__} [{x.name}]'.format(x=self))
+        request_url = self._artifactory.drive + "/api/{uri}".format(uri=self._uri)
+        response = self._session.get(request_url, auth=self._auth,)
         if response.status_code == 200:
-            #logging.debug('{x.__class__.__name__} [{x.name}] does not exist'.format(x=self))
-            json_response=response.json()
-            return [item.get('name') for item in json_response]
+            # logging.debug('{x.__class__.__name__} [{x.name}] does not exist'.format(x=self))
+            json_response = response.json()
+            return [item.get("name") for item in json_response]
         else:
-            #logging.debug('{x.__class__.__name__} [{x.name}] exist'.format(x=self))
+            # logging.debug('{x.__class__.__name__} [{x.name}] exist'.format(x=self))
             return "failed"
 
     def update(self):
