@@ -613,7 +613,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         text, code = self.rest_get(
             url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert
         )
-        if code == 404 and "Unable to find item" in text:
+        if code == 404 and ("Unable to find item" in text or "Not Found" in text):
             raise OSError(2, "No such file or directory: '%s'" % url)
         if code != 200:
             raise RuntimeError(text)
@@ -918,7 +918,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=pathobj.cert,
         )
 
-        if code == 404 and "Unable to find item" in text:
+        if code == 404 and ("Unable to find item" in text or "Not Found" in text):
             raise OSError(2, "No such file or directory: '%s'" % url)
         if code == 404 and "No properties could be found" in text:
             return {}
@@ -952,7 +952,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=pathobj.cert,
         )
 
-        if code == 404 and "Unable to find item" in text:
+        if code == 404 and ("Unable to find item" in text or "Not Found" in text):
             raise OSError(2, "No such file or directory: '%s'" % url)
         if code != 204:
             raise RuntimeError(text)
@@ -985,7 +985,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=pathobj.cert,
         )
 
-        if code == 404 and "Unable to find item" in text:
+        if code == 404 and ("Unable to find item" in text or "Not Found" in text):
             raise OSError(2, "No such file or directory: '%s'" % url)
         if code != 204:
             raise RuntimeError(text)
