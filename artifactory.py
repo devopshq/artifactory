@@ -1238,13 +1238,19 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         if archive_type not in ["zip", "tar", "tar.gz", "tgz"]:
             raise NotImplementedError(archive_type + " is not support by current API")
 
-        archive_url = (self.drive + "/api/archive/download/" + self.repo + self.path_in_repo +
-                       "?archiveType=" + archive_type)
+        archive_url = (
+            self.drive
+            + "/api/archive/download/"
+            + self.repo
+            + self.path_in_repo
+            + "?archiveType="
+            + archive_type
+        )
 
         if check_sum:
             archive_url += "&includeChecksumFiles=true"
 
-        with ArtifactoryPath(archive_url, auth=self.auth) as archive_cls:
+        with self.joinpath(archive_url) as archive_cls:
             return self._accessor.open(archive_cls)
 
     def owner(self):
