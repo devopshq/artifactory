@@ -34,6 +34,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
   * [RepositoryVirtual](#repositoryvirtual)
   * [RepositoryRemote](#repositoryremote)
   * [PermissionTarget](#permissiontarget)
+  * [Token](#token)
   * [Common](#common)
 - [Advanced](#advanced)
   * [Session](#session)
@@ -550,6 +551,40 @@ permission.add_user(user_object, PermissionTarget.ROLE_ADMIN)
 permission.add_group("groupname", PermissionTarget.ROLE_READ)
 
 permission.update()  # Update!!
+```
+
+## Token
+https://www.jfrog.com/confluence/display/RTF5X/Access+Tokens#AccessTokens-RESTAPI
+```python
+from requests.auth import HTTPBasicAuth
+from artifactory import ArtifactoryPath
+from dohq_artifactory import Token
+
+session = ArtifactoryPath(
+    "https://artifactory_dns/artifactory",
+    auth=("admin", "admin_password"),
+    auth_type=HTTPBasicAuth,
+    verify=False,
+)
+
+# Read token for readers group
+group_name = "readers"
+scope = "api:* member-of-groups:" + group_name
+token = Token(session, scope=scope)
+token.read()
+
+# Create token for member of the readers
+group_name = "readers"
+scope = "api:* member-of-groups:" + group_name
+subject = group_name
+token = Token(
+    session, scope=scope, username=subject, expires_in=31557600, refreshable=True
+)
+response = token.create()
+
+print("Readonly token:")
+print("Username: " + token.username)
+print("Token: " + token.token["access_token"])
 ```
 
 ## Common

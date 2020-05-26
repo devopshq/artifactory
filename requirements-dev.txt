@@ -8,3 +8,5 @@ mock
 flake8
 pre-commit
 tox
+
+PyJWT
