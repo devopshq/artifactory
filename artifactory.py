@@ -1227,6 +1227,32 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         return self._accessor.open(self)
 
+    def download_folder_archive(self, archive_type="zip", check_sum=False):
+        """
+            Convert URL to the new link to download specified folder as archive according to REST API.
+            Requires Enable Folder Download to be set in artifactory.
+            :param: archive_type (str): one of possible archive types (supports zip/tar/tar.gz/tgz)
+            :param: check_sum (bool): defines of check sum is required along with download
+            :return: raw object for download
+        """
+        if archive_type not in ["zip", "tar", "tar.gz", "tgz"]:
+            raise NotImplementedError(archive_type + " is not support by current API")
+
+        archive_url = (
+            self.drive
+            + "/api/archive/download/"
+            + self.repo
+            + self.path_in_repo
+            + "?archiveType="
+            + archive_type
+        )
+
+        if check_sum:
+            archive_url += "&includeChecksumFiles=true"
+
+        with self.joinpath(archive_url) as archive_cls:
+            return self._accessor.open(archive_cls)
+
     def owner(self):
         """
         Returns file owner.

@@ -17,6 +17,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
   * [Artifactory SaaS](#artifactory-saas)
   * [Walking Directory Tree](#walking-directory-tree)
   * [Downloading Artifacts](#downloading-artifacts)
+  * [Downloading Artifacts folder as archive](#downloading-artifacts-folder-as-archive)
   * [Uploading Artifacts](#uploading-artifacts)
   * [Copy Artifacts](#copy-artifacts)
   * [Move Artifacts](#move-artifacts)
@@ -154,6 +155,22 @@ path = ArtifactoryPath(
 
 with path.open() as fd, ("tomcat.tar.gz", "wb") as out:
     out.write(fd.read())
+```
+
+## Downloading Artifacts folder as archive ##
+Download artifact folder to a local filesystem as archive (supports zip/tar/tar.gz/tgz)
+Allows to specify archive type and request checksum for the folder
+Note: Archiving should be enabled on the server!
+```python
+from artifactory import ArtifactoryPath
+
+path = ArtifactoryPath(
+    "http://my_url:8080/artifactory/my_repo/winx64/aas", auth=("user", "password")
+)
+
+with path.download_folder_archive(archive_type="zip", check_sum=False) as archive:
+    with open(r"D:\target.zip", "wb") as out:
+        out.write(archive.read())
 ```
 
 ## Uploading Artifacts ##
