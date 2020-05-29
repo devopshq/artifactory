@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 import sys
 import tempfile
+from functools import partial
+
+import pytest
 
 import artifactory
 
@@ -11,190 +14,165 @@ else:
     import io
 
 
-class TestArtifactoryPathTest:
-    cls = artifactory.ArtifactoryPath
+@pytest.fixture(autouse=True)
+def setup(integration_artifactory_path_repo):
+    pass
 
-    def test_root(self, integration_artifactory_path_repo, art_uri, art_auth):
-        P = self.cls
 
-        assert P(art_uri + "/libs-release-local").root == "/libs-release-local/"
+@pytest.fixture()
+def path(artifactory_server, artifactory_auth):
+    """ArtifactoryPath with defined server URL and authentication"""
 
-    def test_isdir(self, integration_artifactory_path_repo, art_uri, art_auth):
-        P = self.cls
+    def f(uri):
+        return artifactory.ArtifactoryPath(
+            artifactory_server + uri, auth=artifactory_auth
+        )
 
-        assert P(art_uri + "/integration-artifactory-path-repo").is_dir()
-        assert not P(art_uri + "/non-existing-repo").is_dir()
+    return f
 
-    def test_owner(self, integration_artifactory_path_repo, art_uri, art_auth):
-        P = self.cls
 
-        assert P(art_uri + "/integration-artifactory-path-repo").owner() == "nobody"
+def test_root(path):
+    assert path("/libs-release-local").root == "/libs-release-local/"
 
-    def test_mkdir(self, integration_artifactory_path_repo, art_uri, art_auth):
-        P = self.cls
 
-        p = P(art_uri + "/integration-artifactory-path-repo/foo", auth=art_auth)
+def test_repository_isdir(path):
+    assert path("/integration-artifactory-path-repo").is_dir()
+    assert not path("/non-existing-repo").is_dir()
 
-        p.mkdir()
-        assert p.is_dir()
-        assert not p.is_file()
 
-        # TODO: fix it
-        # self.assertRaises(OSError, p.mkdir)
+def test_owner(path):
+    assert path("/integration-artifactory-path-repo").owner() == "nobody"
 
+
+def test_mkdir(path):
+    p = path("/integration-artifactory-path-repo/foo")
+
+    p.mkdir()
+    assert p.is_dir()
+    assert not p.is_file()
+
+    p.rmdir()
+    assert not p.exists()
+    assert not p.is_dir()
+    assert not p.is_file()
+
+
+def test_touch(path):
+    p = path("/integration-artifactory-path-repo/foo")
+
+    p.touch(exist_ok=False)
+    p.touch()
+    assert not p.is_dir()
+    assert p.is_file()
+    assert p.exists()
+
+    p.unlink()
+    assert not p.exists()
+
+
+def test_iterdir(path):
+    p = path("/integration-artifactory-path-repo/foo")
+
+    p.mkdir()
+
+    (p / "a").touch()
+    (p / "b").touch()
+    (p / "c").mkdir()
+    (p / "c" / "d").mkdir()
+    (p / "e").touch()
+
+    count = 0
+    for child in p.iterdir():
+        assert str(child)[-1:] in ["a", "b", "c", "e"]
+        count += 1
+
+    assert count == 4
+
+    p.rmdir()
+
+
+def test_glob(path):
+    p = path("/integration-artifactory-path-repo/foo")
+    p_root = path("/integration-artifactory-path-repo")
+
+    if p.exists():
         p.rmdir()
-        assert not p.exists()
-        assert not p.is_dir()
-        assert not p.is_file()
+    p.mkdir()
 
-    def test_touch(self, integration_artifactory_path_repo, art_uri, art_auth):
-        P = self.cls
+    (p / "a").touch()
+    (p / "b.txt").touch()
+    (p / "c").mkdir()
+    (p / "c" / "d.txt").mkdir()
+    (p / "e.bin").touch()
 
-        p = P(art_uri + "/integration-artifactory-path-repo/foo", auth=art_auth)
+    count = 0
+    for child in p.glob("**/*.txt"):
+        assert str(child)[-5:] in ["b.txt", "d.txt"]
+        count += 1
 
-        p.touch(exist_ok=False)
-        p.touch()
-        assert not p.is_dir()
-        assert p.is_file()
-        assert p.exists()
+    assert count == 2
 
-        # TODO: fix it
-        # self.assertRaises(OSError, p.touch, exist_ok=False)
+    for child in p_root.glob("**/*.txt"):
+        assert str(child)[-5:] in ["b.txt", "d.txt"]
 
+    p.rmdir()
+
+
+def test_deploy(path):
+    p = path("/integration-artifactory-path-repo/foo")
+    p2 = path("/integration-artifactory-path-repo/foo2")
+
+    if p.exists():
         p.unlink()
-        assert not p.exists()
 
-    def test_iterdir(self, integration_artifactory_path_repo, art_uri, art_auth):
-        P = self.cls
+    s = io.StringIO()
+    s.write("Some test string")
+    s.seek(0)
 
-        p = P(art_uri + "/integration-artifactory-path-repo/foo", auth=art_auth)
+    p.deploy(s)
 
-        p.mkdir()
+    with p.open() as fd:
+        result = fd.read()
 
-        (p / "a").touch()
-        (p / "b").touch()
-        (p / "c").mkdir()
-        (p / "c" / "d").mkdir()
-        (p / "e").touch()
+    assert result == b"Some test string"
 
-        count = 0
-        for child in p.iterdir():
-            assert str(child)[-1:] in ["a", "b", "c", "e"]
-            count += 1
+    with p.open() as fd:
+        p2.deploy(fd)
 
-        assert count == 4
+    with p2.open() as fd:
+        result = fd.read()
 
+    assert result == b"Some test string"
+
+    p.unlink()
+    p2.unlink()
+
+
+def test_deploy_file(path):
+    p = path("/integration-artifactory-path-repo/foo")
+
+    if p.exists():
+        p.unlink()
+
+    tf = tempfile.NamedTemporaryFile()
+    tf.write(b"Some test string")
+    tf.flush()
+    p.deploy_file(tf.name)
+    tf.close()
+    with p.open() as fd:
+        result = fd.read()
+    assert result == b"Some test string"
+
+    p.unlink()
+
+
+def test_open(path):
+    p = path("/integration-artifactory-path-repo/foo")
+
+    if p.exists():
         p.rmdir()
 
-    def test_glob(self, integration_artifactory_path_repo, art_uri, art_auth):
-
-        P = self.cls
-
-        p = P(art_uri + "/integration-artifactory-path-repo/foo", auth=art_auth)
-        p_root = P(art_uri + "/integration-artifactory-path-repo", auth=art_auth)
-
-        if p.exists():
-            p.rmdir()
-        p.mkdir()
-
-        (p / "a").touch()
-        (p / "b.txt").touch()
-        (p / "c").mkdir()
-        (p / "c" / "d.txt").mkdir()
-        (p / "e.bin").touch()
-
-        count = 0
-        for child in p.glob("**/*.txt"):
-            assert str(child)[-5:] in ["b.txt", "d.txt"]
-            count += 1
-
-        assert count == 2
-
-        for child in p_root.glob("**/*.txt"):
-            assert str(child)[-5:] in ["b.txt", "d.txt"]
-
-        p.rmdir()
-
-    def test_deploy(self, integration_artifactory_path_repo, art_uri, art_auth):
-        P = self.cls
-
-        p = P(art_uri + "/integration-artifactory-path-repo/foo", auth=art_auth)
-        p2 = P(art_uri + "/integration-artifactory-path-repo/foo2", auth=art_auth)
-
-        if p.exists():
-            p.unlink()
-
-        s = io.StringIO()
-        s.write("Some test string")
-
-        p.deploy(s)
-
-        with p.open() as fd:
-            result = fd.read()
-
-        assert result == "Some test string"
-
-        with p.open() as fd:
-            p2.deploy(fd)
-
-        with p2.open() as fd:
-            result = fd.read()
-
-        assert result == "Some test string"
-
-        p.unlink()
-        p2.unlink()
-
-    def test_deploy_file(self, integration_artifactory_path_repo, art_uri, art_auth):
-        P = self.cls
-
-        p = P(art_uri + "/integration-artifactory-path-repo/foo", auth=art_auth)
-
-        if p.exists():
-            p.unlink()
-
-        tf = tempfile.NamedTemporaryFile()
-
-        tf.write("Some test string")
-        tf.flush()
-
-        p.deploy_file(tf.name)
-        tf.close()
-
-        with p.open() as fd:
-            result = fd.read()
-
-        assert result == "Some test string"
-
-        p.unlink()
-
-    def test_open(self, integration_artifactory_path_repo, art_uri, art_auth):
-        P = self.cls
-
-        p = P(art_uri + "/integration-artifactory-path-repo/foo", auth=art_auth)
-
-        if p.exists():
-            p.rmdir()
-
-        s = io.StringIO()
-        s.write("Some test string")
-
-        p.deploy(s)
-
-        # TODO: fix it
-        # with self.assertRaises(NotImplementedError):
-        #     p.open('w')
-        #
-        # with self.assertRaises(NotImplementedError):
-        #     p.open(buffering=1)
-        #
-        # with self.assertRaises(NotImplementedError):
-        #     p.open(encoding='foo')
-        #
-        # with self.assertRaises(NotImplementedError):
-        #     p.open(errors='bar')
-        #
-        # with self.assertRaises(NotImplementedError):
-        #     p.open(newline='baz')
-
-        p.unlink()
+    s = io.StringIO()
+    s.write("Some test string")
+    p.deploy(s)
+    p.unlink()
