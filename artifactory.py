@@ -538,6 +538,27 @@ ArtifactoryFileStat = collections.namedtuple(
 )
 
 
+class _ScandirIter:
+    """
+    For compatibility with different python versions.
+    Pathlib:
+    - prior 3.8 - Use it as an iterator
+    - 3.8 - Use it as an context manager
+    """
+
+    def __init__(self, iterator):
+        self.iterator = iterator
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+    def __iter__(self):
+        return self.iterator
+
+
 class _ArtifactoryAccessor(pathlib._Accessor):
     """
     Implements operations with Artifactory REST API
@@ -990,11 +1011,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if code != 204:
             raise RuntimeError(text)
 
-    # https://github.com/devopshq/artifactory/issues/11
-    # Added for support python 3.6
     def scandir(self, pathobj):
-        for x in _ArtifactoryAccessor.listdir(self, pathobj):
-            yield pathobj.joinpath(x)
+        return _ScandirIter((pathobj.joinpath(x) for x in self.listdir(pathobj)))
 
 
 _artifactory_accessor = _ArtifactoryAccessor()
