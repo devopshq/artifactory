@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 import sys
 import tempfile
-from functools import partial
 
 import pytest
 

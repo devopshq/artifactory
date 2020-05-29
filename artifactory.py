@@ -1005,15 +1005,11 @@ class ArtifactoryProAccessor(_ArtifactoryAccessor):
     TODO: implement OpenSource/Pro differentiation
     """
 
-    pass
-
 
 class ArtifactoryOpensourceAccessor(_ArtifactoryAccessor):
     """
     TODO: implement OpenSource/Pro differentiation
     """
-
-    pass
 
 
 class PureArtifactoryPath(pathlib.PurePath):
