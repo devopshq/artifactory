@@ -5,6 +5,7 @@ import sys
 import pytest
 
 from artifactory import ArtifactoryPath
+from dohq_artifactory import generate_password
 from dohq_artifactory import Group
 from dohq_artifactory import PermissionTarget
 from dohq_artifactory import RepositoryLocal
@@ -31,8 +32,7 @@ def pytest_collection_modifyitems(items):
         if not hasattr(item, "module"):  # e.g.: DoctestTextfile
             continue
         module_path = os.path.relpath(
-            item.module.__file__,
-            os.path.commonprefix([__file__, item.module.__file__]),
+            item.module.__file__, os.path.commonprefix([__file__, item.module.__file__])
         )
         module_root_dir = module_path.split(os.pathsep)[0]
         if module_root_dir.startswith("integration"):
@@ -44,7 +44,7 @@ def pytest_collection_modifyitems(items):
 
 
 @pytest.fixture(scope="session")
-def art_uri():
+def artifactory_server():
     config_path = os.path.join(os.path.dirname(__file__), "test.cfg")
     config = configparser.ConfigParser()
     config.read(config_path)
@@ -54,7 +54,7 @@ def art_uri():
 
 
 @pytest.fixture(scope="session")
-def art_auth():
+def artifactory_auth():
     config_path = os.path.join(os.path.dirname(__file__), "test.cfg")
     config = configparser.ConfigParser()
     config.read(config_path)
@@ -66,8 +66,8 @@ def art_auth():
 
 
 @pytest.fixture(scope="session")
-def artifactory(art_uri, art_auth):
-    artifactory_ = ArtifactoryPath(art_uri, auth=art_auth)
+def artifactory(artifactory_server, artifactory_auth):
+    artifactory_ = ArtifactoryPath(artifactory_server, auth=artifactory_auth)
     yield artifactory_
 
 
@@ -136,7 +136,9 @@ def user1(artifactory):
     user = artifactory.find_user(name)
     if user is not None:
         user.delete()
-    user = User(artifactory=artifactory, name=name, email=name, password=name)
+    user = User(
+        artifactory=artifactory, name=name, email=name, password=generate_password()
+    )
     user.create()
     yield user
     user.delete()
@@ -148,7 +150,9 @@ def user2(artifactory):
     user = artifactory.find_user(name)
     if user is not None:
         user.delete()
-    user = User(artifactory=artifactory, name=name, email=name, password=name)
+    user = User(
+        artifactory=artifactory, name=name, email=name, password=generate_password()
+    )
     user.create()
     yield user
     user.delete()

@@ -28,7 +28,12 @@ pytest -munit
 pre-commit install
 pre-commit run --all-files
 
+# Run unit tests
 tox
+# Run integration tests
+tox -- -mintegration
+# Run Unit and Integration tests
+tox -- ""
 ```
 
 ## Tests
@@ -41,12 +46,38 @@ python -mpytest -munit
 ```
 
 ### Integration
-For integration test you need have **TEST** local Artifactory instance, which is installed using one of methods:
-1. https://github.com/JFrogDev/artifactory-user-plugins-devenv
-2. or https://www.jfrog.com/confluence/display/RTF/Installing+Artifactory
+We also have some integration test. But you have to prepare your environment a little before you can run these tests.
 
-Set your Artifactory instances uri\admin-username\admin-password to `tests\test.cfg` file before running the tests
-
+0. Get [Trial License Key](https://jfrog.com/artifactory/free-trial/) from JFrog
+1. Run Artifactory Pro (only Pro support full REST API) inside docker by command: 
 ```bash
-python -mpytest -mintegration
+docker run --name artifactory-pro -d -p 8081:8081 -p8082:8082 docker.bintray.io/jfrog/artifactory-pro
 ```
+2. Open http://localhost:8081 and wait until it'll be ready
+3. Login with `admin \ password` and complete initialize steps:
+   1. Change password to `P@ssw0rd`. It's important to use exactly this password, we hardcoded it in [test.cfg](../tests/test.cfg)
+   2. Install trial license
+   
+That all, try to run integration tests!
+```bash
+# Run with current python
+python -mpytest -mintegration
+
+# Run through all versions with we do support
+tox -- -mintegration
+```
+
+Some useful command with docker:
+```bash
+# Stop artifactory, but save License and user\password
+docker stop artifactory-pro
+
+# Start stopped Artifactory. 
+docker start artifactory-pro
+
+# Remove installed Artifactory. You'll have to comlete initialize steps again!
+docker rm artifactory-pro
+```
+
+
+
