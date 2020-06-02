@@ -17,6 +17,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
   * [Artifactory SaaS](#artifactory-saas)
   * [Walking Directory Tree](#walking-directory-tree)
   * [Downloading Artifacts](#downloading-artifacts)
+  * [Downloading Artifacts folder as archive](#downloading-artifacts-folder-as-archive)
   * [Uploading Artifacts](#uploading-artifacts)
   * [Copy Artifacts](#copy-artifacts)
   * [Move Artifacts](#move-artifacts)
@@ -33,6 +34,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
   * [RepositoryVirtual](#repositoryvirtual)
   * [RepositoryRemote](#repositoryremote)
   * [PermissionTarget](#permissiontarget)
+  * [Token](#token)
   * [Common](#common)
 - [Advanced](#advanced)
   * [Session](#session)
@@ -154,6 +156,22 @@ path = ArtifactoryPath(
 
 with path.open() as fd, ("tomcat.tar.gz", "wb") as out:
     out.write(fd.read())
+```
+
+## Downloading Artifacts folder as archive ##
+Download artifact folder to a local filesystem as archive (supports zip/tar/tar.gz/tgz)
+Allows to specify archive type and request checksum for the folder
+Note: Archiving should be enabled on the server!
+```python
+from artifactory import ArtifactoryPath
+
+path = ArtifactoryPath(
+    "http://my_url:8080/artifactory/my_repo/winx64/aas", auth=("user", "password")
+)
+
+with path.download_folder_archive(archive_type="zip", check_sum=False) as archive:
+    with open(r"D:\target.zip", "wb") as out:
+        out.write(archive.read())
 ```
 
 ## Uploading Artifacts ##
@@ -533,6 +551,40 @@ permission.add_user(user_object, PermissionTarget.ROLE_ADMIN)
 permission.add_group("groupname", PermissionTarget.ROLE_READ)
 
 permission.update()  # Update!!
+```
+
+## Token
+https://www.jfrog.com/confluence/display/RTF5X/Access+Tokens#AccessTokens-RESTAPI
+```python
+from requests.auth import HTTPBasicAuth
+from artifactory import ArtifactoryPath
+from dohq_artifactory import Token
+
+session = ArtifactoryPath(
+    "https://artifactory_dns/artifactory",
+    auth=("admin", "admin_password"),
+    auth_type=HTTPBasicAuth,
+    verify=False,
+)
+
+# Read token for readers group
+group_name = "readers"
+scope = "api:* member-of-groups:" + group_name
+token = Token(session, scope=scope)
+token.read()
+
+# Create token for member of the readers
+group_name = "readers"
+scope = "api:* member-of-groups:" + group_name
+subject = group_name
+token = Token(
+    session, scope=scope, username=subject, expires_in=31557600, refreshable=True
+)
+response = token.create()
+
+print("Readonly token:")
+print("Username: " + token.username)
+print("Token: " + token.token["access_token"])
 ```
 
 ## Common

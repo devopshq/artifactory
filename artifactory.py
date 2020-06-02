@@ -538,6 +538,27 @@ ArtifactoryFileStat = collections.namedtuple(
 )
 
 
+class _ScandirIter:
+    """
+    For compatibility with different python versions.
+    Pathlib:
+    - prior 3.8 - Use it as an iterator
+    - 3.8 - Use it as an context manager
+    """
+
+    def __init__(self, iterator):
+        self.iterator = iterator
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+    def __iter__(self):
+        return self.iterator
+
+
 class _ArtifactoryAccessor(pathlib._Accessor):
     """
     Implements operations with Artifactory REST API
@@ -613,7 +634,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         text, code = self.rest_get(
             url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert
         )
-        if code == 404 and "Unable to find item" in text:
+        if code == 404 and ("Unable to find item" in text or "Not Found" in text):
             raise OSError(2, "No such file or directory: '%s'" % url)
         if code != 200:
             raise RuntimeError(text)
@@ -918,7 +939,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=pathobj.cert,
         )
 
-        if code == 404 and "Unable to find item" in text:
+        if code == 404 and ("Unable to find item" in text or "Not Found" in text):
             raise OSError(2, "No such file or directory: '%s'" % url)
         if code == 404 and "No properties could be found" in text:
             return {}
@@ -952,7 +973,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=pathobj.cert,
         )
 
-        if code == 404 and "Unable to find item" in text:
+        if code == 404 and ("Unable to find item" in text or "Not Found" in text):
             raise OSError(2, "No such file or directory: '%s'" % url)
         if code != 204:
             raise RuntimeError(text)
@@ -985,16 +1006,13 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=pathobj.cert,
         )
 
-        if code == 404 and "Unable to find item" in text:
+        if code == 404 and ("Unable to find item" in text or "Not Found" in text):
             raise OSError(2, "No such file or directory: '%s'" % url)
         if code != 204:
             raise RuntimeError(text)
 
-    # https://github.com/devopshq/artifactory/issues/11
-    # Added for support python 3.6
     def scandir(self, pathobj):
-        for x in _ArtifactoryAccessor.listdir(self, pathobj):
-            yield pathobj.joinpath(x)
+        return _ScandirIter((pathobj.joinpath(x) for x in self.listdir(pathobj)))
 
 
 _artifactory_accessor = _ArtifactoryAccessor()
@@ -1005,15 +1023,11 @@ class ArtifactoryProAccessor(_ArtifactoryAccessor):
     TODO: implement OpenSource/Pro differentiation
     """
 
-    pass
-
 
 class ArtifactoryOpensourceAccessor(_ArtifactoryAccessor):
     """
     TODO: implement OpenSource/Pro differentiation
     """
-
-    pass
 
 
 class PureArtifactoryPath(pathlib.PurePath):
@@ -1226,6 +1240,32 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             )
 
         return self._accessor.open(self)
+
+    def download_folder_archive(self, archive_type="zip", check_sum=False):
+        """
+            Convert URL to the new link to download specified folder as archive according to REST API.
+            Requires Enable Folder Download to be set in artifactory.
+            :param: archive_type (str): one of possible archive types (supports zip/tar/tar.gz/tgz)
+            :param: check_sum (bool): defines of check sum is required along with download
+            :return: raw object for download
+        """
+        if archive_type not in ["zip", "tar", "tar.gz", "tgz"]:
+            raise NotImplementedError(archive_type + " is not support by current API")
+
+        archive_url = (
+            self.drive
+            + "/api/archive/download/"
+            + self.repo
+            + self.path_in_repo
+            + "?archiveType="
+            + archive_type
+        )
+
+        if check_sum:
+            archive_url += "&includeChecksumFiles=true"
+
+        with self.joinpath(archive_url) as archive_cls:
+            return self._accessor.open(archive_cls)
 
     def owner(self):
         """
