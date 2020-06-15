@@ -324,6 +324,8 @@ class Repository(AdminObject):
     GRADLE = "gradle"
     IVY = "ivy"
     SBT = "sbt"
+    HELM = "helm"
+    RPM = "rpm"
     NUGET = "nuget"
     GEMS = "gems"
     NPM = "npm"
@@ -432,6 +434,7 @@ class RepositoryVirtual(AdminObject):
     RPM = "rpm"
     SBT = "sbt"
     YUM = "yum"
+    DEBIAN = "debian"
 
     def __init__(
         self, artifactory, name, repositories=None, packageType=Repository.GENERIC
