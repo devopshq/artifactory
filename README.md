@@ -154,7 +154,7 @@ path = ArtifactoryPath(
     "http://repo.jfrog.org/artifactory/distributions/org/apache/tomcat/apache-tomcat-7.0.11.tar.gz"
 )
 
-with path.open() as fd, ("tomcat.tar.gz", "wb") as out:
+with path.open() as fd, open("tomcat.tar.gz", "wb") as out:
     out.write(fd.read())
 ```
 
