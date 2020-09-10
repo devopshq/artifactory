@@ -492,7 +492,7 @@ if repo is None:
 # You can re-read from Artifactory
 repo.read()
 
-local_repos = repo.repositories  # return List<RepositiryLocal>
+local_repos = repo.repositories  # return List<RepositoryLocal>
 
 repo.delete()
 ```
