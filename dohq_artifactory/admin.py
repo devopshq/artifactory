@@ -468,7 +468,7 @@ class RepositoryVirtual(AdminObject):
         rclass = response["rclass"]
         if rclass != "virtual":
             raise ArtifactoryException(
-                "Repositiry '{}' have '{}', but expect 'virtual'".format(
+                "Repository '{}' have '{}', but expect 'virtual'".format(
                     self.name, rclass
                 )
             )
