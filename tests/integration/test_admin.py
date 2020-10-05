@@ -19,7 +19,7 @@ class TestUser:
             name=user_name,
             email="test_user@example.com",
             password="password",
-            profile_updatable=True
+            profile_updatable=True,
         )
 
         # CREATE
