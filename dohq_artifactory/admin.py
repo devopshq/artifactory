@@ -251,11 +251,6 @@ class User(AdminObject):
         )
         self._realm = response["realm"] if "realm" in response else []
 
-    def add_to_group(self, group):
-        if isinstance(group, Group):
-            group = group.name
-        self._groups.append(group)
-
     @property
     def encryptedPassword(self):
         if self.password is None:
@@ -280,9 +275,32 @@ class User(AdminObject):
     def realm(self):
         return self._realm
 
+    def add_to_group(self, *args):
+        for value in args:
+            if isinstance(value, Group):
+                value = value.name
+            self._groups.append(value)
+
+    def remove_from_group(self, *args):
+        for value in args:
+            if isinstance(value, Group):
+                value = value.name
+            self._groups.remove(value)
+
     @property
     def groups(self):
         return [self._artifactory.find_group(x) for x in self._groups]
+
+    @groups.setter
+    def groups(self, value):
+        if not isinstance(value, list):
+            value = list(value)
+        self._groups = []
+        self.add_to_group(*value)
+
+    @groups.deleter
+    def groups(self):
+        self._groups = []
 
 
 class Group(AdminObject):
