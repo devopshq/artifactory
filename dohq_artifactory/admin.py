@@ -75,6 +75,12 @@ class AdminObject(object):
         self._auth = self._artifactory.auth
         self._session = self._artifactory.session
 
+    def __repr__(self):
+        return "<{self.__class__.__name__} {self.name}>".format(self=self)
+
+    def __str__(self):
+        return self.name
+
     def _create_json(self):
         """
         Function prepare JSON which send for create or update event
