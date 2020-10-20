@@ -1243,11 +1243,11 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     def download_folder_archive(self, archive_type="zip", check_sum=False):
         """
-            Convert URL to the new link to download specified folder as archive according to REST API.
-            Requires Enable Folder Download to be set in artifactory.
-            :param: archive_type (str): one of possible archive types (supports zip/tar/tar.gz/tgz)
-            :param: check_sum (bool): defines of check sum is required along with download
-            :return: raw object for download
+        Convert URL to the new link to download specified folder as archive according to REST API.
+        Requires Enable Folder Download to be set in artifactory.
+        :param: archive_type (str): one of possible archive types (supports zip/tar/tar.gz/tgz)
+        :param: check_sum (bool): defines of check sum is required along with download
+        :return: raw object for download
         """
         if archive_type not in ["zip", "tar", "tar.gz", "tgz"]:
             raise NotImplementedError(archive_type + " is not support by current API")
