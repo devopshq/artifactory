@@ -129,7 +129,10 @@ class AdminObject(object):
         request_url = self._artifactory.drive + "/api/{uri}/{x.name}".format(
             uri=self._uri, x=self
         )
-        r = self._session.get(request_url, auth=self._auth,)
+        r = self._session.get(
+            request_url,
+            auth=self._auth,
+        )
         if 404 == r.status_code or 400 == r.status_code:
             logging.debug(
                 "{x.__class__.__name__} [{x.name}] does not exist".format(x=self)
@@ -151,7 +154,10 @@ class AdminObject(object):
         """
         # logging.debug('List {x.__class__.__name__} [{x.name}]'.format(x=self))
         request_url = self._artifactory.drive + "/api/{uri}".format(uri=self._uri)
-        response = self._session.get(request_url, auth=self._auth,)
+        response = self._session.get(
+            request_url,
+            auth=self._auth,
+        )
         if response.status_code == 200:
             # logging.debug('{x.__class__.__name__} [{x.name}] does not exist'.format(x=self))
             json_response = response.json()
@@ -177,7 +183,10 @@ class AdminObject(object):
         request_url = self._artifactory.drive + "/api/{uri}/{x.name}".format(
             uri=self._uri, x=self
         )
-        r = self._session.delete(request_url, auth=self._auth,)
+        r = self._session.delete(
+            request_url,
+            auth=self._auth,
+        )
         raise_errors(r)
         rest_delay()
 
@@ -256,7 +265,10 @@ class User(AdminObject):
             )
         logging.debug("User get encrypted password [{x.name}]".format(x=self))
         request_url = self._artifactory.drive + "/api/security/encryptedPassword"
-        r = self._session.get(request_url, auth=(self.name, self.password),)
+        r = self._session.get(
+            request_url,
+            auth=(self.name, self.password),
+        )
         raise_errors(r)
         encryptedPassword = r.text
         return encryptedPassword

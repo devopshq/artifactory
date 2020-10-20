@@ -26,7 +26,7 @@ class UtilTest(unittest.TestCase):
 
     def test_escape_chars(self):
         s = artifactory.escape_chars("a,b|c=d")
-        self.assertEqual(s, "a\,b\|c\=d")
+        self.assertEqual(s, r"a\,b\|c\=d")
 
     def test_properties_encode(self):
         params = {"foo": "bar,baz", "qux": "as=df"}
@@ -36,7 +36,7 @@ class UtilTest(unittest.TestCase):
     def test_properties_encode_multi(self):
         params = {"baz": ["ba\\r", "qu|ux"], "foo": "a,s=df"}
         s = artifactory.encode_properties(params)
-        self.assertEqual(s, "baz=ba\\r,qu\|ux;foo=a\,s\=df")
+        self.assertEqual(s, r"baz=ba\r,qu\|ux;foo=a\,s\=df")
 
 
 class ArtifactoryFlavorTest(unittest.TestCase):
