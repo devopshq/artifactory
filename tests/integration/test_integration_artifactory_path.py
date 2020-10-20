@@ -32,6 +32,14 @@ def path(artifactory_server, artifactory_auth):
 
 def test_root(path):
     assert path("/libs-release-local").root == "/libs-release-local/"
+    assert path("/libs-release-local/some/").root == "/libs-release-local/"
+    assert path("/libs-release-local/some/other/").root == "/libs-release-local/"
+
+
+def test_root(path):
+    assert path("/libs-release-local").top == path("/")
+    assert path("/libs-release-local/some/").top == path("/")
+    assert path("/libs-release-local/some/other/").top == path("/")
 
 
 def test_repository_isdir(path):
