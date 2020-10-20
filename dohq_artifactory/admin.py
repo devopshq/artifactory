@@ -202,6 +202,7 @@ class User(AdminObject):
         password=None,
         disable_ui=False,
         profile_updatable=True,
+        admin=False,
     ):
         super(User, self).__init__(artifactory)
 
@@ -209,7 +210,7 @@ class User(AdminObject):
         self.email = email
 
         self.password = password
-        self.admin = False
+        self.admin = admin
         self.profileUpdatable = profile_updatable
         self.disableUIAccess = disable_ui
         self.internalPasswordDisabled = False
