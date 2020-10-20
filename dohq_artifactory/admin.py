@@ -427,6 +427,7 @@ class RepositoryLocal(Repository):
         """
         self.name = response["key"]
         self.description = response.get("description")
+        self.packageType = response.get("packageType")
         self.repoLayoutRef = response.get("repoLayoutRef")
         self.archiveBrowsingEnabled = response.get("archiveBrowsingEnabled")
 
@@ -491,9 +492,9 @@ class RepositoryVirtual(AdminObject):
             )
 
         self.name = response["key"]
-        self.description = response["description"]
-        self.packageType = response["packageType"]
-        self._repositories = response["repositories"]
+        self.description = response.get("description")
+        self.packageType = response.get("packageType")
+        self._repositories = response.get("repositories")
 
     @property
     def repositories(self):
@@ -561,6 +562,7 @@ class RepositoryRemote(Repository):
         """
         self.name = response["key"]
         self.description = response.get("description")
+        self.packageType = response.get("packageType")
         self.repoLayoutRef = response.get("repoLayoutRef")
         self.archiveBrowsingEnabled = response.get("archiveBrowsingEnabled")
 
