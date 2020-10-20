@@ -425,6 +425,14 @@ class RepositoryLocal(Repository):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
         """
+        rclass = response["rclass"].lower()
+        if rclass != "local":
+            raise ArtifactoryException(
+                "Repository '{}' have '{}', but expect 'local'".format(
+                    self.name, rclass
+                )
+            )
+
         self.name = response["key"]
         self.description = response.get("description")
         self.repoLayoutRef = response.get("repoLayoutRef")
@@ -482,7 +490,7 @@ class RepositoryVirtual(AdminObject):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
         """
-        rclass = response["rclass"]
+        rclass = response["rclass"].lower()
         if rclass != "virtual":
             raise ArtifactoryException(
                 "Repositiry '{}' have '{}', but expect 'virtual'".format(
@@ -497,7 +505,7 @@ class RepositoryVirtual(AdminObject):
 
     @property
     def repositories(self):
-        return [self._artifactory.find_repository_local(x) for x in self._repositories]
+        return [self._artifactory.find_repository(x) for x in self._repositories]
 
 
 class RepositoryRemote(Repository):
@@ -559,6 +567,14 @@ class RepositoryRemote(Repository):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
         """
+        rclass = response["rclass"].lower()
+        if rclass != "remote":
+            raise ArtifactoryException(
+                "Repository '{}' have '{}', but expect 'remote'".format(
+                    self.name, rclass
+                )
+            )
+
         self.name = response["key"]
         self.description = response.get("description")
         self.repoLayoutRef = response.get("repoLayoutRef")
@@ -637,7 +653,7 @@ class PermissionTarget(AdminObject):
 
     @property
     def repositories(self):
-        return [self._artifactory.find_repository_local(x) for x in self._repositories]
+        return [self._artifactory.find_repository(x) for x in self._repositories]
 
     def update(self):
         # POST method for permissions is not implemented by artifactory
