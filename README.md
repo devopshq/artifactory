@@ -100,7 +100,8 @@ path = ArtifactoryPath(
 
 # Load username, password from global config if exist:
 path = ArtifactoryPath(
-    "http://my-artifactory/artifactory/myrepo/restricted-path", auth_type=HTTPBasicAuth,
+    "http://my-artifactory/artifactory/myrepo/restricted-path",
+    auth_type=HTTPBasicAuth,
 )
 
 path.touch()
@@ -331,7 +332,12 @@ args = [
     {
         "$and": [
             {"repo": {"$eq": "repo"}},
-            {"$or": [{"path": {"$match": "*path1"}}, {"path": {"$match": "*path2"}},]},
+            {
+                "$or": [
+                    {"path": {"$match": "*path1"}},
+                    {"path": {"$match": "*path2"}},
+                ]
+            },
         ]
     },
 ]
