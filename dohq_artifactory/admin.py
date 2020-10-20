@@ -385,12 +385,13 @@ class RepositoryLocal(Repository):
         name,
         packageType=Repository.GENERIC,
         dockerApiVersion=Repository.V1,
+        repoLayoutRef="maven-2-default",
     ):
         super(RepositoryLocal, self).__init__(artifactory)
         self.name = name
         self.description = ""
         self.packageType = packageType
-        self.repoLayoutRef = "maven-2-default"
+        self.repoLayoutRef = repoLayoutRef
         self.archiveBrowsingEnabled = True
         self.dockerApiVersion = dockerApiVersion
 
@@ -510,12 +511,13 @@ class RepositoryRemote(Repository):
         url=None,
         packageType=Repository.GENERIC,
         dockerApiVersion=Repository.V1,
+        repoLayoutRef="maven-2-default",
     ):
         super(RepositoryRemote, self).__init__(artifactory)
         self.name = name
         self.description = ""
         self.packageType = packageType
-        self.repoLayoutRef = "maven-2-default"
+        self.repoLayoutRef = repoLayoutRef
         self.archiveBrowsingEnabled = True
         self.dockerApiVersion = dockerApiVersion
         self.url = url
