@@ -1597,19 +1597,19 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         return None
 
     def find_repository_local(self, name):
-        obj = RepositoryLocal(self, name, packageType=None)
+        obj = RepositoryLocal(self, name)
         if obj.read():
             return obj
         return None
 
     def find_repository_virtual(self, name):
-        obj = RepositoryVirtual(self, name, packageType=None)
+        obj = RepositoryVirtual(self, name)
         if obj.read():
             return obj
         return None
 
     def find_repository_remote(self, name):
-        obj = RepositoryRemote(self, name, packageType=None)
+        obj = RepositoryRemote(self, name)
         if obj.read():
             return obj
         return None
