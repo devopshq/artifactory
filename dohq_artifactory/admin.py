@@ -582,6 +582,7 @@ class RepositoryRemote(Repository):
         self.packageType = response.get("packageType")
         self.repoLayoutRef = response.get("repoLayoutRef")
         self.archiveBrowsingEnabled = response.get("archiveBrowsingEnabled")
+        self.url = response.get("url")
 
 
 class PermissionTarget(AdminObject):
