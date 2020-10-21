@@ -46,6 +46,7 @@ from dohq_artifactory.admin import RepositoryRemote
 from dohq_artifactory.admin import RepositoryVirtual
 from dohq_artifactory.admin import User
 from dohq_artifactory.auth import XJFrogArtApiAuth
+from dohq_artifactory.exception import ArtifactoryException
 
 try:
     import requests.packages.urllib3 as urllib3
@@ -1612,6 +1613,24 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj = RepositoryRemote(self, name)
         if obj.read():
             return obj
+        return None
+
+    def find_repository(self, name):
+        try:
+            return self.find_repository_local(name)
+        except ArtifactoryException:
+            pass
+
+        try:
+            return self.find_repository_remote(name)
+        except ArtifactoryException:
+            pass
+
+        try:
+            return self.find_repository_virtual(name)
+        except ArtifactoryException:
+            pass
+
         return None
 
     def find_permission_target(self, name):
