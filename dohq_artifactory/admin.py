@@ -366,25 +366,29 @@ class GroupLDAP(Group):
 class Repository(AdminObject):
     # List packageType from wiki:
     # https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON#RepositoryConfigurationJSON-application/vnd.org.jfrog.artifactory.repositories.LocalRepositoryConfiguration+json
-    MAVEN = "maven"
-    GRADLE = "gradle"
-    IVY = "ivy"
-    SBT = "sbt"
-    NUGET = "nuget"
-    GEMS = "gems"
-    NPM = "npm"
+    ALPINE = "alpine"
     BOWER = "bower"
-    DEBIAN = "debian"
-    COMPOSER = "composer"
-    PYPI = "pypi"
-    DOCKER = "docker"
-    VAGRANT = "vagrant"
-    GITLFS = "gitlfs"
-    YUM = "yum"
-    CONAN = "conan"
     CHEF = "chef"
-    PUPPET = "puppet"
+    COCOAPODS = "cocoapods"
+    COMPOSER = "composer"
+    CONAN = "conan"
+    CRAN = "cran"
+    DEBIAN = "debian"
+    DOCKER = "docker"
+    GEMS = "gems"
     GENERIC = "generic"
+    GO = "go"
+    GRADLE = "gradle"
+    HELM = "helm"
+    IVY = "ivy"
+    MAVEN = "maven"
+    NPM = "npm"
+    NUGET = "nuget"
+    PUPPET = "puppet"
+    PYPI = "pypi"
+    RPM = "rpm"
+    SBT = "sbt"
+    YUM = "yum"
 
     # List dockerApiVersion from wiki:
     V1 = "V1"
@@ -404,6 +408,10 @@ class Repository(AdminObject):
 
 class RepositoryLocal(Repository):
     _uri = "repositories"
+
+    OPKG = "opkg"
+    P2 = "p2"
+    VCS = "vcs"
 
     def __init__(
         self,
@@ -470,6 +478,7 @@ class RepositoryLocal(Repository):
 class RepositoryVirtual(AdminObject):
     _uri = "repositories"
 
+    ALPINE = "alpine"
     BOWER = "bower"
     CHEF = "chef"
     CRAN = "cran"
@@ -566,6 +575,10 @@ class RepositoryVirtual(AdminObject):
 
 class RepositoryRemote(Repository):
     _uri = "repositories"
+
+    GITLFS = "gitlfs"
+    OPKG = "opkg"
+    VAGRANT = "vagrant"
 
     def __init__(
         self,
