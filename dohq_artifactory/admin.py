@@ -6,6 +6,7 @@ import time
 
 import jwt
 import requests
+from dateutil.parser import isoparse
 
 from dohq_artifactory.exception import ArtifactoryException
 
@@ -74,6 +75,12 @@ class AdminObject(object):
         self._artifactory = artifactory
         self._auth = self._artifactory.auth
         self._session = self._artifactory.session
+
+    def __repr__(self):
+        return "<{self.__class__.__name__} {self.name}>".format(self=self)
+
+    def __str__(self):
+        return self.name
 
     def _create_json(self):
         """
@@ -202,6 +209,7 @@ class User(AdminObject):
         password=None,
         disable_ui=False,
         profile_updatable=True,
+        admin=False,
     ):
         super(User, self).__init__(artifactory)
 
@@ -209,7 +217,7 @@ class User(AdminObject):
         self.email = email
 
         self.password = password
-        self.admin = False
+        self.admin = admin
         self.profileUpdatable = profile_updatable
         self.disableUIAccess = disable_ui
         self.internalPasswordDisabled = False
@@ -240,21 +248,16 @@ class User(AdminObject):
         """
         # self.password = ''  # never returned
         self.name = response["name"]
-        self.email = response.get("email", None)
-        self.admin = response["admin"]
-        self.profileUpdatable = response["profileUpdatable"]
-        self.disableUIAccess = response["disableUIAccess"]
-        self.internalPasswordDisabled = response["internalPasswordDisabled"]
-        self._groups = response["groups"] if "groups" in response else []
+        self.email = response.get("email")
+        self.admin = response.get("admin")
+        self.profileUpdatable = response.get("profileUpdatable")
+        self.disableUIAccess = response.get("disableUIAccess")
+        self.internalPasswordDisabled = response.get("internalPasswordDisabled")
+        self._groups = response.get("groups", [])
         self._lastLoggedIn = (
-            response["lastLoggedIn"] if "lastLoggedIn" in response else []
+            isoparse(response["lastLoggedIn"]) if response.get("lastLoggedIn") else None
         )
-        self._realm = response["realm"] if "realm" in response else []
-
-    def add_to_group(self, group):
-        if isinstance(group, Group):
-            group = group.name
-        self._groups.append(group)
+        self._realm = response.get("realm")
 
     @property
     def encryptedPassword(self):
@@ -280,9 +283,32 @@ class User(AdminObject):
     def realm(self):
         return self._realm
 
+    def add_to_group(self, *args):
+        for value in args:
+            if isinstance(value, Group):
+                value = value.name
+            self._groups.append(value)
+
+    def remove_from_group(self, *args):
+        for value in args:
+            if isinstance(value, Group):
+                value = value.name
+            self._groups.remove(value)
+
     @property
     def groups(self):
         return [self._artifactory.find_group(x) for x in self._groups]
+
+    @groups.setter
+    def groups(self, value):
+        if not isinstance(value, list):
+            value = list(value)
+        self._groups = []
+        self.add_to_group(*value)
+
+    @groups.deleter
+    def groups(self):
+        self._groups = []
 
 
 class Group(AdminObject):
@@ -393,12 +419,13 @@ class RepositoryLocal(Repository):
         name,
         packageType=Repository.GENERIC,
         dockerApiVersion=Repository.V1,
+        repoLayoutRef="maven-2-default",
     ):
         super(RepositoryLocal, self).__init__(artifactory)
         self.name = name
         self.description = ""
         self.packageType = packageType
-        self.repoLayoutRef = "maven-2-default"
+        self.repoLayoutRef = repoLayoutRef
         self.archiveBrowsingEnabled = True
         self.dockerApiVersion = dockerApiVersion
 
@@ -433,14 +460,24 @@ class RepositoryLocal(Repository):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
         """
+        rclass = response["rclass"].lower()
+        if rclass != "local":
+            raise ArtifactoryException(
+                "Repository '{}' have '{}', but expect 'local'".format(
+                    self.name, rclass
+                )
+            )
+
         self.name = response["key"]
         self.description = response.get("description")
+        self.packageType = response.get("packageType")
         self.repoLayoutRef = response.get("repoLayoutRef")
         self.archiveBrowsingEnabled = response.get("archiveBrowsingEnabled")
 
 
 class RepositoryVirtual(AdminObject):
     _uri = "repositories"
+
     ALPINE = "alpine"
     BOWER = "bower"
     CHEF = "chef"
@@ -463,14 +500,18 @@ class RepositoryVirtual(AdminObject):
     YUM = "yum"
 
     def __init__(
-        self, artifactory, name, repositories=None, packageType=Repository.GENERIC
+        self,
+        artifactory,
+        name,
+        repositories=None,
+        packageType=Repository.GENERIC,
     ):
         super(RepositoryVirtual, self).__init__(artifactory)
         self.name = name
         self.description = ""
         self.notes = ""
         self.packageType = packageType
-        self._repositories = repositories
+        self.repositories = repositories or []
 
     def _create_json(self):
         """
@@ -491,7 +532,7 @@ class RepositoryVirtual(AdminObject):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
         """
-        rclass = response["rclass"]
+        rclass = response["rclass"].lower()
         if rclass != "virtual":
             raise ArtifactoryException(
                 "Repositiry '{}' have '{}', but expect 'virtual'".format(
@@ -500,13 +541,36 @@ class RepositoryVirtual(AdminObject):
             )
 
         self.name = response["key"]
-        self.description = response["description"]
-        self.packageType = response["packageType"]
-        self._repositories = response["repositories"]
+        self.description = response.get("description")
+        self.packageType = response.get("packageType")
+        self._repositories = response.get("repositories")
+
+    def add_repository(self, *args):
+        for value in args:
+            if isinstance(value, Repository):
+                value = value.name
+            self._repositories.append(value)
+
+    def remove_repository(self, *args):
+        for value in args:
+            if isinstance(value, Repository):
+                value = value.name
+            self._repositories.remove(value)
 
     @property
     def repositories(self):
-        return [self._artifactory.find_repository_local(x) for x in self._repositories]
+        return [self._artifactory.find_repository(x) for x in self._repositories]
+
+    @repositories.setter
+    def repositories(self, value):
+        if not isinstance(value, list):
+            value = list(value)
+        self._repositories = []
+        self.add_repository(*value)
+
+    @repositories.deleter
+    def repositories(self):
+        self._repositories = []
 
 
 class RepositoryRemote(Repository):
@@ -523,12 +587,13 @@ class RepositoryRemote(Repository):
         url=None,
         packageType=Repository.GENERIC,
         dockerApiVersion=Repository.V1,
+        repoLayoutRef="maven-2-default",
     ):
         super(RepositoryRemote, self).__init__(artifactory)
         self.name = name
         self.description = ""
         self.packageType = packageType
-        self.repoLayoutRef = "maven-2-default"
+        self.repoLayoutRef = repoLayoutRef
         self.archiveBrowsingEnabled = True
         self.dockerApiVersion = dockerApiVersion
         self.url = url
@@ -572,10 +637,20 @@ class RepositoryRemote(Repository):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
         """
+        rclass = response["rclass"].lower()
+        if rclass != "remote":
+            raise ArtifactoryException(
+                "Repository '{}' have '{}', but expect 'remote'".format(
+                    self.name, rclass
+                )
+            )
+
         self.name = response["key"]
         self.description = response.get("description")
+        self.packageType = response.get("packageType")
         self.repoLayoutRef = response.get("repoLayoutRef")
         self.archiveBrowsingEnabled = response.get("archiveBrowsingEnabled")
+        self.url = response.get("url")
 
 
 class PermissionTarget(AdminObject):
@@ -650,7 +725,7 @@ class PermissionTarget(AdminObject):
 
     @property
     def repositories(self):
-        return [self._artifactory.find_repository_local(x) for x in self._repositories]
+        return [self._artifactory.find_repository(x) for x in self._repositories]
 
     def update(self):
         # POST method for permissions is not implemented by artifactory
