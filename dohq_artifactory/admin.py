@@ -468,6 +468,7 @@ class RepositoryLocal(Repository):
 
 class RepositoryVirtual(AdminObject):
     _uri = "repositories"
+
     BOWER = "bower"
     CHEF = "chef"
     CRAN = "cran"
@@ -489,14 +490,18 @@ class RepositoryVirtual(AdminObject):
     YUM = "yum"
 
     def __init__(
-        self, artifactory, name, repositories=None, packageType=Repository.GENERIC
+        self,
+        artifactory,
+        name,
+        repositories=None,
+        packageType=Repository.GENERIC,
     ):
         super(RepositoryVirtual, self).__init__(artifactory)
         self.name = name
         self.description = ""
         self.notes = ""
         self.packageType = packageType
-        self._repositories = repositories
+        self.repositories = repositories or []
 
     def _create_json(self):
         """
@@ -530,9 +535,32 @@ class RepositoryVirtual(AdminObject):
         self.packageType = response.get("packageType")
         self._repositories = response.get("repositories")
 
+    def add_repository(self, *args):
+        for value in args:
+            if isinstance(value, Repository):
+                value = value.name
+            self._repositories.append(value)
+
+    def remove_repository(self, *args):
+        for value in args:
+            if isinstance(value, Repository):
+                value = value.name
+            self._repositories.remove(value)
+
     @property
     def repositories(self):
         return [self._artifactory.find_repository(x) for x in self._repositories]
+
+    @repositories.setter
+    def repositories(self, value):
+        if not isinstance(value, list):
+            value = list(value)
+        self._repositories = []
+        self.add_repository(*value)
+
+    @repositories.deleter
+    def repositories(self):
+        self._repositories = []
 
 
 class RepositoryRemote(Repository):
