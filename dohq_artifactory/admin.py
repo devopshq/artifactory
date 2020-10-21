@@ -382,6 +382,11 @@ class Repository(AdminObject):
     HELM = "helm"
     IVY = "ivy"
     MAVEN = "maven"
+    SBT = "sbt"
+    HELM = "helm"
+    RPM = "rpm"
+    NUGET = "nuget"
+    GEMS = "gems"
     NPM = "npm"
     NUGET = "nuget"
     PUPPET = "puppet"
@@ -498,6 +503,7 @@ class RepositoryVirtual(AdminObject):
     RPM = "rpm"
     SBT = "sbt"
     YUM = "yum"
+    DEBIAN = "debian"
 
     def __init__(
         self,
@@ -535,7 +541,7 @@ class RepositoryVirtual(AdminObject):
         rclass = response["rclass"].lower()
         if rclass != "virtual":
             raise ArtifactoryException(
-                "Repositiry '{}' have '{}', but expect 'virtual'".format(
+                "Repository '{}' have '{}', but expect 'virtual'".format(
                     self.name, rclass
                 )
             )
