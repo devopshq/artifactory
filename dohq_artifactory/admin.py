@@ -6,6 +6,7 @@ import time
 
 import jwt
 import requests
+from dateutil.parser import isoparse
 
 from dohq_artifactory.exception import ArtifactoryException
 
@@ -247,16 +248,16 @@ class User(AdminObject):
         """
         # self.password = ''  # never returned
         self.name = response["name"]
-        self.email = response.get("email", None)
-        self.admin = response["admin"]
-        self.profileUpdatable = response["profileUpdatable"]
-        self.disableUIAccess = response["disableUIAccess"]
-        self.internalPasswordDisabled = response["internalPasswordDisabled"]
-        self._groups = response["groups"] if "groups" in response else []
+        self.email = response.get("email")
+        self.admin = response.get("admin")
+        self.profileUpdatable = response.get("profileUpdatable")
+        self.disableUIAccess = response.get("disableUIAccess")
+        self.internalPasswordDisabled = response.get("internalPasswordDisabled")
+        self._groups = response.get("groups", [])
         self._lastLoggedIn = (
-            response["lastLoggedIn"] if "lastLoggedIn" in response else []
+            isoparse(response["lastLoggedIn"]) if response.get("lastLoggedIn") else None
         )
-        self._realm = response["realm"] if "realm" in response else []
+        self._realm = response.get("realm")
 
     @property
     def encryptedPassword(self):
