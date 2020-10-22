@@ -1,5 +1,6 @@
 import logging
 import random
+import re
 import string
 import sys
 import time
@@ -283,14 +284,14 @@ class User(AdminObject):
     def realm(self):
         return self._realm
 
-    def add_to_group(self, *args):
-        for value in args:
+    def add_to_group(self, *groups):
+        for value in groups:
             if isinstance(value, Group):
                 value = value.name
             self._groups.append(value)
 
-    def remove_from_group(self, *args):
-        for value in args:
+    def remove_from_group(self, *groups):
+        for value in groups:
             if isinstance(value, Group):
                 value = value.name
             self._groups.remove(value)
@@ -666,14 +667,14 @@ class RepositoryVirtual(GenericRepository):
         self.packageType = response.get("packageType")
         self._repositories = response.get("repositories")
 
-    def add_repository(self, *args):
-        for value in args:
+    def add_repository(self, *repos):
+        for value in repos:
             if isinstance(value, Repository):
                 value = value.name
             self._repositories.append(value)
 
-    def remove_repository(self, *args):
-        for value in args:
+    def remove_repository(self, *repos):
+        for value in repos:
             if isinstance(value, Repository):
                 value = value.name
             self._repositories.remove(value)
@@ -790,14 +791,14 @@ class PermissionTarget(AdminObject):
     ROLE_ANNOTATE = (ANNOTATE, READ)
     ROLE_READ = READ
 
-    def __init__(self, artifactory, name):
+    def __init__(self, artifactory, name, repositories=None, users=None, groups=None):
         super(PermissionTarget, self).__init__(artifactory)
         self.name = name
         self.includesPattern = "**"
         self.excludesPattern = ""
-        self._repositories = []
-        self._users = {}
-        self._groups = {}
+        self.repositories = repositories or []
+        self.users = users or {}
+        self.groups = groups or {}
 
     def _create_json(self):
         """
@@ -808,7 +809,10 @@ class PermissionTarget(AdminObject):
             "includesPattern": self.includesPattern,
             "excludesPattern": self.excludesPattern,
             "repositories": self._repositories,
-            "principals": {"users": self._users, "groups": self._groups},
+            "principals": {
+                "users": self._users,
+                "groups": self._groups,
+            },
         }
         return data_json
 
@@ -820,33 +824,127 @@ class PermissionTarget(AdminObject):
         self.includesPattern = response["includesPattern"]
         self.excludesPattern = response["excludesPattern"]
         self._repositories = response.get("repositories", [])
+        self._users = {}
+        self._groups = {}
         if "principals" in response:
             if "users" in response["principals"]:
-                self._users = response["principals"]["users"]
+                self._users = self._permissions_from_json(
+                    response["principals"]["users"]
+                )
             if "groups" in response["principals"]:
-                self._groups = response["principals"]["groups"]
+                self._groups = self._permissions_from_json(
+                    response["principals"]["groups"]
+                )
 
-    def add_repository(self, *args):
-        self._repositories.extend([x if isinstance(x, str) else x.name for x in args])
+    @classmethod
+    def _principal_parse(cls, name, permissions):
+        return cls._principal_name_parse(name), cls._permissions_parse(permissions)
 
-    @staticmethod
-    def _add_principals(name, permissions, principals):
-        if isinstance(permissions, str):
-            permissions = [permissions]
-        permissions = list(set(permissions))
+    @classmethod
+    def _permissions_from_json(cls, permissions_map):
+        result = {}
+        for key, permissions in permissions_map.items():
+            name, new_permissions = cls._principal_parse(key, permissions)
+            result[name] = new_permissions
+        return result
+
+    @classmethod
+    def _principal_name_parse(cls, name):
         if isinstance(name, AdminObject):
             name = name.name
-        principals[name] = permissions
+        return name
+
+    @classmethod
+    def _permissions_parse(cls, permissions):
+        if isinstance(permissions, str):
+            permissions = re.sub(r"\W", "", permissions.strip()).split("")
+        permissions = list(set(permissions))
+
+        for permission in permissions:
+            if permission not in cls.ROLE_ADMIN:
+                raise ValueError("Unknown permission {name}".format(name=permission))
+        return permissions
 
     def add_user(self, name, permissions):
-        self._add_principals(name, permissions, self._users)
+        name, permissions = self._principal_parse(name, permissions)
+        self._users[name] = permissions
+
+    def remove_user(self, *users):
+        for value in users:
+            if isinstance(value, User):
+                value = value.name
+            self._users.pop(value)
+
+    @property
+    def users(self):
+        return {
+            self._artifactory.find_user(name): permissions
+            for name, permissions in self._users.items()
+        }
+
+    @users.setter
+    def users(self, value):
+        self._users = {}
+        for key, value in value.items():
+            self.add_user(key, value)
+
+    @users.deleter
+    def users(self):
+        self._users = {}
 
     def add_group(self, name, permissions):
-        self._add_principals(name, permissions, self._groups)
+        name, permissions = self._principal_parse(name, permissions)
+        self._groups[name] = permissions
+
+    def remove_group(self, *groups):
+        for value in groups:
+            if isinstance(value, Group):
+                value = value.name
+            self._groups.pop(value)
+
+    @property
+    def groups(self):
+        return {
+            self._artifactory.find_group(name): permissions
+            for name, permissions in self._groups.items()
+        }
+
+    @groups.setter
+    def groups(self, value):
+        self._groups = {}
+        for key, value in value.items():
+            self.add_group(key, value)
+
+    @groups.deleter
+    def groups(self):
+        self._groups = {}
+
+    def add_repository(self, *repos):
+        for value in repos:
+            if isinstance(value, (Repository, RepositoryVirtual)):
+                value = value.name
+            self._repositories.append(value)
+
+    def remove_repository(self, *repos):
+        for value in repos:
+            if isinstance(value, (Repository, RepositoryVirtual)):
+                value = value.name
+            self._repositories.remove(value)
 
     @property
     def repositories(self):
         return [self._artifactory.find_repository(x) for x in self._repositories]
+
+    @repositories.setter
+    def repositories(self, value):
+        if not isinstance(value, list):
+            value = list(value)
+        self._repositories = []
+        self.add_repository(*value)
+
+    @repositories.deleter
+    def repositories(self):
+        self._repositories = []
 
     def update(self):
         # POST method for permissions is not implemented by artifactory

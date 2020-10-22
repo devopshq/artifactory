@@ -769,11 +769,11 @@ Some types of repositories support specific ways of searching artifacts.
 Docs: https://www.jfrog.com/confluence/display/RTF/Managing+Permissions
 
 Supports these roles:
-- PermissionTarget.ROLE_ADMIN = `ADMIN + DELETE + DEPLOY + ANNOTATE + READ`
-- PermissionTarget.ROLE_DELETE = `DELETE + DEPLOY + ANNOTATE + READ`
-- PermissionTarget.ROLE_DEPLOY = `DEPLOY + ANNOTATE + READ`
-- PermissionTarget.ROLE_ANNOTATE = `ANNOTATE + READ`
-- PermissionTarget.ROLE_READ = `READ`
+- `PermissionTarget.ROLE_ADMIN` = `ADMIN + DELETE + DEPLOY + ANNOTATE + READ`
+- `PermissionTarget.ROLE_DELETE` = `DELETE + DEPLOY + ANNOTATE + READ`
+- `PermissionTarget.ROLE_DEPLOY` = `DEPLOY + ANNOTATE + READ`
+- `PermissionTarget.ROLE_ANNOTATE` = `ANNOTATE + READ`
+- `PermissionTarget.ROLE_READ` = `READ`
 
 And for more modular control:
 - `PermissionTarget.ADMIN` - Allows changing the permission settings for other users on this permission target
@@ -787,14 +787,63 @@ from dohq_artifactory import PermissionTarget
 
 permission = artifactory_.find_permission_target("rule")
 
-# Add repo as string or RepositoryLocal object
-permission.add_repository("repo1", "repo2")
+# See repositories, users or groups
+permission.repositories
+# Result:
+# <RepositiryLocal repo1>
+# <RepositiryLocal repo2>
 
-# Add group or user with permission
-permission.add_user(user_object, PermissionTarget.ROLE_ADMIN)
-permission.add_group("groupname", PermissionTarget.ROLE_READ)
+permission.users
+# Result:
+# <User user1>
+# <User user2>
+
+permission.groups
+# Result:
+# <Group group1>
+# <Group group2>
+
+# Add repo (string or Repository) object
+permission.add_repository("repo3", "repo4")
+permission.add_repository(repo5_object)
+# Or remove
+permission.remove_repository("repo1", "repo2")
+
+# Add user (string or User object) with specific permission
+permission.add_user("user3", PermissionTarget.ROLE_ADMIN)
+permission.add_user(
+    user4_object, PermissionTarget.ROLE_READ + PermissionTarget.ROLE_WRITE
+)  # You can add sum of permissions
+
+# Or remove
+permission.remove_user("user1", "user2")
+
+# Add group (string or Group object) with permission
+permission.add_group("group3", PermissionTarget.ROLE_ADMIN)
+permission.add_group(
+    group4_object, PermissionTarget.ROLE_READ + PermissionTarget.ROLE_WRITE
+)  # You can add sum of permissions
+
+# Or remove
+permission.remove_group("group1", "group2")
 
 permission.update()  # Update!!
+
+permission.repositories
+# Result:
+# <RepositiryLocal repo3>
+# <RepositiryLocal repo4>
+# <RepositiryLocal repo5>
+
+permission.users
+# Result:
+# <User user3>
+# <User user4>
+
+permission.groups
+# Result:
+# <Group group3>
+# <Group group4>
 ```
 
 ## Token
