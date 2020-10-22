@@ -1117,6 +1117,15 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         super(ArtifactoryPath, self)._init(*args, **kwargs)
 
     @property
+    def top(self):
+        obj = ArtifactoryPath(self.drive)
+        obj.auth = self.auth
+        obj.verify = self.verify
+        obj.cert = self.cert
+        obj.session = self.session
+        return obj
+
+    @property
     def parent(self):
         """
         The logical parent of the path.

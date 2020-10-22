@@ -72,7 +72,7 @@ class AdminObject(object):
         self.raw = None
         self.name = None
 
-        self._artifactory = artifactory
+        self._artifactory = artifactory.top
         self._auth = self._artifactory.auth
         self._session = self._artifactory.session
 
@@ -363,7 +363,122 @@ class GroupLDAP(Group):
         return data_json
 
 
-class Repository(AdminObject):
+class GenericRepository(AdminObject):
+    @property
+    def path(self):
+        return self._artifactory.joinpath(self.name)
+
+    def _generate_query(self, package):
+        if self.packageType == Repository.DOCKER:
+            parts = package.split(":")
+
+            name = parts[0]
+            version = parts[1] if len(parts) > 1 else "*"
+
+            package = "/".join([name, version])
+
+            return {"name": "manifest.json", "path": {"$match": package}}
+
+        if self.packageType == Repository.PYPI and "/" not in package:
+            operators = {
+                "<=": "$lte",
+                "<": "$lt",
+                ">=": "$gte",
+                ">": "$gt",
+                "==": "$eq",
+                "!=": "$ne",
+                "~=": "$match",
+            }
+            for symbol, operator in operators.items():
+                if symbol in package:
+                    name, version = package.split(symbol)
+
+                    return {
+                        "@pypi.name": {"$match": name},
+                        "@pypi.version": {operator: version},
+                    }
+
+            return {"@pypi.name": {"$match": package}}
+
+        if self.packageType == Repository.MAVEN and "/" not in package:
+            package = package.replace("#", ":")
+
+            parts = list(package.split(":"))
+
+            group = parts[0].replace(".", "/")
+            name = parts[1] if len(parts) > 1 else None
+            version = parts[2] if len(parts) > 2 else None
+
+            if not name:
+                name = "*"
+            elif not version:
+                version = "*"
+
+            package = "/".join(filter(None, [group, name, version]))
+
+        return {
+            "$or": [
+                {"name": {"$match": package}},
+                {"path": {"$match": package}},
+                {"@{}.name".format(self.packageType): {"$match": package}},
+                {"@build.name": {"$match": package}},
+                {"artifact.module.build.name": {"$match": package}},
+            ]
+        }
+
+    def _build_query(
+        self, terms=None, sort=None, include=None, limit=None, offset=None
+    ):
+        terms = terms or {}
+        terms["repo"] = {"$eq": self.name}
+
+        query = ["items.find", terms]
+
+        if include:
+            query.extend([".include", include])
+        if sort:
+            query.extend([".sort", sort])
+        if offset is not None:
+            query.extend([".offset", offset])
+        if limit is not None:
+            query.extend([".limit", limit])
+        return query
+
+    def search_raw(self, *args, **kwargs):
+        query = self._build_query(*args, **kwargs)
+
+        return self.path.aql(*query)
+
+    def search(self, *args, **kwargs):
+        for item in self.search_raw(*args, **kwargs):
+            yield self.path.from_aql(item)
+
+    def __iter__(self):
+        for package in self.search():
+            yield package
+
+    def __getitem__(self, key):
+        terms = self._generate_query(key)
+        sort = {"$desc": ["name", "created"]}
+
+        for item in self.search(terms=terms, sort=sort):
+            yield item
+
+    def __getattr__(self, attr):
+        return getattr(self.path, attr)
+
+    def __truediv__(self, key):
+        return self.path.__truediv__(key)
+
+    def __rtruediv__(self, key):
+        return self.path.__truediv__(key)
+
+    if sys.version_info < (3,):
+        __div__ = __truediv__
+        __rdiv__ = __rtruediv__
+
+
+class Repository(GenericRepository):
     # List packageType from wiki:
     # https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON#RepositoryConfigurationJSON-application/vnd.org.jfrog.artifactory.repositories.LocalRepositoryConfiguration+json
     ALPINE = "alpine"
@@ -480,7 +595,7 @@ class RepositoryLocal(Repository):
         self.archiveBrowsingEnabled = response.get("archiveBrowsingEnabled")
 
 
-class RepositoryVirtual(AdminObject):
+class RepositoryVirtual(GenericRepository):
     _uri = "repositories"
 
     ALPINE = "alpine"
