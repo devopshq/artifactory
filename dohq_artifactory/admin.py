@@ -1,11 +1,13 @@
 import logging
 import random
+import re
 import string
 import sys
 import time
 
 import jwt
 import requests
+from dateutil.parser import isoparse
 
 from dohq_artifactory.exception import ArtifactoryException
 
@@ -71,9 +73,15 @@ class AdminObject(object):
         self.raw = None
         self.name = None
 
-        self._artifactory = artifactory
+        self._artifactory = artifactory.top
         self._auth = self._artifactory.auth
         self._session = self._artifactory.session
+
+    def __repr__(self):
+        return "<{self.__class__.__name__} {self.name}>".format(self=self)
+
+    def __str__(self):
+        return self.name
 
     def _create_json(self):
         """
@@ -129,7 +137,10 @@ class AdminObject(object):
         request_url = self._artifactory.drive + "/api/{uri}/{x.name}".format(
             uri=self._uri, x=self
         )
-        r = self._session.get(request_url, auth=self._auth,)
+        r = self._session.get(
+            request_url,
+            auth=self._auth,
+        )
         if 404 == r.status_code or 400 == r.status_code:
             logging.debug(
                 "{x.__class__.__name__} [{x.name}] does not exist".format(x=self)
@@ -151,7 +162,10 @@ class AdminObject(object):
         """
         # logging.debug('List {x.__class__.__name__} [{x.name}]'.format(x=self))
         request_url = self._artifactory.drive + "/api/{uri}".format(uri=self._uri)
-        response = self._session.get(request_url, auth=self._auth,)
+        response = self._session.get(
+            request_url,
+            auth=self._auth,
+        )
         if response.status_code == 200:
             # logging.debug('{x.__class__.__name__} [{x.name}] does not exist'.format(x=self))
             json_response = response.json()
@@ -177,7 +191,10 @@ class AdminObject(object):
         request_url = self._artifactory.drive + "/api/{uri}/{x.name}".format(
             uri=self._uri, x=self
         )
-        r = self._session.delete(request_url, auth=self._auth,)
+        r = self._session.delete(
+            request_url,
+            auth=self._auth,
+        )
         raise_errors(r)
         rest_delay()
 
@@ -185,15 +202,24 @@ class AdminObject(object):
 class User(AdminObject):
     _uri = "security/users"
 
-    def __init__(self, artifactory, name, email=None, password=None, disable_ui=False):
+    def __init__(
+        self,
+        artifactory,
+        name,
+        email=None,
+        password=None,
+        disable_ui=False,
+        profile_updatable=True,
+        admin=False,
+    ):
         super(User, self).__init__(artifactory)
 
         self.name = name
         self.email = email
 
         self.password = password
-        self.admin = False
-        self.profileUpdatable = True
+        self.admin = admin
+        self.profileUpdatable = profile_updatable
         self.disableUIAccess = disable_ui
         self.internalPasswordDisabled = False
         self._groups = []
@@ -223,21 +249,16 @@ class User(AdminObject):
         """
         # self.password = ''  # never returned
         self.name = response["name"]
-        self.email = response.get("email", None)
-        self.admin = response["admin"]
-        self.profileUpdatable = response["profileUpdatable"]
-        self.disableUIAccess = response["disableUIAccess"]
-        self.internalPasswordDisabled = response["internalPasswordDisabled"]
-        self._groups = response["groups"] if "groups" in response else []
+        self.email = response.get("email")
+        self.admin = response.get("admin")
+        self.profileUpdatable = response.get("profileUpdatable")
+        self.disableUIAccess = response.get("disableUIAccess")
+        self.internalPasswordDisabled = response.get("internalPasswordDisabled")
+        self._groups = response.get("groups", [])
         self._lastLoggedIn = (
-            response["lastLoggedIn"] if "lastLoggedIn" in response else []
+            isoparse(response["lastLoggedIn"]) if response.get("lastLoggedIn") else None
         )
-        self._realm = response["realm"] if "realm" in response else []
-
-    def add_to_group(self, group):
-        if isinstance(group, Group):
-            group = group.name
-        self._groups.append(group)
+        self._realm = response.get("realm")
 
     @property
     def encryptedPassword(self):
@@ -247,7 +268,10 @@ class User(AdminObject):
             )
         logging.debug("User get encrypted password [{x.name}]".format(x=self))
         request_url = self._artifactory.drive + "/api/security/encryptedPassword"
-        r = self._session.get(request_url, auth=(self.name, self.password),)
+        r = self._session.get(
+            request_url,
+            auth=(self.name, self.password),
+        )
         raise_errors(r)
         encryptedPassword = r.text
         return encryptedPassword
@@ -260,9 +284,32 @@ class User(AdminObject):
     def realm(self):
         return self._realm
 
+    def add_to_group(self, *groups):
+        for value in groups:
+            if isinstance(value, Group):
+                value = value.name
+            self._groups.append(value)
+
+    def remove_from_group(self, *groups):
+        for value in groups:
+            if isinstance(value, Group):
+                value = value.name
+            self._groups.remove(value)
+
     @property
     def groups(self):
         return [self._artifactory.find_group(x) for x in self._groups]
+
+    @groups.setter
+    def groups(self, value):
+        if not isinstance(value, list):
+            value = list(value)
+        self._groups = []
+        self.add_to_group(*value)
+
+    @groups.deleter
+    def groups(self):
+        self._groups = []
 
 
 class Group(AdminObject):
@@ -317,30 +364,152 @@ class GroupLDAP(Group):
         return data_json
 
 
-class Repository(AdminObject):
+class GenericRepository(AdminObject):
+    @property
+    def path(self):
+        return self._artifactory.joinpath(self.name)
+
+    def _generate_query(self, package):
+        if self.packageType == Repository.DOCKER:
+            parts = package.split(":")
+
+            name = parts[0]
+            version = parts[1] if len(parts) > 1 else "*"
+
+            package = "/".join([name, version])
+
+            return {"name": "manifest.json", "path": {"$match": package}}
+
+        if self.packageType == Repository.PYPI and "/" not in package:
+            operators = {
+                "<=": "$lte",
+                "<": "$lt",
+                ">=": "$gte",
+                ">": "$gt",
+                "==": "$eq",
+                "!=": "$ne",
+                "~=": "$match",
+            }
+            for symbol, operator in operators.items():
+                if symbol in package:
+                    name, version = package.split(symbol)
+
+                    return {
+                        "@pypi.name": {"$match": name},
+                        "@pypi.version": {operator: version},
+                    }
+
+            return {"@pypi.name": {"$match": package}}
+
+        if self.packageType == Repository.MAVEN and "/" not in package:
+            package = package.replace("#", ":")
+
+            parts = list(package.split(":"))
+
+            group = parts[0].replace(".", "/")
+            name = parts[1] if len(parts) > 1 else None
+            version = parts[2] if len(parts) > 2 else None
+
+            if not name:
+                name = "*"
+            elif not version:
+                version = "*"
+
+            package = "/".join(filter(None, [group, name, version]))
+
+        return {
+            "$or": [
+                {"name": {"$match": package}},
+                {"path": {"$match": package}},
+                {"@{}.name".format(self.packageType): {"$match": package}},
+                {"@build.name": {"$match": package}},
+                {"artifact.module.build.name": {"$match": package}},
+            ]
+        }
+
+    def _build_query(
+        self, terms=None, sort=None, include=None, limit=None, offset=None
+    ):
+        terms = terms or {}
+        terms["repo"] = {"$eq": self.name}
+
+        query = ["items.find", terms]
+
+        if include:
+            query.extend([".include", include])
+        if sort:
+            query.extend([".sort", sort])
+        if offset is not None:
+            query.extend([".offset", offset])
+        if limit is not None:
+            query.extend([".limit", limit])
+        return query
+
+    def search_raw(self, *args, **kwargs):
+        query = self._build_query(*args, **kwargs)
+
+        return self.path.aql(*query)
+
+    def search(self, *args, **kwargs):
+        for item in self.search_raw(*args, **kwargs):
+            yield self.path.from_aql(item)
+
+    def __iter__(self):
+        for package in self.search():
+            yield package
+
+    def __getitem__(self, key):
+        terms = self._generate_query(key)
+        sort = {"$desc": ["name", "created"]}
+
+        for item in self.search(terms=terms, sort=sort):
+            yield item
+
+    def __getattr__(self, attr):
+        return getattr(self.path, attr)
+
+    def __truediv__(self, key):
+        return self.path.__truediv__(key)
+
+    def __rtruediv__(self, key):
+        return self.path.__truediv__(key)
+
+    if sys.version_info < (3,):
+        __div__ = __truediv__
+        __rdiv__ = __rtruediv__
+
+
+class Repository(GenericRepository):
     # List packageType from wiki:
     # https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON#RepositoryConfigurationJSON-application/vnd.org.jfrog.artifactory.repositories.LocalRepositoryConfiguration+json
-    MAVEN = "maven"
+    ALPINE = "alpine"
+    BOWER = "bower"
+    CHEF = "chef"
+    COCOAPODS = "cocoapods"
+    COMPOSER = "composer"
+    CONAN = "conan"
+    CRAN = "cran"
+    DEBIAN = "debian"
+    DOCKER = "docker"
+    GEMS = "gems"
+    GENERIC = "generic"
+    GO = "go"
     GRADLE = "gradle"
+    HELM = "helm"
     IVY = "ivy"
+    MAVEN = "maven"
     SBT = "sbt"
     HELM = "helm"
     RPM = "rpm"
     NUGET = "nuget"
     GEMS = "gems"
     NPM = "npm"
-    BOWER = "bower"
-    DEBIAN = "debian"
-    COMPOSER = "composer"
-    PYPI = "pypi"
-    DOCKER = "docker"
-    VAGRANT = "vagrant"
-    GITLFS = "gitlfs"
-    YUM = "yum"
-    CONAN = "conan"
-    CHEF = "chef"
+    NUGET = "nuget"
     PUPPET = "puppet"
-    GENERIC = "generic"
+    PYPI = "pypi"
+    RPM = "rpm"
+    SBT = "sbt"
+    YUM = "yum"
 
     # List dockerApiVersion from wiki:
     V1 = "V1"
@@ -361,18 +530,23 @@ class Repository(AdminObject):
 class RepositoryLocal(Repository):
     _uri = "repositories"
 
+    OPKG = "opkg"
+    P2 = "p2"
+    VCS = "vcs"
+
     def __init__(
         self,
         artifactory,
         name,
         packageType=Repository.GENERIC,
         dockerApiVersion=Repository.V1,
+        repoLayoutRef="maven-2-default",
     ):
         super(RepositoryLocal, self).__init__(artifactory)
         self.name = name
         self.description = ""
         self.packageType = packageType
-        self.repoLayoutRef = "maven-2-default"
+        self.repoLayoutRef = repoLayoutRef
         self.archiveBrowsingEnabled = True
         self.dockerApiVersion = dockerApiVersion
 
@@ -407,14 +581,25 @@ class RepositoryLocal(Repository):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
         """
+        rclass = response["rclass"].lower()
+        if rclass != "local":
+            raise ArtifactoryException(
+                "Repository '{}' have '{}', but expect 'local'".format(
+                    self.name, rclass
+                )
+            )
+
         self.name = response["key"]
         self.description = response.get("description")
+        self.packageType = response.get("packageType")
         self.repoLayoutRef = response.get("repoLayoutRef")
         self.archiveBrowsingEnabled = response.get("archiveBrowsingEnabled")
 
 
-class RepositoryVirtual(AdminObject):
+class RepositoryVirtual(GenericRepository):
     _uri = "repositories"
+
+    ALPINE = "alpine"
     BOWER = "bower"
     CHEF = "chef"
     CRAN = "cran"
@@ -437,14 +622,18 @@ class RepositoryVirtual(AdminObject):
     DEBIAN = "debian"
 
     def __init__(
-        self, artifactory, name, repositories=None, packageType=Repository.GENERIC
+        self,
+        artifactory,
+        name,
+        repositories=None,
+        packageType=Repository.GENERIC,
     ):
         super(RepositoryVirtual, self).__init__(artifactory)
         self.name = name
         self.description = ""
         self.notes = ""
         self.packageType = packageType
-        self._repositories = repositories
+        self.repositories = repositories or []
 
     def _create_json(self):
         """
@@ -465,7 +654,7 @@ class RepositoryVirtual(AdminObject):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
         """
-        rclass = response["rclass"]
+        rclass = response["rclass"].lower()
         if rclass != "virtual":
             raise ArtifactoryException(
                 "Repository '{}' have '{}', but expect 'virtual'".format(
@@ -474,17 +663,44 @@ class RepositoryVirtual(AdminObject):
             )
 
         self.name = response["key"]
-        self.description = response["description"]
-        self.packageType = response["packageType"]
-        self._repositories = response["repositories"]
+        self.description = response.get("description")
+        self.packageType = response.get("packageType")
+        self._repositories = response.get("repositories")
+
+    def add_repository(self, *repos):
+        for value in repos:
+            if isinstance(value, Repository):
+                value = value.name
+            self._repositories.append(value)
+
+    def remove_repository(self, *repos):
+        for value in repos:
+            if isinstance(value, Repository):
+                value = value.name
+            self._repositories.remove(value)
 
     @property
     def repositories(self):
-        return [self._artifactory.find_repository_local(x) for x in self._repositories]
+        return [self._artifactory.find_repository(x) for x in self._repositories]
+
+    @repositories.setter
+    def repositories(self, value):
+        if not isinstance(value, list):
+            value = list(value)
+        self._repositories = []
+        self.add_repository(*value)
+
+    @repositories.deleter
+    def repositories(self):
+        self._repositories = []
 
 
 class RepositoryRemote(Repository):
     _uri = "repositories"
+
+    GITLFS = "gitlfs"
+    OPKG = "opkg"
+    VAGRANT = "vagrant"
 
     def __init__(
         self,
@@ -493,12 +709,13 @@ class RepositoryRemote(Repository):
         url=None,
         packageType=Repository.GENERIC,
         dockerApiVersion=Repository.V1,
+        repoLayoutRef="maven-2-default",
     ):
         super(RepositoryRemote, self).__init__(artifactory)
         self.name = name
         self.description = ""
         self.packageType = packageType
-        self.repoLayoutRef = "maven-2-default"
+        self.repoLayoutRef = repoLayoutRef
         self.archiveBrowsingEnabled = True
         self.dockerApiVersion = dockerApiVersion
         self.url = url
@@ -542,10 +759,20 @@ class RepositoryRemote(Repository):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
         """
+        rclass = response["rclass"].lower()
+        if rclass != "remote":
+            raise ArtifactoryException(
+                "Repository '{}' have '{}', but expect 'remote'".format(
+                    self.name, rclass
+                )
+            )
+
         self.name = response["key"]
         self.description = response.get("description")
+        self.packageType = response.get("packageType")
         self.repoLayoutRef = response.get("repoLayoutRef")
         self.archiveBrowsingEnabled = response.get("archiveBrowsingEnabled")
+        self.url = response.get("url")
 
 
 class PermissionTarget(AdminObject):
@@ -564,14 +791,14 @@ class PermissionTarget(AdminObject):
     ROLE_ANNOTATE = (ANNOTATE, READ)
     ROLE_READ = READ
 
-    def __init__(self, artifactory, name):
+    def __init__(self, artifactory, name, repositories=None, users=None, groups=None):
         super(PermissionTarget, self).__init__(artifactory)
         self.name = name
         self.includesPattern = "**"
         self.excludesPattern = ""
-        self._repositories = []
-        self._users = {}
-        self._groups = {}
+        self.repositories = repositories or []
+        self.users = users or {}
+        self.groups = groups or {}
 
     def _create_json(self):
         """
@@ -582,7 +809,10 @@ class PermissionTarget(AdminObject):
             "includesPattern": self.includesPattern,
             "excludesPattern": self.excludesPattern,
             "repositories": self._repositories,
-            "principals": {"users": self._users, "groups": self._groups},
+            "principals": {
+                "users": self._users,
+                "groups": self._groups,
+            },
         }
         return data_json
 
@@ -594,33 +824,127 @@ class PermissionTarget(AdminObject):
         self.includesPattern = response["includesPattern"]
         self.excludesPattern = response["excludesPattern"]
         self._repositories = response.get("repositories", [])
+        self._users = {}
+        self._groups = {}
         if "principals" in response:
             if "users" in response["principals"]:
-                self._users = response["principals"]["users"]
+                self._users = self._permissions_from_json(
+                    response["principals"]["users"]
+                )
             if "groups" in response["principals"]:
-                self._groups = response["principals"]["groups"]
+                self._groups = self._permissions_from_json(
+                    response["principals"]["groups"]
+                )
 
-    def add_repository(self, *args):
-        self._repositories.extend([x if isinstance(x, str) else x.name for x in args])
+    @classmethod
+    def _principal_parse(cls, name, permissions):
+        return cls._principal_name_parse(name), cls._permissions_parse(permissions)
 
-    @staticmethod
-    def _add_principals(name, permissions, principals):
-        if isinstance(permissions, str):
-            permissions = [permissions]
-        permissions = list(set(permissions))
+    @classmethod
+    def _permissions_from_json(cls, permissions_map):
+        result = {}
+        for key, permissions in permissions_map.items():
+            name, new_permissions = cls._principal_parse(key, permissions)
+            result[name] = new_permissions
+        return result
+
+    @classmethod
+    def _principal_name_parse(cls, name):
         if isinstance(name, AdminObject):
             name = name.name
-        principals[name] = permissions
+        return name
+
+    @classmethod
+    def _permissions_parse(cls, permissions):
+        if isinstance(permissions, str):
+            permissions = re.sub(r"\W", "", permissions.strip()).split("")
+        permissions = list(set(permissions))
+
+        for permission in permissions:
+            if permission not in cls.ROLE_ADMIN:
+                raise ValueError("Unknown permission {name}".format(name=permission))
+        return permissions
 
     def add_user(self, name, permissions):
-        self._add_principals(name, permissions, self._users)
+        name, permissions = self._principal_parse(name, permissions)
+        self._users[name] = permissions
+
+    def remove_user(self, *users):
+        for value in users:
+            if isinstance(value, User):
+                value = value.name
+            self._users.pop(value)
+
+    @property
+    def users(self):
+        return {
+            self._artifactory.find_user(name): permissions
+            for name, permissions in self._users.items()
+        }
+
+    @users.setter
+    def users(self, value):
+        self._users = {}
+        for key, value in value.items():
+            self.add_user(key, value)
+
+    @users.deleter
+    def users(self):
+        self._users = {}
 
     def add_group(self, name, permissions):
-        self._add_principals(name, permissions, self._groups)
+        name, permissions = self._principal_parse(name, permissions)
+        self._groups[name] = permissions
+
+    def remove_group(self, *groups):
+        for value in groups:
+            if isinstance(value, Group):
+                value = value.name
+            self._groups.pop(value)
+
+    @property
+    def groups(self):
+        return {
+            self._artifactory.find_group(name): permissions
+            for name, permissions in self._groups.items()
+        }
+
+    @groups.setter
+    def groups(self, value):
+        self._groups = {}
+        for key, value in value.items():
+            self.add_group(key, value)
+
+    @groups.deleter
+    def groups(self):
+        self._groups = {}
+
+    def add_repository(self, *repos):
+        for value in repos:
+            if isinstance(value, (Repository, RepositoryVirtual)):
+                value = value.name
+            self._repositories.append(value)
+
+    def remove_repository(self, *repos):
+        for value in repos:
+            if isinstance(value, (Repository, RepositoryVirtual)):
+                value = value.name
+            self._repositories.remove(value)
 
     @property
     def repositories(self):
-        return [self._artifactory.find_repository_local(x) for x in self._repositories]
+        return [self._artifactory.find_repository(x) for x in self._repositories]
+
+    @repositories.setter
+    def repositories(self, value):
+        if not isinstance(value, list):
+            value = list(value)
+        self._repositories = []
+        self.add_repository(*value)
+
+    @repositories.deleter
+    def repositories(self):
+        self._repositories = []
 
     def update(self):
         # POST method for permissions is not implemented by artifactory

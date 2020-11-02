@@ -46,6 +46,7 @@ from dohq_artifactory.admin import RepositoryRemote
 from dohq_artifactory.admin import RepositoryVirtual
 from dohq_artifactory.admin import User
 from dohq_artifactory.auth import XJFrogArtApiAuth
+from dohq_artifactory.exception import ArtifactoryException
 
 try:
     import requests.packages.urllib3 as urllib3
@@ -1116,6 +1117,15 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         super(ArtifactoryPath, self)._init(*args, **kwargs)
 
     @property
+    def top(self):
+        obj = ArtifactoryPath(self.drive)
+        obj.auth = self.auth
+        obj.verify = self.verify
+        obj.cert = self.cert
+        obj.session = self.session
+        return obj
+
+    @property
     def parent(self):
         """
         The logical parent of the path.
@@ -1243,11 +1253,11 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     def download_folder_archive(self, archive_type="zip", check_sum=False):
         """
-            Convert URL to the new link to download specified folder as archive according to REST API.
-            Requires Enable Folder Download to be set in artifactory.
-            :param: archive_type (str): one of possible archive types (supports zip/tar/tar.gz/tgz)
-            :param: check_sum (bool): defines of check sum is required along with download
-            :return: raw object for download
+        Convert URL to the new link to download specified folder as archive according to REST API.
+        Requires Enable Folder Download to be set in artifactory.
+        :param: archive_type (str): one of possible archive types (supports zip/tar/tar.gz/tgz)
+        :param: check_sum (bool): defines of check sum is required along with download
+        :return: raw object for download
         """
         if archive_type not in ["zip", "tar", "tar.gz", "tgz"]:
             raise NotImplementedError(archive_type + " is not support by current API")
@@ -1597,21 +1607,39 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         return None
 
     def find_repository_local(self, name):
-        obj = RepositoryLocal(self, name, packageType=None)
+        obj = RepositoryLocal(self, name)
         if obj.read():
             return obj
         return None
 
     def find_repository_virtual(self, name):
-        obj = RepositoryVirtual(self, name, packageType=None)
+        obj = RepositoryVirtual(self, name)
         if obj.read():
             return obj
         return None
 
     def find_repository_remote(self, name):
-        obj = RepositoryRemote(self, name, packageType=None)
+        obj = RepositoryRemote(self, name)
         if obj.read():
             return obj
+        return None
+
+    def find_repository(self, name):
+        try:
+            return self.find_repository_local(name)
+        except ArtifactoryException:
+            pass
+
+        try:
+            return self.find_repository_remote(name)
+        except ArtifactoryException:
+            pass
+
+        try:
+            return self.find_repository_virtual(name)
+        except ArtifactoryException:
+            pass
+
         return None
 
     def find_permission_target(self, name):

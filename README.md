@@ -33,6 +33,10 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
   * [RepositoryLocal](#repositorylocal)
   * [RepositoryVirtual](#repositoryvirtual)
   * [RepositoryRemote](#repositoryremote)
+  * [Get repository of any type](#get-repository-of-any-type)
+  * [Iterate over repository artifacts](#iterate-over-repository-artifacts)
+  * [Access repository child item](#access-repository-child-item)
+  * [Search for certain package artifacts](#search-for-certain-package-artifacts)
   * [PermissionTarget](#permissiontarget)
   * [Token](#token)
   * [Common](#common)
@@ -100,7 +104,8 @@ path = ArtifactoryPath(
 
 # Load username, password from global config if exist:
 path = ArtifactoryPath(
-    "http://my-artifactory/artifactory/myrepo/restricted-path", auth_type=HTTPBasicAuth,
+    "http://my-artifactory/artifactory/myrepo/restricted-path",
+    auth_type=HTTPBasicAuth,
 )
 
 path.touch()
@@ -331,7 +336,12 @@ args = [
     {
         "$and": [
             {"repo": {"$eq": "repo"}},
-            {"$or": [{"path": {"$match": "*path1"}}, {"path": {"$match": "*path2"}},]},
+            {
+                "$or": [
+                    {"path": {"$match": "*path1"}},
+                    {"path": {"$match": "*path2"}},
+                ]
+            },
         ]
     },
 ]
@@ -521,15 +531,249 @@ repo.read()
 repo.delete()
 ```
 
+
+## Get repository of any type
+```python
+# Find any repo by name
+repo = artifactory_.find_repository("pypi.all")
+```
+
+## Iterate over repository artifacts
+```python
+# Get repo
+repo = artifactory_.find_repository("pypi.all")
+
+# Iterate over repo
+for artifact in repo:
+    print(artifact)
+    print(artifact.properties)
+
+# Result:
+# http://my.artifactory.com/artifactory/pypi.all/my_package/my_package-1.0.0-py3.whl
+# {"pypi.name": ["my_package"], "pypy_version": ["1.0.0"]}
+# http://my.artifactory.com/artifactory/pypi.all/my_package/my_package-1.0.1.dev5-py3.whl
+# {"pypi.name": ["my_package"], "pypy_version": ["1.0.1.dev5"]}
+# http://my.artifactory.com/artifactory/pypi.all/other_package/other_package-0.0.1-py3.whl
+# {"pypi.name": ["other_package"], "pypy_version": ["0.0.1"]}
+# ...
+```
+
+## Access repository child item
+Repo can bee accessed just like any other `ArtifactPath`:
+```python
+# Get repo
+repo = artifactory_.find_repository("pypi.all")
+
+# Access a folder within the repo
+package = repo / "my_package"
+
+# Result:
+# ArtifactPath('http://my.artifactory.com/artifactory/pypi.all/my_package')
+
+# Access a file within the repo
+package = repo / "my_package" / "my_artifact.tar.gz"
+
+# Result:
+# ArtifactPath('http://my.artifactory.com/artifactory/pypi.all/my_package/my_artifact.tar.gz')
+```
+
+## Search for certain package artifacts
+```python
+# Get repo
+repo = artifactory_.find_repository("pypi.all")
+
+# Will generate and perform AQL query for getting artifacts by path or name
+for artifacts in repo["my_package"]:
+    print(artifact)
+    print(artifact.properties)
+
+# Result:
+# http://my.artifactory.com/artifactory/pypi.all/my_package/my_package-1.0.0-py3.whl
+# {"pypi.name": ["my_package"], "pypy_version": ["1.0.0"], ...}
+# http://my.artifactory.com/artifactory/pypi.all/my_package/my_package-1.0.1.dev5-py3.whl
+# {"pypi.name": ["my_package"], "pypy_version": ["1.0.1.dev5"], ...}
+# http://my.artifactory.com/artifactory/pypi.all/my_package/my_package-1.1.0-py3.whl
+# {"pypi.name": ["my_package"], "pypy_version": ["1.1.0"], ...}
+# ...
+
+# Using partial match
+for artifacts in repo["my_pack*"]:
+    print(artifact)
+    print(artifact.properties)
+
+# Result:
+# http://my.artifactory.com/artifactory/pypi.all/my_package/my_package-1.0.0-py3.whl
+# {"pypi.name": ["my_package"], "pypy_version": ["1.0.0"], ...}
+# http://my.artifactory.com/artifactory/pypi.all/my_package/my_package-1.0.1.dev5-py3.whl
+# {"pypi.name": ["my_package"], "pypy_version": ["1.0.1.dev5"], ...}
+# http://my.artifactory.com/artifactory/pypi.all/my_package_new_/my_package_new-0.0.1-py3.whl
+# {"pypi.name": ["my_package_new"], "pypy_version": ["0.0.1"], ...}
+# ...
+```
+
+Some types of repositories support specific ways of searching artifacts.
+  * PyPi
+
+    ```python
+    # Get repo
+    repo = artifactory_.find_repository("pypi.all")
+
+    # Get artifacts by package name
+    for artifacts in repo["my_package"]:
+        print(artifact)
+        print(artifact.properties)
+
+    # Result:
+    # http://my.artifactory.com/artifactory/pypi.all/my_package/my_package-1.0.0-py3.whl
+    # {"pypi.name": ["my_package"], "pypy_version": ["1.0.0"], ...}
+    # http://my.artifactory.com/artifactory/pypi.all/my_package/my_package-1.0.1.dev5-py3.whl
+    # {"pypi.name": ["my_package"], "pypy_version": ["1.0.1.dev5"], ...}
+    # http://my.artifactory.com/artifactory/pypi.all/my_package/my_package-1.1.0-py3.whl
+    # {"pypi.name": ["my_package"], "pypy_version": ["1.1.0"], ...}
+    # ...
+
+    # Get artifacts by specific version
+    for artifacts in repo["my_package==1.0.0"]:
+        print(artifact)
+        print(artifact.properties)
+
+    # Result:
+    # http://my.artifactory.com/artifactory/pypi.all/my_package/my_package-1.0.0-py3.whl
+    # {"pypi.name": ["my_package"], "pypy_version": ["1.0.0"], ...}
+
+    # Using other pip operators (result should be additionaly checked!)
+    for artifacts in repo["my_package!=1.0.0"]:
+        print(artifact)
+        print(artifact.properties)
+
+    # Result:
+    # http://my.artifactory.com/artifactory/pypi.all/my_package/my_package-1.0.1.dev5-py3.whl
+    # {"pypi.name": ["my_package"], "pypy_version": ["1.0.1.dev5"], ...}
+    # http://my.artifactory.com/artifactory/pypi.all/my_package/my_package-1.1.0-py3.whl
+    # {"pypi.name": ["my_package"], "pypy_version": ["1.1.0"], ...}
+    # ...
+
+
+    # In case of using > or < operators, the result should be additionaly checked
+    # because Artifactory compares strings, not versions
+    for artifacts in repo["my_package>=1.0.0"]:
+        print(artifact)
+        print(artifact.properties)
+
+    # Result:
+    # http://my.artifactory.com/artifactory/pypi.all/my_package/my_package-1.0.1.dev5-py3.whl
+    # {"pypi.name": ["my_package"], "pypy_version": ["1.0.1.dev5"], ...}
+    # http://my.artifactory.com/artifactory/pypi.all/my_package/my_package-1.1.0-py3.whl
+    # {"pypi.name": ["my_package"], "pypy_version": ["1.1.0"], ...}
+    # ...
+    ```
+
+  * Docker
+
+    ```python
+    # Get repo
+    repo = artifactory_.find_repository("docker.all")
+
+    # Get artifacts by image name
+    for artifacts in repo["my_image"]:
+        print(artifact)
+        print(artifact.properties)
+
+    # Result:
+    # http://my.artifactory.com/artifactory/docker.all/my_image/latest/manifest.json
+    # {"docker.repoName": ["my_image"], "docker.manifest": ["latest"], ...}
+    # http://my.artifactory.com/artifactory/docker.all/my_image/1.0.0/manifest.json
+    # {"docker.repoName": ["my_image"], "docker.manifest": ["1.0.0"], ...}
+    # http://my.artifactory.com/artifactory/docker.all/my_image/1.1.0/manifest.json
+    # {"docker.repoName": ["my_image"], "docker.manifest": ["1.1.0"], ...}
+    # ...
+
+    # Get artifacts by specific version
+    for artifacts in repo["my_image:1.0.0"]:
+        print(artifact)
+        print(artifact.properties)
+
+    # Result:
+    # http://my.artifactory.com/artifactory/docker.all/my_image/1.0.0/manifest.json
+    # {"docker.repoName": ["my_image"], "docker.manifest": ["1.0.0"], ...}
+    # ...
+
+    for artifacts in repo["my_image:latest"]:
+        print(artifact)
+        print(artifact.properties)
+
+    # Result:
+    # http://my.artifactory.com/artifactory/docker.all/my_image/latest/manifest.json
+    # {"docker.repoName": ["my_image"], "docker.manifest": ["latest"], ...}
+    # ...
+
+    # Partial search
+    for artifacts in repo["my_package:*dev*"]:
+        print(artifact)
+        print(artifact.properties)
+    # http://my.artifactory.com/artifactory/docker.all/my_image/dev/manifest.json
+    # {"pypi.name": ["my_package"], "pypy_version": ["dev"]}
+    # http://my.artifactory.com/artifactory/docker.all/my_image/1.0.1-dev5/manifest.json
+    # {"pypi.name": ["my_package"], "pypy_version": ["1.0.1-dev5"]}
+    # ...
+    ```
+
+  * Maven
+
+    ```python
+    # Get repo
+    repo = artifactory_.find_repository("maven.all")
+
+    # Get artifacts by group name
+    for artifacts in repo["my.group"]:
+        print(artifact)
+        print(artifact.properties)
+
+    # Result:
+    # http://my.artifactory.com/artifactory/maven.all/my/group/package/1.0.0/maven-metadata.xml
+    # ...
+    # http://my.artifactory.com/artifactory/maven.all/my/group/another_package/1.2.3/maven-metadata.xml
+    # ...
+
+    # Get artifacts by group and package name
+    for artifacts in repo["my.group:package"]:
+        print(artifact)
+        print(artifact.properties)
+
+    # Result:
+    # http://my.artifactory.com/artifactory/maven.all/my/group/package/1.0.0/maven-metadata.xml
+    # http://my.artifactory.com/artifactory/maven.all/my/group/package/1.0.0/package-1.0.0-source.jar
+    # http://my.artifactory.com/artifactory/maven.all/my/group/package/1.0.0/package-1.0.0-javadoc.jar
+    # http://my.artifactory.com/artifactory/maven.all/my/group/package/1.0.0/package-1.0.0.pom
+    # http://my.artifactory.com/artifactory/maven.all/my/group/package/1.0.0/package-1.0.0.jar
+    # {"build.number": ["123"], "build.name": ["1.0.0"], ...}
+
+    # http://my.artifactory.com/artifactory/maven.all/my/group/package/1.0.1/maven-metadata.xml
+    # ...
+
+    # Get artifacts by group, package name and version
+    for artifacts in repo["my.group:package:1.0.0"]:
+        print(artifact)
+        print(artifact.properties)
+
+    # Result:
+    # http://my.artifactory.com/artifactory/maven.all/my/group/package/1.0.0/maven-metadata.xml
+    # http://my.artifactory.com/artifactory/maven.all/my/group/package/1.0.0/package-1.0.0-source.jar
+    # http://my.artifactory.com/artifactory/maven.all/my/group/package/1.0.0/package-1.0.0-javadoc.jar
+    # http://my.artifactory.com/artifactory/maven.all/my/group/package/1.0.0/package-1.0.0.pom
+    # http://my.artifactory.com/artifactory/maven.all/my/group/package/1.0.0/package-1.0.0.jar
+    # {"build.number": ["123"], "build.name": ["1.0.0"], ...}
+    ```
+
 ## PermissionTarget
 Docs: https://www.jfrog.com/confluence/display/RTF/Managing+Permissions
 
 Supports these roles:
-- PermissionTarget.ROLE_ADMIN = `ADMIN + DELETE + DEPLOY + ANNOTATE + READ`
-- PermissionTarget.ROLE_DELETE = `DELETE + DEPLOY + ANNOTATE + READ`
-- PermissionTarget.ROLE_DEPLOY = `DEPLOY + ANNOTATE + READ`
-- PermissionTarget.ROLE_ANNOTATE = `ANNOTATE + READ`
-- PermissionTarget.ROLE_READ = `READ`
+- `PermissionTarget.ROLE_ADMIN` = `ADMIN + DELETE + DEPLOY + ANNOTATE + READ`
+- `PermissionTarget.ROLE_DELETE` = `DELETE + DEPLOY + ANNOTATE + READ`
+- `PermissionTarget.ROLE_DEPLOY` = `DEPLOY + ANNOTATE + READ`
+- `PermissionTarget.ROLE_ANNOTATE` = `ANNOTATE + READ`
+- `PermissionTarget.ROLE_READ` = `READ`
 
 And for more modular control:
 - `PermissionTarget.ADMIN` - Allows changing the permission settings for other users on this permission target
@@ -543,14 +787,63 @@ from dohq_artifactory import PermissionTarget
 
 permission = artifactory_.find_permission_target("rule")
 
-# Add repo as string or RepositoryLocal object
-permission.add_repository("repo1", "repo2")
+# See repositories, users or groups
+permission.repositories
+# Result:
+# <RepositiryLocal repo1>
+# <RepositiryLocal repo2>
 
-# Add group or user with permission
-permission.add_user(user_object, PermissionTarget.ROLE_ADMIN)
-permission.add_group("groupname", PermissionTarget.ROLE_READ)
+permission.users
+# Result:
+# <User user1>
+# <User user2>
+
+permission.groups
+# Result:
+# <Group group1>
+# <Group group2>
+
+# Add repo (string or Repository) object
+permission.add_repository("repo3", "repo4")
+permission.add_repository(repo5_object)
+# Or remove
+permission.remove_repository("repo1", "repo2")
+
+# Add user (string or User object) with specific permission
+permission.add_user("user3", PermissionTarget.ROLE_ADMIN)
+permission.add_user(
+    user4_object, PermissionTarget.ROLE_READ + PermissionTarget.ROLE_WRITE
+)  # You can add sum of permissions
+
+# Or remove
+permission.remove_user("user1", "user2")
+
+# Add group (string or Group object) with permission
+permission.add_group("group3", PermissionTarget.ROLE_ADMIN)
+permission.add_group(
+    group4_object, PermissionTarget.ROLE_READ + PermissionTarget.ROLE_WRITE
+)  # You can add sum of permissions
+
+# Or remove
+permission.remove_group("group1", "group2")
 
 permission.update()  # Update!!
+
+permission.repositories
+# Result:
+# <RepositiryLocal repo3>
+# <RepositiryLocal repo4>
+# <RepositiryLocal repo5>
+
+permission.users
+# Result:
+# <User user3>
+# <User user4>
+
+permission.groups
+# Result:
+# <Group group3>
+# <Group group4>
 ```
 
 ## Token
