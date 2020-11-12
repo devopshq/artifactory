@@ -857,7 +857,7 @@ class PermissionTarget(AdminObject):
     @classmethod
     def _permissions_parse(cls, permissions):
         if isinstance(permissions, str):
-            permissions = re.sub(r"\W", "", permissions.strip()).split("")
+            permissions = re.sub(r"\W", "", permissions.strip())
         permissions = list(set(permissions))
 
         for permission in permissions:
