@@ -17,6 +17,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
   * [Artifactory SaaS](#artifactory-saas)
   * [Walking Directory Tree](#walking-directory-tree)
   * [Downloading Artifacts](#downloading-artifacts)
+  * [Downloading Artifacts in chunks](#downloading-artifacts-in-chunks)
   * [Downloading Artifacts folder as archive](#downloading-artifacts-folder-as-archive)
   * [Uploading Artifacts](#uploading-artifacts)
   * [Copy Artifacts](#copy-artifacts)
@@ -162,6 +163,23 @@ path = ArtifactoryPath(
 with path.open() as fd, open("tomcat.tar.gz", "wb") as out:
     out.write(fd.read())
 ```
+
+## Downloading Artifacts in chunks ##
+
+Download artifact to the local filesystem using chunks (in bytes) to prevent loading the entire response into memory at once.
+This can help with getting big files or resolve [known issue](https://github.com/devopshq/artifactory/issues/135)
+
+```python
+from artifactory import ArtifactoryPath
+
+path = ArtifactoryPath(
+    "http://repo.jfrog.org/artifactory/distributions/org/apache/tomcat/apache-tomcat-7.0.11.tar.gz"
+)
+
+with open("tomcat.tar.gz", "wb") as out:
+    path.writeto(out, chunk_size=256)
+```
+
 
 ## Downloading Artifacts folder as archive ##
 Download artifact folder to a local filesystem as archive (supports zip/tar/tar.gz/tgz)

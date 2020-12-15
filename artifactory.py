@@ -1015,6 +1015,15 @@ class _ArtifactoryAccessor(pathlib._Accessor):
     def scandir(self, pathobj):
         return _ScandirIter((pathobj.joinpath(x) for x in self.listdir(pathobj)))
 
+    def writeto(self, fd, out, chunk_size):
+        url = str(fd)
+        res = fd.session.get(url, stream=True, verify=True, cert=None)
+        if res.status_code != 200:
+            raise RuntimeError(res.status_code)
+        for chunk in res.iter_content(chunk_size=chunk_size):
+            if chunk:
+                out.write(chunk)
+
 
 _artifactory_accessor = _ArtifactoryAccessor()
 
@@ -1647,6 +1656,18 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         if obj.read():
             return obj
         return None
+
+    def writeto(self, out, chunk_size=None):
+        """
+        Writes artifact to file descriptor in chunks
+
+        :param out: File Descriptor
+        :param chunk_size: Chunk size, default 256
+        """
+        if not chunk_size:
+            chunk_size = 256
+
+        self._accessor.writeto(self, out, chunk_size=chunk_size)
 
     def _get_all(self, lazy: bool, url=None, key="name", cls=None):
         """
