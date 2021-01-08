@@ -34,6 +34,7 @@ import re
 import sys
 import urllib.parse
 from itertools import islice
+from tempfile import TemporaryDirectory
 
 import dateutil.parser
 import requests
@@ -1471,8 +1472,13 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         if self.drive.rstrip("/") == dst.drive.rstrip("/"):
             self._accessor.copy(self, dst, suppress_layouts=suppress_layouts)
         else:
-            with self.open() as fobj:
-                dst.deploy(fobj)
+            with TemporaryDirectory() as tmp_dir:
+                filename_to_deploy = pathlib.Path(tmp_dir) / self.name
+                with self.open() as fobj, open(filename_to_deploy, "wb") as out:
+                    out.write(fobj.read())
+                dst.deploy_file(
+                    filename_to_deploy, calc_md5=True, calc_sha1=True, calc_sha256=True
+                )
 
     def move(self, dst):
         """
