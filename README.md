@@ -176,8 +176,15 @@ path = ArtifactoryPath(
     "http://repo.jfrog.org/artifactory/distributions/org/apache/tomcat/apache-tomcat-7.0.11.tar.gz"
 )
 
+# download by providing output as file object and specify chunk size
 with open("tomcat.tar.gz", "wb") as out:
     path.writeto(out, chunk_size=256)
+
+# download by providing path to output file and use default chunk 1024
+path.writeto(output="tomcat2.tar.gz")
+
+# download and suppress download progress messages
+path.writeto(output="tomcat2.tar.gz", progress_func=None)
 ```
 
 
