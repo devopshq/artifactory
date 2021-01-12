@@ -1041,18 +1041,15 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         arti_cls,
         output,
         chunk_size=1024,
-        progress_func=print_download_progress,
-        *args,
-        **kwargs
+        progress_func=print_download_progress
     ):
         """
         Downloads large file in chunks and prints progress
         :param arti_cls: ArtifactoryPath class
         :param output: file path of output file
         :param chunk_size: chunk size in bytes, recommend. eg 1024*1024 is 1Mb
-        :param progress_func: custom function to print output, otherwise uses default print_download_progress
-        :param args: *args to supply for your custom progress_func
-        :param kwargs: **kargs to supply for your custom progress_func
+        :param progress_func: by default print_download_progress. Provide custom function to print output or suppress
+            print by setting to None
         :return: None
         """
         response = self.get_response(arti_cls)
@@ -1074,7 +1071,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             for chunk in response.iter_content(chunk_size=chunk_size):
                 bytes_read += len(chunk)
                 if callable(progress_func):
-                    progress_func(bytes_read, file_size, *args, **kwargs)
+                    progress_func(bytes_read, file_size)
                 file.write(chunk)
         finally:
             # in case if connection will die during download
@@ -1718,22 +1715,19 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         self,
         output,
         chunk_size=1024,
-        progress_func=print_download_progress,
-        *args,
-        **kwargs
+        progress_func=print_download_progress
     ):
         """
-        Downloads large file in chunks and prints progress. Suppress print by setting progress_func=none
+        Downloads large file in chunks and and call a progress function.
 
         :param output: file path of output file
-        :param chunk_size: chunk size in bytes, recommend. eg 1024*1024 is 1Mb
-        :param progress_func: custom function to print output, otherwise uses default print_download_progress
-        :param args: *args to supply for your custom progress_func
-        :param kwargs: **kargs to supply for your custom progress_func
+        :param chunk_size: chunk size in bytes, recommend. eg 1024*1024 is 1MiB
+        :param progress_func: by default print_download_progress. Provide custom function to print output or suppress
+            print by setting to None
         :return: None
         """
 
-        self._accessor.writeto(self, output, chunk_size, progress_func, *args, **kwargs)
+        self._accessor.writeto(self, output, chunk_size, progress_func)
 
     def _get_all(self, lazy: bool, url=None, key="name", cls=None):
         """
