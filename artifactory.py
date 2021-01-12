@@ -1052,22 +1052,16 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             print by setting to None
         :return: None
         """
-        response = self.get_response(arti_cls)
-
-        bytes_read = 0
-        if "Content-Length" in response.headers:
-            file_size = int(response.headers["Content-Length"])
-        else:
-            file_size = 0  # sometimes response does not have content length
-
         if isinstance(output, str) or isinstance(output, pathlib.Path):
-            # if string or Path is provided as output, then open file to write in bytes
             file = open(output, "wb")
         else:
-            # file object: TextIOWrapper
+            # objects that support IO (write, open), eg TextIOWrapper
             file = output
 
+        response = self.get_response(arti_cls)
+        file_size = int(response.headers("Content-Length", 0))
         try:
+            bytes_read = 0
             for chunk in response.iter_content(chunk_size=chunk_size):
                 bytes_read += len(chunk)
                 if callable(progress_func):
