@@ -33,6 +33,7 @@ import pathlib
 import re
 import sys
 import urllib.parse
+from contextlib import nullcontext
 from itertools import islice
 
 import dateutil.parser
@@ -1039,38 +1040,28 @@ class _ArtifactoryAccessor(pathlib._Accessor):
     def writeto(
         self,
         pathobj,
-        output,
+        file,
         chunk_size=1024,
         progress_func=print_download_progress
     ):
         """
         Downloads large file in chunks and prints progress
-        :param pathobj: ArtifactoryPath class
-        :param output: file path of output file
+        :param pathobj: path like object
+        :param file: IO object
         :param chunk_size: chunk size in bytes, recommend. eg 1024*1024 is 1Mb
         :param progress_func: by default print_download_progress. Provide custom function to print output or suppress
             print by setting to None
         :return: None
         """
-        if isinstance(output, str) or isinstance(output, pathlib.Path):
-            file = open(output, "wb")
-        else:
-            # objects that support IO (write, open), eg TextIOWrapper
-            file = output
 
         response = self.get_response(pathobj)
-        file_size = int(response.headers("Content-Length", 0))
-        try:
-            bytes_read = 0
-            for chunk in response.iter_content(chunk_size=chunk_size):
-                bytes_read += len(chunk)
-                if callable(progress_func):
-                    progress_func(bytes_read, file_size)
-                file.write(chunk)
-        finally:
-            # in case if connection will die during download
-            if isinstance(output, str) or isinstance(output, pathlib.Path):
-                file.close()
+        file_size = int(response.headers.get("Content-Length", 0))
+        bytes_read = 0
+        for chunk in response.iter_content(chunk_size=chunk_size):
+            bytes_read += len(chunk)
+            if callable(progress_func):
+                progress_func(bytes_read, file_size)
+            file.write(chunk)
 
 
 _artifactory_accessor = _ArtifactoryAccessor()
@@ -1720,8 +1711,13 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             print by setting to None
         :return: None
         """
+        if isinstance(output, str) or isinstance(output, pathlib.Path):
+            context = open(output, "wb")
+        else:
+            context = nullcontext(output)
 
-        self._accessor.writeto(self, output, chunk_size, progress_func)
+        with context as file:
+            self._accessor.writeto(self, file, chunk_size, progress_func)
 
     def _get_all(self, lazy: bool, url=None, key="name", cls=None):
         """

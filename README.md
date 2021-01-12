@@ -183,7 +183,7 @@ path.writeto(output="tomcat.tar.gz")
 path.writeto(output="tomcat2.tar.gz", progress_func=None)
 
 # download by providing output as file object and specify chunk size
-with open("tomcat.tar.gz", "wb") as out:
+with open("tomcat3.tar.gz", "wb") as out:
     path.writeto(out, chunk_size=256)
 
 # download and use custom print function
@@ -195,7 +195,7 @@ def custom_print(bytes_now, total, custom):
 
 # since writeto requires [int, int] in its signature all custom arguments you have to provide via lambda function or 
 # similar methods
-path.writeto(output="tomcat2.tar.gz", progress_func=lambda x, y: custom_print(x, y, custom="test"))
+path.writeto(output="tomcat4.tar.gz", progress_func=lambda x, y: custom_print(x, y, custom="test"))
 ```
 
 
