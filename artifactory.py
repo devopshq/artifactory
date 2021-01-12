@@ -1038,11 +1038,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         return _ScandirIter((pathobj.joinpath(x) for x in self.listdir(pathobj)))
 
     def writeto(
-        self,
-        pathobj,
-        file,
-        chunk_size=1024,
-        progress_func=print_download_progress
+        self, pathobj, file, chunk_size=1024, progress_func=print_download_progress
     ):
         """
         Downloads large file in chunks and prints progress
@@ -1696,12 +1692,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             return obj
         return None
 
-    def writeto(
-        self,
-        output,
-        chunk_size=1024,
-        progress_func=print_download_progress
-    ):
+    def writeto(self, output, chunk_size=1024, progress_func=print_download_progress):
         """
         Downloads large file in chunks and and call a progress function.
 

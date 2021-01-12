@@ -193,9 +193,13 @@ def custom_print(bytes_now, total, custom):
     """
     print(bytes_now, total, custom)
 
-# since writeto requires [int, int] in its signature all custom arguments you have to provide via lambda function or 
+
+# since writeto requires [int, int] in its signature all custom arguments you have to provide via lambda function or
 # similar methods
-path.writeto(output="tomcat4.tar.gz", progress_func=lambda x, y: custom_print(x, y, custom="test"))
+path.writeto(
+    output="tomcat4.tar.gz",
+    progress_func=lambda x, y: custom_print(x, y, custom="test"),
+)
 ```
 
 
