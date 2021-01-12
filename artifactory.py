@@ -1038,14 +1038,14 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
     def writeto(
         self,
-        arti_cls,
+        pathobj,
         output,
         chunk_size=1024,
         progress_func=print_download_progress
     ):
         """
         Downloads large file in chunks and prints progress
-        :param arti_cls: ArtifactoryPath class
+        :param pathobj: ArtifactoryPath class
         :param output: file path of output file
         :param chunk_size: chunk size in bytes, recommend. eg 1024*1024 is 1Mb
         :param progress_func: by default print_download_progress. Provide custom function to print output or suppress
@@ -1058,7 +1058,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             # objects that support IO (write, open), eg TextIOWrapper
             file = output
 
-        response = self.get_response(arti_cls)
+        response = self.get_response(pathobj)
         file_size = int(response.headers("Content-Length", 0))
         try:
             bytes_read = 0
