@@ -1178,7 +1178,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         obj.cert = kwargs.get("cert")
         obj.session = kwargs.get("session")
-        obj.timeout = kwargs.get("timeout", None)
+        obj.timeout = kwargs.get("timeout")
 
         if obj.cert is None and cfg_entry:
             obj.cert = cfg_entry["cert"]
