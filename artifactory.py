@@ -33,7 +33,6 @@ import pathlib
 import re
 import sys
 import urllib.parse
-from contextlib import nullcontext
 from itertools import islice
 
 import dateutil.parser
@@ -342,6 +341,28 @@ def encode_properties(parameters):
         result.append("=".join((param, value)))
 
     return ";".join(result)
+
+
+# Declare contextlib class that was enabled in Py 3.7. Declare for compatibility with 3.5
+class nullcontext:
+    """Context manager that does no additional processing.
+
+    Used as a stand-in for a normal context manager, when a particular
+    block of code is only sometimes used with a normal context manager:
+
+    cm = optional_cm if condition else nullcontext()
+    with cm:
+        # Perform operation, using optional_cm if condition is True
+    """
+
+    def __init__(self, enter_result=None):
+        self.enter_result = enter_result
+
+    def __enter__(self):
+        return self.enter_result
+
+    def __exit__(self, *excinfo):
+        pass
 
 
 class _ArtifactoryFlavour(pathlib._Flavour):
@@ -1037,16 +1058,13 @@ class _ArtifactoryAccessor(pathlib._Accessor):
     def scandir(self, pathobj):
         return _ScandirIter((pathobj.joinpath(x) for x in self.listdir(pathobj)))
 
-    def writeto(
-        self, pathobj, file, chunk_size=1024, progress_func=print_download_progress
-    ):
+    def writeto(self, pathobj, file, chunk_size, progress_func):
         """
         Downloads large file in chunks and prints progress
         :param pathobj: path like object
         :param file: IO object
         :param chunk_size: chunk size in bytes, recommend. eg 1024*1024 is 1Mb
-        :param progress_func: by default print_download_progress. Provide custom function to print output or suppress
-            print by setting to None
+        :param progress_func: Provide custom function to print output or suppress print by setting to None
         :return: None
         """
 
@@ -1698,8 +1716,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         :param output: file path of output file
         :param chunk_size: chunk size in bytes, recommend. eg 1024*1024 is 1MiB
-        :param progress_func: by default print_download_progress. Provide custom function to print output or suppress
-            print by setting to None
+        :param progress_func: Provide custom function to print output or suppress print by setting to None
         :return: None
         """
         if isinstance(output, str) or isinstance(output, pathlib.Path):
