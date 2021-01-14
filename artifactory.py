@@ -245,17 +245,24 @@ def chunks(data, size):
         yield {k: data[k] for k in islice(it, size)}
 
 
-def print_download_progress(offset, total_size, *args, **kwargs):
+def print_download_progress(bytes_now, total_size, print_method=logging.debug):
+    """
+    Function to print download progress
+    :param bytes_now: current number of bytes
+    :param total_size: total file size in bytes
+    :param print_method: function to report progress
+    :return:
+    """
     if total_size > 0:
         msg = "Downloaded {}/{}MB...[{}%]".format(
-            int(offset / 1024 / 1024),
+            int(bytes_now / 1024 / 1024),
             int(total_size / 1024 / 1024),
-            round(offset / total_size * 100, 2),
+            round(bytes_now / total_size * 100, 2),
         )
     else:
-        msg = "Downloaded {}MB".format(int(offset / 1024 / 1024))
+        msg = "Downloaded {}MB".format(int(bytes_now / 1024 / 1024))
 
-    print(msg)
+    print_method(msg)
 
 
 class HTTPResponseWrapper(object):
