@@ -351,6 +351,7 @@ def encode_properties(parameters):
 
 
 # Declare contextlib class that was enabled in Py 3.7. Declare for compatibility with 3.5
+# this class is taken and modified from standard module contextlib
 class nullcontext:
     """Context manager that does no additional processing.
 
@@ -608,57 +609,112 @@ class _ArtifactoryAccessor(pathlib._Accessor):
     """
 
     def rest_get(
-        self, url, params=None, headers=None, session=None, verify=True, cert=None
+        self,
+        url,
+        params=None,
+        headers=None,
+        session=None,
+        verify=True,
+        cert=None,
+        timeout=None,
     ):
         """
         Perform a GET request to url with requests.session
         """
-        res = session.get(url, params=params, headers=headers, verify=verify, cert=cert)
+        res = session.get(
+            url,
+            params=params,
+            headers=headers,
+            verify=verify,
+            cert=cert,
+            timeout=timeout,
+        )
         return res.text, res.status_code
 
     def rest_put(
-        self, url, params=None, headers=None, session=None, verify=True, cert=None
+        self,
+        url,
+        params=None,
+        headers=None,
+        session=None,
+        verify=True,
+        cert=None,
+        timeout=None,
     ):
         """
         Perform a PUT request to url with requests.session
         """
-        res = session.put(url, params=params, headers=headers, verify=verify, cert=cert)
+        res = session.put(
+            url,
+            params=params,
+            headers=headers,
+            verify=verify,
+            cert=cert,
+            timeout=timeout,
+        )
         return res.text, res.status_code
 
     def rest_post(
-        self, url, params=None, headers=None, session=None, verify=True, cert=None
+        self,
+        url,
+        params=None,
+        headers=None,
+        session=None,
+        verify=True,
+        cert=None,
+        timeout=None,
     ):
         """
         Perform a POST request to url with requests.session
         """
         res = session.post(
-            url, params=params, headers=headers, verify=verify, cert=cert
+            url,
+            params=params,
+            headers=headers,
+            verify=verify,
+            cert=cert,
+            timeout=timeout,
         )
         return res.text, res.status_code
 
-    def rest_del(self, url, params=None, session=None, verify=True, cert=None):
+    def rest_del(
+        self, url, params=None, session=None, verify=True, cert=None, timeout=None
+    ):
         """
         Perform a DELETE request to url with requests.session
         """
-        res = session.delete(url, params=params, verify=verify, cert=cert)
+        res = session.delete(
+            url, params=params, verify=verify, cert=cert, timeout=timeout
+        )
         return res.text, res.status_code
 
     def rest_put_stream(
-        self, url, stream, headers=None, session=None, verify=True, cert=None
+        self,
+        url,
+        stream,
+        headers=None,
+        session=None,
+        verify=True,
+        cert=None,
+        timeout=None,
     ):
         """
         Perform a chunked PUT request to url with requests.session
         This is specifically to upload files.
         """
-        res = session.put(url, headers=headers, data=stream, verify=verify, cert=cert)
+        res = session.put(
+            url, headers=headers, data=stream, verify=verify, cert=cert, timeout=timeout
+        )
         return res.text, res.status_code
 
-    def rest_get_stream(self, url, session=None, verify=True, cert=None):
+    def rest_get_stream(self, url, session=None, verify=True, cert=None, timeout=None):
         """
         Perform a chunked GET request to url with requests.session
         This is specifically to download files.
         """
-        response = session.get(url, stream=True, verify=verify, cert=cert)
+        response = session.get(
+            url, stream=True, verify=verify, cert=cert, timeout=timeout
+        )
         return response
 
     def get_stat_json(self, pathobj):
@@ -675,7 +731,11 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         )
 
         text, code = self.rest_get(
-            url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert
+            url,
+            session=pathobj.session,
+            verify=pathobj.verify,
+            cert=pathobj.cert,
+            timeout=pathobj.timeout,
         )
         if code == 404 and ("Unable to find item" in text or "Not Found" in text):
             raise OSError(2, "No such file or directory: '%s'" % url)
@@ -780,7 +840,11 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         url = str(pathobj) + "/"
         text, code = self.rest_put(
-            url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert
+            url,
+            session=pathobj.session,
+            verify=pathobj.verify,
+            cert=pathobj.cert,
+            timeout=pathobj.timeout,
         )
 
         if code != 201:
@@ -815,7 +879,11 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         url = str(pathobj)
         text, code = self.rest_del(
-            url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert
+            url,
+            session=pathobj.session,
+            verify=pathobj.verify,
+            cert=pathobj.cert,
+            timeout=pathobj.timeout,
         )
 
         if code not in (200, 202, 204):
@@ -833,7 +901,11 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         url = str(pathobj)
         text, code = self.rest_put(
-            url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert
+            url,
+            session=pathobj.session,
+            verify=pathobj.verify,
+            cert=pathobj.cert,
+            timeout=pathobj.timeout,
         )
 
         if code != 201:
@@ -881,7 +953,11 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         """
         url = str(pathobj)
         response = self.rest_get_stream(
-            url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert
+            url,
+            session=pathobj.session,
+            verify=pathobj.verify,
+            cert=pathobj.cert,
+            timeout=pathobj.timeout,
         )
         code = response.status_code
         if code != 200:
@@ -918,6 +994,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             session=pathobj.session,
             verify=pathobj.verify,
             cert=pathobj.cert,
+            timeout=pathobj.timeout,
         )
 
         if code not in (200, 201):
@@ -941,7 +1018,12 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         }
 
         text, code = self.rest_post(
-            url, params=params, session=src.session, verify=src.verify, cert=src.cert
+            url,
+            params=params,
+            session=src.session,
+            verify=src.verify,
+            cert=src.cert,
+            timeout=src.timeout,
         )
 
         if code not in (200, 201):
@@ -962,7 +1044,12 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         params = {"to": str(dst.relative_to(dst.drive)).rstrip("/")}
 
         text, code = self.rest_post(
-            url, params=params, session=src.session, verify=src.verify, cert=src.cert
+            url,
+            params=params,
+            session=src.session,
+            verify=src.verify,
+            cert=src.cert,
+            timeout=src.timeout,
         )
 
         if code not in (200, 201):
@@ -988,6 +1075,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             session=pathobj.session,
             verify=pathobj.verify,
             cert=pathobj.cert,
+            timeout=pathobj.timeout,
         )
 
         if code == 404 and ("Unable to find item" in text or "Not Found" in text):
@@ -1022,6 +1110,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             session=pathobj.session,
             verify=pathobj.verify,
             cert=pathobj.cert,
+            timeout=pathobj.timeout,
         )
 
         if code == 404 and ("Unable to find item" in text or "Not Found" in text):
@@ -1055,6 +1144,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             session=pathobj.session,
             verify=pathobj.verify,
             cert=pathobj.cert,
+            timeout=pathobj.timeout,
         )
 
         if code == 404 and ("Unable to find item" in text or "Not Found" in text):
@@ -1130,7 +1220,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     # Pathlib limits what members can be present in 'Path' class,
     # so authentication information has to be added via __slots__
-    __slots__ = ("auth", "verify", "cert", "session")
+    __slots__ = ("auth", "verify", "cert", "session", "timeout")
 
     def __new__(cls, *args, **kwargs):
         """
@@ -1160,6 +1250,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         obj.cert = kwargs.get("cert")
         obj.session = kwargs.get("session")
+        obj.timeout = kwargs.get("timeout")
 
         if obj.cert is None and cfg_entry:
             obj.cert = cfg_entry["cert"]
@@ -1176,6 +1267,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             obj.session.auth = obj.auth
             obj.session.cert = obj.cert
             obj.session.verify = obj.verify
+            obj.session.timeout = obj.timeout
 
         return obj
 
@@ -1192,6 +1284,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.verify = self.verify
         obj.cert = self.cert
         obj.session = self.session
+        obj.timeout = self.timeout
         return obj
 
     @property
@@ -1204,6 +1297,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.verify = self.verify
         obj.cert = self.cert
         obj.session = self.session
+        obj.timeout = self.timeout
         return obj
 
     def with_name(self, name):
@@ -1215,6 +1309,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.verify = self.verify
         obj.cert = self.cert
         obj.session = self.session
+        obj.timeout = self.timeout
         return obj
 
     def with_suffix(self, suffix):
@@ -1226,6 +1321,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.verify = self.verify
         obj.cert = self.cert
         obj.session = self.session
+        obj.timeout = self.timeout
         return obj
 
     def relative_to(self, *other):
@@ -1239,6 +1335,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.verify = self.verify
         obj.cert = self.cert
         obj.session = self.session
+        obj.timeout = self.timeout
         return obj
 
     def joinpath(self, *args):
@@ -1253,6 +1350,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.verify = self.verify
         obj.cert = self.cert
         obj.session = self.session
+        obj.timeout = self.timeout
         return obj
 
     def __truediv__(self, key):
@@ -1264,6 +1362,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.verify = self.verify
         obj.cert = self.cert
         obj.session = self.session
+        obj.timeout = self.timeout
         return obj
 
     def __rtruediv__(self, key):
@@ -1275,6 +1374,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.verify = self.verify
         obj.cert = self.cert
         obj.session = self.session
+        obj.timeout = self.timeout
         return obj
 
     if sys.version_info < (3,):
@@ -1287,6 +1387,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.verify = self.verify
         obj.cert = self.cert
         obj.session = self.session
+        obj.timeout = self.timeout
         return obj
 
     def _make_child_relpath(self, args):
@@ -1295,6 +1396,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.verify = self.verify
         obj.cert = self.cert
         obj.session = self.session
+        obj.timeout = self.timeout
         return obj
 
     def __iter__(self):
@@ -1650,6 +1752,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             verify=self.verify,
             cert=self.cert,
             session=self.session,
+            timeout=self.timeout,
         )
         return obj
 

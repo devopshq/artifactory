@@ -44,6 +44,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
 - [Advanced](#advanced)
   * [Session](#session)
   * [SSL Cert Verification Options](#ssl-cert-verification-options)
+  * [Timeout on requests](#timeout-on-requests)
   * [Troubleshooting](#troubleshooting)
   * [Global Configuration File](#global-configuration-file)
 - [Contribute](#contribute)
@@ -1020,6 +1021,33 @@ To disable these warning, one needs to call `urllib3.disable_warnings()`.
 import requests.packages.urllib3 as urllib3
 
 urllib3.disable_warnings()
+```
+
+## Timeout on requests ##
+
+The library supports `timeout` argument in the same meaner as [requests does](https://requests.readthedocs.io/en/master/user/advanced/#timeouts)
+```python
+from artifactory import ArtifactoryPath
+
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0"
+)
+```
+... is the same as
+```python
+from artifactory import ArtifactoryPath
+
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0", timeout=None
+)
+```
+Set 5 seconds timeout to your requests after which it will be terminated:
+```python
+from artifactory import ArtifactoryPath
+
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0", timeout=5
+)
 ```
 
 ## Troubleshooting ##
