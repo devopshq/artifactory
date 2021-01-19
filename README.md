@@ -977,6 +977,7 @@ urllib3.disable_warnings()
 
 ## Timeout on requests ##
 
+The library supports `timeout` argument in the same meaner as [requests does](https://requests.readthedocs.io/en/master/user/advanced/#timeouts)
 ```python
 from artifactory import ArtifactoryPath
 
