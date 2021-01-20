@@ -20,14 +20,34 @@ Development takes place on GitHub, where the git-flow branch structure is used:
 * ``feature/XXX`` - feature branches are used for development of new features before they are merged to ``develop``.
 
 ### Prepare development environment
+It is recommended to use Unix systems. You can use free Oracle Virtualbox and Ubuntu.  
+Setup script for Ubuntu system (python version might be 3.5+):
 ```bash
-pip install -r requirements-dev.txt
-pytest -munit
+python3.7 -m pip install -r requirements-dev.txt
+python3.7 -m pytest -munit
+
+# install ruby (required for pre-commit)
+sudo apt install ruby
+
+# run pre-commit
+python3.7 -m pre_commit install
+python3.7 -m pre_commit run --all-files
+```
+
+If you use another system procedure might be different.  
+General script:
+```bash
+python -m pip install -r requirements-dev.txt
+python -m pytest -munit
 
 # Install `pre-commit` hooks after clone:
 pre-commit install
 pre-commit run --all-files
+```
 
+## Tests
+Command snippet to run tests via tox
+```bash
 # Run unit tests
 tox
 # Run integration tests
@@ -36,13 +56,10 @@ tox -- -mintegration
 tox -- ""
 ```
 
-## Tests
-We have two type of test.
-
 ### Unit
 If you can write unit tests, please do so. How to run them:
 ```bash
-python -mpytest -munit
+python -m pytest -munit
 ```
 
 ### Integration

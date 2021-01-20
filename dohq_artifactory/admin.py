@@ -921,13 +921,13 @@ class PermissionTarget(AdminObject):
 
     def add_repository(self, *repos):
         for value in repos:
-            if isinstance(value, (Repository, RepositoryVirtual)):
+            if isinstance(value, GenericRepository):
                 value = value.name
             self._repositories.append(value)
 
     def remove_repository(self, *repos):
         for value in repos:
-            if isinstance(value, (Repository, RepositoryVirtual)):
+            if isinstance(value, GenericRepository):
                 value = value.name
             self._repositories.remove(value)
 

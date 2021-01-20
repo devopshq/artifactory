@@ -17,6 +17,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
   * [Artifactory SaaS](#artifactory-saas)
   * [Walking Directory Tree](#walking-directory-tree)
   * [Downloading Artifacts](#downloading-artifacts)
+  * [Downloading Artifacts in chunks](#downloading-artifacts-in-chunks)
   * [Downloading Artifacts folder as archive](#downloading-artifacts-folder-as-archive)
   * [Uploading Artifacts](#uploading-artifacts)
   * [Copy Artifacts](#copy-artifacts)
@@ -43,6 +44,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
 - [Advanced](#advanced)
   * [Session](#session)
   * [SSL Cert Verification Options](#ssl-cert-verification-options)
+  * [Timeout on requests](#timeout-on-requests)
   * [Troubleshooting](#troubleshooting)
   * [Global Configuration File](#global-configuration-file)
 - [Contribute](#contribute)
@@ -162,6 +164,23 @@ path = ArtifactoryPath(
 with path.open() as fd, open("tomcat.tar.gz", "wb") as out:
     out.write(fd.read())
 ```
+
+## Downloading Artifacts in chunks ##
+
+Download artifact to the local filesystem using chunks (in bytes) to prevent loading the entire response into memory at once.
+This can help with getting big files or resolve [known issue](https://github.com/devopshq/artifactory/issues/135)
+
+```python
+from artifactory import ArtifactoryPath
+
+path = ArtifactoryPath(
+    "http://repo.jfrog.org/artifactory/distributions/org/apache/tomcat/apache-tomcat-7.0.11.tar.gz"
+)
+
+with open("tomcat.tar.gz", "wb") as out:
+    path.writeto(out, chunk_size=256)
+```
+
 
 ## Downloading Artifacts folder as archive ##
 Download artifact folder to a local filesystem as archive (supports zip/tar/tar.gz/tgz)
@@ -972,6 +991,33 @@ To disable these warning, one needs to call `urllib3.disable_warnings()`.
 import requests.packages.urllib3 as urllib3
 
 urllib3.disable_warnings()
+```
+
+## Timeout on requests ##
+
+The library supports `timeout` argument in the same meaner as [requests does](https://requests.readthedocs.io/en/master/user/advanced/#timeouts)
+```python
+from artifactory import ArtifactoryPath
+
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0"
+)
+```
+... is the same as
+```python
+from artifactory import ArtifactoryPath
+
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0", timeout=None
+)
+```
+Set 5 seconds timeout to your requests after which it will be terminated:
+```python
+from artifactory import ArtifactoryPath
+
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0", timeout=5
+)
 ```
 
 ## Troubleshooting ##
