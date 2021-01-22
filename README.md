@@ -212,6 +212,20 @@ path.mkdir()
 
 path.deploy_file("./myapp-1.0.tar.gz")
 ```
+
+Deploy artifacts from archive: this will automatically extract the contents of the archive on the server preserving the archive's paths
+
+```python
+from artifactory import ArtifactoryPath
+
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0"
+)
+path.mkdir()
+
+path.deploy_file("./myapp-1.0.tar.gz", explode_archive=True)
+```
+
 Deploy a debian package ```myapp-1.0.deb```
 
 ```python
