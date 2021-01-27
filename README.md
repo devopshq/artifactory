@@ -187,14 +187,6 @@ path.writeto(output="tomcat2.tar.gz", progress_func=None)
 with open("tomcat3.tar.gz", "wb") as out:
     path.writeto(out, chunk_size=256)
 
-# select another method for progress reporting (printing) eg print instead of logging
-from artifactory import print_download_progress
-
-path.writeto(
-    output="tomcat4.tar.gz",
-    progress_func=lambda x, y: print_download_progress(x, y, print_method=print),
-)
-
 # download and use custom print function
 def custom_print(bytes_now, total, custom):
     """

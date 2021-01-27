@@ -245,12 +245,11 @@ def chunks(data, size):
         yield {k: data[k] for k in islice(it, size)}
 
 
-def print_download_progress(bytes_now, total_size, print_method=logging.debug):
+def log_download_progress(bytes_now, total_size):
     """
-    Function to print download progress
+    Function to log download progress
     :param bytes_now: current number of bytes
     :param total_size: total file size in bytes
-    :param print_method: function to report progress
     :return:
     """
     if total_size > 0:
@@ -262,7 +261,7 @@ def print_download_progress(bytes_now, total_size, print_method=logging.debug):
     else:
         msg = "Downloaded {}MB".format(int(bytes_now / 1024 / 1024))
 
-    print_method(msg)
+    logging.debug(msg)
 
 
 class HTTPResponseWrapper(object):
@@ -1820,7 +1819,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             return obj
         return None
 
-    def writeto(self, output, chunk_size=1024, progress_func=print_download_progress):
+    def writeto(self, output, chunk_size=1024, progress_func=log_download_progress):
         """
         Downloads large file in chunks and and call a progress function.
 
