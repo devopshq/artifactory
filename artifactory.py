@@ -912,7 +912,16 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         return raw
 
-    def deploy(self, pathobj, fobj, md5=None, sha1=None, sha256=None, parameters=None):
+    def deploy(
+        self,
+        pathobj,
+        fobj,
+        md5=None,
+        sha1=None,
+        sha256=None,
+        parameters=None,
+        explode_archive=None,
+    ):
         """
         Uploads a given file-like object
         HTTP chunked encoding will be attempted
@@ -933,6 +942,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             headers["X-Checksum-Sha1"] = sha1
         if sha256:
             headers["X-Checksum-Sha256"] = sha256
+        if explode_archive:
+            headers["X-Explode-Archive"] = "true"
 
         text, code = self.rest_put_stream(
             url,
@@ -1479,16 +1490,36 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         raise NotImplementedError()
 
-    def deploy(self, fobj, md5=None, sha1=None, sha256=None, parameters={}):
+    def deploy(
+        self,
+        fobj,
+        md5=None,
+        sha1=None,
+        sha256=None,
+        parameters={},
+        explode_archive=None,
+    ):
         """
         Upload the given file object to this path
         """
         return self._accessor.deploy(
-            self, fobj, md5=md5, sha1=sha1, sha256=sha256, parameters=parameters
+            self,
+            fobj,
+            md5=md5,
+            sha1=sha1,
+            sha256=sha256,
+            parameters=parameters,
+            explode_archive=explode_archive,
         )
 
     def deploy_file(
-        self, file_name, calc_md5=True, calc_sha1=True, calc_sha256=True, parameters={}
+        self,
+        file_name,
+        calc_md5=True,
+        calc_sha1=True,
+        calc_sha256=True,
+        parameters={},
+        explode_archive=False,
     ):
         """
         Upload the given file to this path
@@ -1504,7 +1535,12 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         with open(file_name, "rb") as fobj:
             target.deploy(
-                fobj, md5=md5, sha1=sha1, sha256=sha256, parameters=parameters
+                fobj,
+                md5=md5,
+                sha1=sha1,
+                sha256=sha256,
+                parameters=parameters,
+                explode_archive=explode_archive,
             )
 
     def deploy_deb(
