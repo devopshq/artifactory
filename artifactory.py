@@ -245,6 +245,25 @@ def chunks(data, size):
         yield {k: data[k] for k in islice(it, size)}
 
 
+def log_download_progress(bytes_now, total_size):
+    """
+    Function to log download progress
+    :param bytes_now: current number of bytes
+    :param total_size: total file size in bytes
+    :return:
+    """
+    if total_size > 0:
+        msg = "Downloaded {}/{}MB...[{}%]".format(
+            int(bytes_now / 1024 / 1024),
+            int(total_size / 1024 / 1024),
+            round(bytes_now / total_size * 100, 2),
+        )
+    else:
+        msg = "Downloaded {}MB".format(int(bytes_now / 1024 / 1024))
+
+    logging.debug(msg)
+
+
 class HTTPResponseWrapper(object):
     """
     This class is intended as a workaround for 'requests' module
@@ -328,6 +347,29 @@ def encode_properties(parameters):
         result.append("=".join((param, value)))
 
     return ";".join(result)
+
+
+# Declare contextlib class that was enabled in Py 3.7. Declare for compatibility with 3.5
+# this class is taken and modified from standard module contextlib
+class nullcontext:
+    """Context manager that does no additional processing.
+
+    Used as a stand-in for a normal context manager, when a particular
+    block of code is only sometimes used with a normal context manager:
+
+    cm = optional_cm if condition else nullcontext()
+    with cm:
+        # Perform operation, using optional_cm if condition is True
+    """
+
+    def __init__(self, enter_result=None):
+        self.enter_result = enter_result
+
+    def __enter__(self):
+        return self.enter_result
+
+    def __exit__(self, *excinfo):
+        pass
 
 
 class _ArtifactoryFlavour(pathlib._Flavour):
@@ -669,8 +711,10 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         Perform a chunked GET request to url with requests.session
         This is specifically to download files.
         """
-        res = session.get(url, stream=True, verify=verify, cert=cert, timeout=timeout)
-        return res.raw, res.status_code
+        response = session.get(
+            url, stream=True, verify=verify, cert=cert, timeout=timeout
+        )
+        return response
 
     def get_stat_json(self, pathobj):
         """
@@ -898,19 +942,27 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         Given the nature of HTTP streaming, this object doesn't support
         seek()
         """
+        response = self.get_response(pathobj)
+        return response.raw
+
+    def get_response(self, pathobj):
+        """
+        :param pathobj: ArtifactoryPath object
+        :return: request response
+        """
         url = str(pathobj)
-        raw, code = self.rest_get_stream(
+        response = self.rest_get_stream(
             url,
             session=pathobj.session,
             verify=pathobj.verify,
             cert=pathobj.cert,
             timeout=pathobj.timeout,
         )
-
+        code = response.status_code
         if code != 200:
             raise RuntimeError(code)
 
-        return raw
+        return response
 
     def deploy(
         self,
@@ -1113,14 +1165,24 @@ class _ArtifactoryAccessor(pathlib._Accessor):
     def scandir(self, pathobj):
         return _ScandirIter((pathobj.joinpath(x) for x in self.listdir(pathobj)))
 
-    def writeto(self, fd, out, chunk_size):
-        url = str(fd)
-        res = fd.session.get(url, stream=True, verify=True, cert=None)
-        if res.status_code != 200:
-            raise RuntimeError(res.status_code)
-        for chunk in res.iter_content(chunk_size=chunk_size):
-            if chunk:
-                out.write(chunk)
+    def writeto(self, pathobj, file, chunk_size, progress_func):
+        """
+        Downloads large file in chunks and prints progress
+        :param pathobj: path like object
+        :param file: IO object
+        :param chunk_size: chunk size in bytes, recommend. eg 1024*1024 is 1Mb
+        :param progress_func: Provide custom function to print output or suppress print by setting to None
+        :return: None
+        """
+
+        response = self.get_response(pathobj)
+        file_size = int(response.headers.get("Content-Length", 0))
+        bytes_read = 0
+        for chunk in response.iter_content(chunk_size=chunk_size):
+            bytes_read += len(chunk)
+            if callable(progress_func):
+                progress_func(bytes_read, file_size)
+            file.write(chunk)
 
 
 _artifactory_accessor = _ArtifactoryAccessor()
@@ -1793,17 +1855,22 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             return obj
         return None
 
-    def writeto(self, out, chunk_size=None):
+    def writeto(self, output, chunk_size=1024, progress_func=log_download_progress):
         """
-        Writes artifact to file descriptor in chunks
+        Downloads large file in chunks and and call a progress function.
 
-        :param out: File Descriptor
-        :param chunk_size: Chunk size, default 256
+        :param output: file path of output file
+        :param chunk_size: chunk size in bytes, recommend. eg 1024*1024 is 1MiB
+        :param progress_func: Provide custom function to print output or suppress print by setting to None
+        :return: None
         """
-        if not chunk_size:
-            chunk_size = 256
+        if isinstance(output, str) or isinstance(output, pathlib.Path):
+            context = open(output, "wb")
+        else:
+            context = nullcontext(output)
 
-        self._accessor.writeto(self, out, chunk_size=chunk_size)
+        with context as file:
+            self._accessor.writeto(self, file, chunk_size, progress_func)
 
     def _get_all(self, lazy: bool, url=None, key="name", cls=None):
         """
