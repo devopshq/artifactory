@@ -1171,7 +1171,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         :param pathobj: path like object
         :param file: IO object
         :param chunk_size: chunk size in bytes, recommend. eg 1024*1024 is 1Mb
-        :param progress_func: Provide custom function to print output or suppress print by setting to None
+        :param progress_func: Provide custom function to print out or suppress print by setting to None
         :return: None
         """
 
@@ -1855,19 +1855,19 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             return obj
         return None
 
-    def writeto(self, output, chunk_size=1024, progress_func=log_download_progress):
+    def writeto(self, out, chunk_size=1024, progress_func=log_download_progress):
         """
         Downloads large file in chunks and and call a progress function.
 
-        :param output: file path of output file
+        :param out: file path of output file
         :param chunk_size: chunk size in bytes, recommend. eg 1024*1024 is 1MiB
         :param progress_func: Provide custom function to print output or suppress print by setting to None
         :return: None
         """
-        if isinstance(output, str) or isinstance(output, pathlib.Path):
-            context = open(output, "wb")
+        if isinstance(out, str) or isinstance(out, pathlib.Path):
+            context = open(out, "wb")
         else:
-            context = nullcontext(output)
+            context = nullcontext(out)
 
         with context as file:
             self._accessor.writeto(self, file, chunk_size, progress_func)

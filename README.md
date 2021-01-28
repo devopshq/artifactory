@@ -177,15 +177,16 @@ path = ArtifactoryPath(
     "http://repo.jfrog.org/artifactory/distributions/org/apache/tomcat/apache-tomcat-7.0.11.tar.gz"
 )
 
-# download by providing path to output file and use default chunk 1024
-path.writeto(output="tomcat.tar.gz")
+# download by providing path to out file and use default chunk 1024
+path.writeto(out="tomcat.tar.gz")
 
 # download and suppress progress messages
-path.writeto(output="tomcat2.tar.gz", progress_func=None)
+path.writeto(out="tomcat2.tar.gz", progress_func=None)
 
-# download by providing output as file object and specify chunk size
+# download by providing out as file object and specify chunk size
 with open("tomcat3.tar.gz", "wb") as out:
     path.writeto(out, chunk_size=256)
+
 
 # download and use custom print function
 def custom_print(bytes_now, total, custom):
@@ -198,7 +199,7 @@ def custom_print(bytes_now, total, custom):
 # since writeto requires [int, int] in its signature, all custom arguments you have to provide via lambda function or
 # similar methods
 path.writeto(
-    output="tomcat5.tar.gz",
+    out="tomcat5.tar.gz",
     progress_func=lambda x, y: custom_print(x, y, custom="test"),
 )
 ```
