@@ -1692,8 +1692,10 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             timeout=self.timeout,
         )
         return obj
-    
-    def promote_docker_image(self, source_repo, target_repo, docker_repo, tag, copy=False):
+
+    def promote_docker_image(
+        self, source_repo, target_repo, docker_repo, tag, copy=False
+    ):
         """
         Promote Docker image from source repo to target repo
         :param source_repo: source repository
@@ -1703,20 +1705,27 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         :param copy (bool): whether to move the image or copy it
         :return:
         """
-        promote_url = "{}/api/docker/{}/v2/promote".format(self.drive.rstrip("/"), source_repo)
-        promote_data = json.dumps({
-            "targetRepo": target_repo,
-            "dockerRepository": docker_repo,
-            "tag": tag,
-            "copy": copy
-        })
-        headers = {
-            "Content-Type": "application/json"
-        }
+        promote_url = "{}/api/docker/{}/v2/promote".format(
+            self.drive.rstrip("/"), source_repo
+        )
+        promote_data = json.dumps(
+            {
+                "targetRepo": target_repo,
+                "dockerRepository": docker_repo,
+                "tag": tag,
+                "copy": copy,
+            }
+        )
+        headers = {"Content-Type": "application/json"}
         r = self.session.post(promote_url, data=promote_data, headers=headers)
-        if (r.status_code == 400 and "Unsupported docker" in r.text
-            or r.status_code == 403 and "No permission" in r.text
-            or r.status_code == 404 and "Unable to find" in r.text):
+        if (
+            r.status_code == 400
+            and "Unsupported docker" in r.text
+            or r.status_code == 403
+            and "No permission" in r.text
+            or r.status_code == 404
+            and "Unable to find" in r.text
+        ):
             raise ArtifactoryException(r.text)
         else:
             r.raise_for_status()
