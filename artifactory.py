@@ -1708,16 +1708,13 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         promote_url = "{}/api/docker/{}/v2/promote".format(
             self.drive.rstrip("/"), source_repo
         )
-        promote_data = json.dumps(
-            {
-                "targetRepo": target_repo,
-                "dockerRepository": docker_repo,
-                "tag": tag,
-                "copy": copy,
-            }
-        )
-        headers = {"Content-Type": "application/json"}
-        r = self.session.post(promote_url, data=promote_data, headers=headers)
+        promote_data = {
+            "targetRepo": target_repo,
+            "dockerRepository": docker_repo,
+            "tag": tag,
+            "copy": copy,
+        }
+        r = self.session.post(promote_url, json=promote_data)
         if (
             r.status_code == 400
             and "Unsupported docker" in r.text
