@@ -26,6 +26,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
   * [Artifact properties](#artifact-properties)
   * [Artifactory Query Language](#artifactory-query-language)
   * [FileStat](#filestat)
+  * [Promote Docker image](#promote-docker-image)
 - [Admin area](#admin-area)
   * [User](#user)
   * [Group](#group)
@@ -432,6 +433,16 @@ print(stat.sha256)
 print(stat.ctime)
 print(stat.is_dir)
 print(stat.size)
+```
+
+## Promote Docker image
+Promotes a Docker image in a registry to another registry.
+```
+from artifactory import ArtifactoryPath
+
+path = ArtifactoryPath("http://example.com/artifactory")
+
+path.promote_docker_image("docker-staging", "docker-prod", "my-application", "0.5.1")
 ```
 
 # Admin area
