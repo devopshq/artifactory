@@ -1296,10 +1296,6 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         :param: check_sum (bool): defines of check sum is required along with download
         :return: raw object for download
         """
-        print(
-            "This method will deprecated in future versions. Consider using path.archive(). "
-            "See readme for more information"
-        )
         return self._accessor.open(self.archive(archive_type, check_sum))
 
     def owner(self):
