@@ -26,6 +26,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
   * [Artifact properties](#artifact-properties)
   * [Artifactory Query Language](#artifactory-query-language)
   * [FileStat](#filestat)
+  * [Promote Docker image](#promote-docker-image)
 - [Admin area](#admin-area)
   * [User](#user)
   * [Group](#group)
@@ -177,8 +178,31 @@ path = ArtifactoryPath(
     "http://repo.jfrog.org/artifactory/distributions/org/apache/tomcat/apache-tomcat-7.0.11.tar.gz"
 )
 
-with open("tomcat.tar.gz", "wb") as out:
+# download by providing path to out file and use default chunk 1024
+path.writeto(out="tomcat.tar.gz")
+
+# download and suppress progress messages
+path.writeto(out="tomcat2.tar.gz", progress_func=None)
+
+# download by providing out as file object and specify chunk size
+with open("tomcat3.tar.gz", "wb") as out:
     path.writeto(out, chunk_size=256)
+
+
+# download and use custom print function
+def custom_print(bytes_now, total, custom):
+    """
+    Custom function that accepts first two arguments as [int, int] in its signature
+    """
+    print(bytes_now, total, custom)
+
+
+# since writeto requires [int, int] in its signature, all custom arguments you have to provide via lambda function or
+# similar methods
+path.writeto(
+    out="tomcat5.tar.gz",
+    progress_func=lambda x, y: custom_print(x, y, custom="test"),
+)
 ```
 
 
@@ -212,6 +236,20 @@ path.mkdir()
 
 path.deploy_file("./myapp-1.0.tar.gz")
 ```
+
+Deploy artifacts from archive: this will automatically extract the contents of the archive on the server preserving the archive's paths
+
+```python
+from artifactory import ArtifactoryPath
+
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0"
+)
+path.mkdir()
+
+path.deploy_file("./myapp-1.0.tar.gz", explode_archive=True)
+```
+
 Deploy a debian package ```myapp-1.0.deb```
 
 ```python
@@ -395,6 +433,16 @@ print(stat.sha256)
 print(stat.ctime)
 print(stat.is_dir)
 print(stat.size)
+```
+
+## Promote Docker image
+Promotes a Docker image in a registry to another registry.
+```
+from artifactory import ArtifactoryPath
+
+path = ArtifactoryPath("http://example.com/artifactory")
+
+path.promote_docker_image("docker-staging", "docker-prod", "my-application", "0.5.1")
 ```
 
 # Admin area

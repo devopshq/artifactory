@@ -245,6 +245,25 @@ def chunks(data, size):
         yield {k: data[k] for k in islice(it, size)}
 
 
+def log_download_progress(bytes_now, total_size):
+    """
+    Function to log download progress
+    :param bytes_now: current number of bytes
+    :param total_size: total file size in bytes
+    :return:
+    """
+    if total_size > 0:
+        msg = "Downloaded {}/{}MB...[{}%]".format(
+            int(bytes_now / 1024 / 1024),
+            int(total_size / 1024 / 1024),
+            round(bytes_now / total_size * 100, 2),
+        )
+    else:
+        msg = "Downloaded {}MB".format(int(bytes_now / 1024 / 1024))
+
+    logging.debug(msg)
+
+
 class HTTPResponseWrapper(object):
     """
     This class is intended as a workaround for 'requests' module
@@ -328,6 +347,29 @@ def encode_properties(parameters):
         result.append("=".join((param, value)))
 
     return ";".join(result)
+
+
+# Declare contextlib class that was enabled in Py 3.7. Declare for compatibility with 3.5
+# this class is taken and modified from standard module contextlib
+class nullcontext:
+    """Context manager that does no additional processing.
+
+    Used as a stand-in for a normal context manager, when a particular
+    block of code is only sometimes used with a normal context manager:
+
+    cm = optional_cm if condition else nullcontext()
+    with cm:
+        # Perform operation, using optional_cm if condition is True
+    """
+
+    def __init__(self, enter_result=None):
+        self.enter_result = enter_result
+
+    def __enter__(self):
+        return self.enter_result
+
+    def __exit__(self, *excinfo):
+        pass
 
 
 class _ArtifactoryFlavour(pathlib._Flavour):
@@ -669,8 +711,10 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         Perform a chunked GET request to url with requests.session
         This is specifically to download files.
         """
-        res = session.get(url, stream=True, verify=verify, cert=cert, timeout=timeout)
-        return res.raw, res.status_code
+        response = session.get(
+            url, stream=True, verify=verify, cert=cert, timeout=timeout
+        )
+        return response
 
     def get_stat_json(self, pathobj):
         """
@@ -898,21 +942,38 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         Given the nature of HTTP streaming, this object doesn't support
         seek()
         """
+        response = self.get_response(pathobj)
+        return response.raw
+
+    def get_response(self, pathobj):
+        """
+        :param pathobj: ArtifactoryPath object
+        :return: request response
+        """
         url = str(pathobj)
-        raw, code = self.rest_get_stream(
+        response = self.rest_get_stream(
             url,
             session=pathobj.session,
             verify=pathobj.verify,
             cert=pathobj.cert,
             timeout=pathobj.timeout,
         )
-
+        code = response.status_code
         if code != 200:
             raise RuntimeError(code)
 
-        return raw
+        return response
 
-    def deploy(self, pathobj, fobj, md5=None, sha1=None, sha256=None, parameters=None):
+    def deploy(
+        self,
+        pathobj,
+        fobj,
+        md5=None,
+        sha1=None,
+        sha256=None,
+        parameters=None,
+        explode_archive=None,
+    ):
         """
         Uploads a given file-like object
         HTTP chunked encoding will be attempted
@@ -933,6 +994,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             headers["X-Checksum-Sha1"] = sha1
         if sha256:
             headers["X-Checksum-Sha256"] = sha256
+        if explode_archive:
+            headers["X-Explode-Archive"] = "true"
 
         text, code = self.rest_put_stream(
             url,
@@ -1102,14 +1165,24 @@ class _ArtifactoryAccessor(pathlib._Accessor):
     def scandir(self, pathobj):
         return _ScandirIter((pathobj.joinpath(x) for x in self.listdir(pathobj)))
 
-    def writeto(self, fd, out, chunk_size):
-        url = str(fd)
-        res = fd.session.get(url, stream=True, verify=True, cert=None)
-        if res.status_code != 200:
-            raise RuntimeError(res.status_code)
-        for chunk in res.iter_content(chunk_size=chunk_size):
-            if chunk:
-                out.write(chunk)
+    def writeto(self, pathobj, file, chunk_size, progress_func):
+        """
+        Downloads large file in chunks and prints progress
+        :param pathobj: path like object
+        :param file: IO object
+        :param chunk_size: chunk size in bytes, recommend. eg 1024*1024 is 1Mb
+        :param progress_func: Provide custom function to print out or suppress print by setting to None
+        :return: None
+        """
+
+        response = self.get_response(pathobj)
+        file_size = int(response.headers.get("Content-Length", 0))
+        bytes_read = 0
+        for chunk in response.iter_content(chunk_size=chunk_size):
+            bytes_read += len(chunk)
+            if callable(progress_func):
+                progress_func(bytes_read, file_size)
+            file.write(chunk)
 
 
 _artifactory_accessor = _ArtifactoryAccessor()
@@ -1479,16 +1552,36 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         raise NotImplementedError()
 
-    def deploy(self, fobj, md5=None, sha1=None, sha256=None, parameters={}):
+    def deploy(
+        self,
+        fobj,
+        md5=None,
+        sha1=None,
+        sha256=None,
+        parameters={},
+        explode_archive=None,
+    ):
         """
         Upload the given file object to this path
         """
         return self._accessor.deploy(
-            self, fobj, md5=md5, sha1=sha1, sha256=sha256, parameters=parameters
+            self,
+            fobj,
+            md5=md5,
+            sha1=sha1,
+            sha256=sha256,
+            parameters=parameters,
+            explode_archive=explode_archive,
         )
 
     def deploy_file(
-        self, file_name, calc_md5=True, calc_sha1=True, calc_sha256=True, parameters={}
+        self,
+        file_name,
+        calc_md5=True,
+        calc_sha1=True,
+        calc_sha256=True,
+        parameters={},
+        explode_archive=False,
     ):
         """
         Upload the given file to this path
@@ -1504,7 +1597,12 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         with open(file_name, "rb") as fobj:
             target.deploy(
-                fobj, md5=md5, sha1=sha1, sha256=sha256, parameters=parameters
+                fobj,
+                md5=md5,
+                sha1=sha1,
+                sha256=sha256,
+                parameters=parameters,
+                explode_archive=explode_archive,
             )
 
     def deploy_deb(
@@ -1693,6 +1791,40 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         )
         return obj
 
+    def promote_docker_image(
+        self, source_repo, target_repo, docker_repo, tag, copy=False
+    ):
+        """
+        Promote Docker image from source repo to target repo
+        :param source_repo: source repository
+        :param target_repo: target repository
+        :param docker_repo: Docker repository to promote
+        :param tag: Docker tag to promote
+        :param copy (bool): whether to move the image or copy it
+        :return:
+        """
+        promote_url = "{}/api/docker/{}/v2/promote".format(
+            self.drive.rstrip("/"), source_repo
+        )
+        promote_data = {
+            "targetRepo": target_repo,
+            "dockerRepository": docker_repo,
+            "tag": tag,
+            "copy": copy,
+        }
+        r = self.session.post(promote_url, json=promote_data)
+        if (
+            r.status_code == 400
+            and "Unsupported docker" in r.text
+            or r.status_code == 403
+            and "No permission" in r.text
+            or r.status_code == 404
+            and "Unable to find" in r.text
+        ):
+            raise ArtifactoryException(r.text)
+        else:
+            r.raise_for_status()
+
     @property
     def repo(self):
         return self._root.replace("/", "")
@@ -1757,17 +1889,22 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             return obj
         return None
 
-    def writeto(self, out, chunk_size=None):
+    def writeto(self, out, chunk_size=1024, progress_func=log_download_progress):
         """
-        Writes artifact to file descriptor in chunks
+        Downloads large file in chunks and and call a progress function.
 
-        :param out: File Descriptor
-        :param chunk_size: Chunk size, default 256
+        :param out: file path of output file
+        :param chunk_size: chunk size in bytes, recommend. eg 1024*1024 is 1MiB
+        :param progress_func: Provide custom function to print output or suppress print by setting to None
+        :return: None
         """
-        if not chunk_size:
-            chunk_size = 256
+        if isinstance(out, str) or isinstance(out, pathlib.Path):
+            context = open(out, "wb")
+        else:
+            context = nullcontext(out)
 
-        self._accessor.writeto(self, out, chunk_size=chunk_size)
+        with context as file:
+            self._accessor.writeto(self, file, chunk_size, progress_func)
 
     def _get_all(self, lazy: bool, url=None, key="name", cls=None):
         """
