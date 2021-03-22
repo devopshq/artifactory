@@ -209,6 +209,7 @@ path.writeto(
 ## Downloading Artifacts folder as archive ##
 Download artifact folder to a local filesystem as archive (supports zip/tar/tar.gz/tgz)
 Allows to specify archive type and request checksum for the folder
+
 Note: Archiving should be enabled on the server!
 ```python
 from artifactory import ArtifactoryPath
@@ -217,9 +218,12 @@ path = ArtifactoryPath(
     "http://my_url:8080/artifactory/my_repo/winx64/aas", auth=("user", "password")
 )
 
-with path.download_folder_archive(archive_type="zip", check_sum=False) as archive:
+with path.archive(archive_type="zip", check_sum=False) as archive:
     with open(r"D:\target.zip", "wb") as out:
         out.write(archive.read())
+
+# download folder archive in chunks
+path.archive().writeto(output="my.zip", chunk_size=100 * 1024)
 ```
 
 ## Uploading Artifacts ##
