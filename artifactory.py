@@ -1053,7 +1053,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         params = {
             "to": str(dst.relative_to(dst.drive)).rstrip("/"),
-            "suppressLayouts": int(suppress_layouts)
+            "suppressLayouts": int(suppress_layouts),
         }
 
         text, code = self.rest_post(
