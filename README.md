@@ -323,6 +323,12 @@ http://example.com/artifactory/published/production/product-1.0.0.tar.pom
 ## Move Artifacts
 Move artifact from this path to destination.
 
+The suppress_layouts parameter, when set to `True`, will allow artifacts
+from one path to be copied directly into another path without enforcing
+repository layouts. The default behaviour is to copy to the repository
+root, but remap the [org], [module], [baseVer], etc. structure to the
+target repository.
+
 ```python
 from artifactory import ArtifactoryPath
 
