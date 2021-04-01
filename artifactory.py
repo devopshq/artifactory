@@ -1039,7 +1039,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if code not in (200, 201):
             raise RuntimeError(text)
 
-    def move(self, src, dst):
+    def move(self, src, dst, suppress_layouts=False):
         """
         Move artifact from src to dst
         """
@@ -1051,7 +1051,10 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             ]
         )
 
-        params = {"to": str(dst.relative_to(dst.drive)).rstrip("/")}
+        params = {
+            "to": str(dst.relative_to(dst.drive)).rstrip("/"),
+            "suppressLayouts": int(suppress_layouts),
+        }
 
         text, code = self.rest_post(
             url,
@@ -1692,9 +1695,15 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             with self.open() as fobj:
                 dst.deploy(fobj)
 
-    def move(self, dst):
+    def move(self, dst, suppress_layouts=False):
         """
         Move artifact from this path to destinaiton.
+
+        The suppress_layouts parameter, when set to True, will allow artifacts
+        from one path to be moved directly into another path without enforcing
+        repository layouts. The default behaviour is to move the repository
+        root, but remap the [org], [module], [baseVer], etc. structure to the
+        target repository.
         """
         if self.drive.rstrip("/") != dst.drive.rstrip("/"):
             raise NotImplementedError("Moving between instances is not implemented yet")
