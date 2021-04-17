@@ -1644,7 +1644,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     def copy(self, dst, suppress_layouts=False):
         """
-        Copy artifact from this path to destinaiton.
+        Copy artifact from this path to destination.
         If files are on the same instance of artifactory, lightweight (local)
         copying will be attempted.
 
