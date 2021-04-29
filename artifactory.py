@@ -1318,17 +1318,15 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         Get status of the repo replication
         :return:
-            namedtuple('status' (bool): True only if OK, 'details' (dict): full response
+            (dict): full response, where keys:
+                {status}= never_run|incomplete(running or interrupted)|error|warn|ok|inconsistent
+                {time}= time in ISO8601 format (yyyy-MM-dd'T'HH:mm:ss.SSSZ), or null if never completed
         """
         replication_url = self.drive + "/api/replication/" + self.repo
         replication_obj = self.joinpath(replication_url)
         resp = self._accessor.get_response(replication_obj).json()
 
-        success = True if resp["status"] == "ok" else False
-        Replication = collections.namedtuple("Replication", ["status", "details"])
-        replication = Replication(success, resp)
-
-        return replication
+        return resp
 
     def with_name(self, name):
         """

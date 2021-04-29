@@ -24,6 +24,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
   * [Move Artifacts](#move-artifacts)
   * [Remove Artifacts](#remove-artifacts)
   * [Artifact properties](#artifact-properties)
+  * [Repository Scheduled Replication Status](#repository-scheduled-replication-status)
   * [Artifactory Query Language](#artifactory-query-language)
   * [FileStat](#filestat)
   * [Promote Docker image](#promote-docker-image)
@@ -374,6 +375,24 @@ path.properties = properties
 # Remove properties
 properties.pop("release")
 path.properties = properties
+```
+
+## Repository Scheduled Replication Status ##
+Returns the status of scheduled  cron-based replication jobs define via the Artifactory UI on repositories.
+Supported by local, local-cached and remote repositories.
+
+Notes: Requires Artifactory Pro
+
+Security: Requires a user with 'read' permission (can be anonymous)
+```python
+from artifactory import ArtifactoryPath
+
+path = ArtifactoryPath(
+    "https://repo.jfrog.org/artifactory/repo1-cache/archetype-catalog.xml"
+)
+
+rep_status = path.replication_status
+print("status: ", rep_status["status"])
 ```
 
 ## Artifactory Query Language
