@@ -1313,6 +1313,23 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.timeout = self.timeout
         return obj
 
+    @property
+    def replication_status(self):
+        """
+        Get status of the repo replication
+        :return:
+            namedtuple('status' (bool): True only if OK, 'details' (dict): full response
+        """
+        replication_url = self.drive + "/api/replication/" + self.repo
+        replication_obj = self.joinpath(replication_url)
+        resp = self._accessor.get_response(replication_obj).json()
+
+        success = True if resp["status"] == "ok" else False
+        Replication = collections.namedtuple("Replication", ["status", "details"])
+        replication = Replication(success, resp)
+
+        return replication
+
     def with_name(self, name):
         """
         Return a new path with the file name changed.
