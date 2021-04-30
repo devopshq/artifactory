@@ -1313,6 +1313,21 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.timeout = self.timeout
         return obj
 
+    @property
+    def replication_status(self):
+        """
+        Get status of the repo replication
+        :return:
+            (dict): full response, where keys:
+                {status}= never_run|incomplete(running or interrupted)|error|warn|ok|inconsistent
+                {time}= time in ISO8601 format (yyyy-MM-dd'T'HH:mm:ss.SSSZ), or null if never completed
+        """
+        replication_url = self.drive + "/api/replication/" + self.repo
+        replication_obj = self.joinpath(replication_url)
+        resp = self._accessor.get_response(replication_obj).json()
+
+        return resp
+
     def with_name(self, name):
         """
         Return a new path with the file name changed.
