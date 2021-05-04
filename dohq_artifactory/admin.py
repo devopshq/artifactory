@@ -319,9 +319,9 @@ class Group(AdminObject):
     def __init__(self, artifactory, name):
         super(Group, self).__init__(artifactory)
 
+        self.name = name
         self.description = ""
         self.external = False
-        self.name = name
         self.autoJoin = False
         self.realm = "artifactory"
         self.newUserDefault = False
@@ -336,9 +336,10 @@ class Group(AdminObject):
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
         """
         data_json = {
-            "description": self.description,
-            "external": self.external,
             "name": self.name,
+            "description": self.description,
+            "autoJoin": self.autoJoin,
+            "external": self.external,
             "newUserDefault": self.newUserDefault,
             "realm": self.realm,
         }
@@ -352,12 +353,13 @@ class Group(AdminObject):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
         """
-        self.description = response.get("description")
-        self.external = response.get("external")
         self.name = response.get("name")
-        self.newUserDefault = response.get("newUserDefault")
+        self.description = response.get("description")
+        self.autoJoin = response.get("autoJoin")
         self.realm = response.get("realm")
         self.realmAttributes = response.get("realmAttributes")
+        self.external = response.get("external")
+        self.newUserDefault = response.get("newUserDefault")
         self.users = response.get("usersInGroup")
 
     def delete(self):
