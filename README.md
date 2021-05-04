@@ -540,6 +540,14 @@ if group is None:
 # You can re-read from Artifactory
 group.read()
 
+# You can add multiple users at once to Group
+group.users = ["admin", "anonymous"]
+group.create()
+
+# You can remove all users from a Group
+group.users = []
+group.create()
+
 group.delete()
 ```
 
