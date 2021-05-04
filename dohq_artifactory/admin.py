@@ -219,9 +219,9 @@ class User(AdminObject):
 
         self.password = password
         self.admin = admin
-        self.profileUpdatable = profile_updatable
-        self.disableUIAccess = disable_ui
-        self.internalPasswordDisabled = False
+        self.profile_updatable = profile_updatable
+        self.disable_ui_access = disable_ui
+        self.internal_password_disabled = False
         self._groups = []
 
         self._lastLoggedIn = None
@@ -236,9 +236,9 @@ class User(AdminObject):
             "email": self.email,
             "password": self.password,
             "admin": self.admin,
-            "profileUpdatable": self.profileUpdatable,
-            "disableUIAccess": self.disableUIAccess,
-            "internalPasswordDisabled": self.internalPasswordDisabled,
+            "profileUpdatable": self.profile_updatable,
+            "disableUIAccess": self.disable_ui_access,
+            "internalPasswordDisabled": self.internal_password_disabled,
             "groups": self._groups,
         }
         return data_json
@@ -251,9 +251,9 @@ class User(AdminObject):
         self.name = response["name"]
         self.email = response.get("email")
         self.admin = response.get("admin")
-        self.profileUpdatable = response.get("profileUpdatable")
-        self.disableUIAccess = response.get("disableUIAccess")
-        self.internalPasswordDisabled = response.get("internalPasswordDisabled")
+        self.profile_updatable = response.get("profileUpdatable")
+        self.disable_ui_access = response.get("disableUIAccess")
+        self.internal_password_disabled = response.get("internalPasswordDisabled")
         self._groups = response.get("groups", [])
         self._lastLoggedIn = (
             isoparse(response["lastLoggedIn"]) if response.get("lastLoggedIn") else None
@@ -264,7 +264,7 @@ class User(AdminObject):
     def encryptedPassword(self):
         if self.password is None:
             raise ArtifactoryException(
-                "Please, set [self.password] before query encryptedPassword"
+                "Please, set [self.password] before query encrypted password"
             )
         logging.debug("User get encrypted password [{x.name}]".format(x=self))
         request_url = self._artifactory.drive + "/api/security/encryptedPassword"
@@ -273,8 +273,8 @@ class User(AdminObject):
             auth=(self.name, self.password),
         )
         raise_errors(r)
-        encryptedPassword = r.text
-        return encryptedPassword
+        encrypted_password = r.text
+        return encrypted_password
 
     @property
     def lastLoggedIn(self):
@@ -322,14 +322,14 @@ class Group(AdminObject):
         self.name = name
         self.description = ""
         self.external = False
-        self.autoJoin = False
+        self.auto_join = False
         self.realm = "artifactory"
-        self.newUserDefault = False
-        self.realmAttributes = None
+        self.new_user_default = False
+        self.realm_attributes = None
         self.users = None
 
         # Deprecated
-        self.autoJoin = self.newUserDefault
+        self.auto_join = self.new_user_default
 
     def _create_json(self):
         """
@@ -338,9 +338,9 @@ class Group(AdminObject):
         data_json = {
             "name": self.name,
             "description": self.description,
-            "autoJoin": self.autoJoin,
+            "autoJoin": self.auto_join,
             "external": self.external,
-            "newUserDefault": self.newUserDefault,
+            "newUserDefault": self.new_user_default,
             "realm": self.realm,
         }
 
@@ -355,11 +355,11 @@ class Group(AdminObject):
         """
         self.name = response.get("name")
         self.description = response.get("description")
-        self.autoJoin = response.get("autoJoin")
+        self.auto_join = response.get("autoJoin")
         self.realm = response.get("realm")
-        self.realmAttributes = response.get("realmAttributes")
+        self.realm_attributes = response.get("realmAttributes")
         self.external = response.get("external")
-        self.newUserDefault = response.get("newUserDefault")
+        self.new_user_default = response.get("newUserDefault")
         self.users = response.get("usersInGroup")
 
     def delete(self):
@@ -400,19 +400,19 @@ class Group(AdminObject):
 
 
 class GroupLDAP(Group):
-    def __init__(self, artifactory, name, realmAttributes=None):
+    def __init__(self, artifactory, name, realm_attributes=None):
         # Must be lower case: https://www.jfrog.com/confluence/display/RTF/LDAP+Groups#LDAPGroups-UsingtheRESTAPI
         name = name.lower()
         super(GroupLDAP, self).__init__(artifactory, name)
         self.realm = "ldap"
-        self.realmAttributes = realmAttributes
+        self.realm_attributes = realm_attributes
 
     def _create_json(self):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
         """
         data_json = super(GroupLDAP, self)._create_json()
-        data_json.update({"realmAttributes": self.realmAttributes, "external": True})
+        data_json.update({"realmAttributes": self.realm_attributes, "external": True})
         return data_json
 
 
