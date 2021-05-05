@@ -265,7 +265,9 @@ path = ArtifactoryPath(
 )
 path.mkdir()
 
-path.deploy_file("./myapp-1.0.tar.gz", explode_archive=True, explode_archive_atomic=True)
+path.deploy_file(
+    "./myapp-1.0.tar.gz", explode_archive=True, explode_archive_atomic=True
+)
 ```
 
 Deploy a debian package ```myapp-1.0.deb```
