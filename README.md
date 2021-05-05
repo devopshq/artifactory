@@ -454,7 +454,7 @@ path = ArtifactoryPath(
 )
 
 # Get FileStat
-stat = ArtifactoryPath.stat(path)
+stat = path.stat()
 print(stat)
 print(stat.md5)
 print(stat.sha1)
