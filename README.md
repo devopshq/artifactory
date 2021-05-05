@@ -255,6 +255,19 @@ path.mkdir()
 path.deploy_file("./myapp-1.0.tar.gz", explode_archive=True)
 ```
 
+Atomically deploy artifacts from archive: this will automatically extract the contents of the archive on the server preserving the archive's paths. This is primarily useful when you want Artifactory to see all the artifacts at once, e.g., for indexing purposes.
+
+```python
+from artifactory import ArtifactoryPath
+
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0"
+)
+path.mkdir()
+
+path.deploy_file("./myapp-1.0.tar.gz", explode_archive=True, explode_archive_atomic=True)
+```
+
 Deploy a debian package ```myapp-1.0.deb```
 
 ```python
