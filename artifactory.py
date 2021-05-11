@@ -747,19 +747,6 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         """
         Request remote file/directory status info
         Returns an object of class ArtifactoryFileStat.
-
-        The following fields are available:
-          ctime -- file creation time
-          mtime -- file modification time
-          created_by -- original uploader
-          modified_by -- last user modifying the file
-          mime_type -- MIME type of the file
-          size -- file size
-          sha1 -- SHA1 digest of the file
-          sha256 -- SHA256 digest of the file
-          md5 -- MD5 digest of the file
-          is_dir -- 'True' if path is a directory
-          children -- list of children names
         """
         jsn = self.get_stat_json(pathobj)
 
@@ -1330,6 +1317,29 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         resp = self._accessor.get_response(replication_obj).json()
 
         return resp
+
+    def stat(self, pathobj=None):
+        """
+        Request remote file/directory status info
+        Returns an object of class ArtifactoryFileStat.
+        :param pathobj: (Optional) path like object for which to get stats.
+            if None is provided then applied to ArtifactoryPath itself
+
+        The following fields are available:
+          ctime -- file creation time
+          mtime -- file modification time
+          created_by -- original uploader
+          modified_by -- last user modifying the file
+          mime_type -- MIME type of the file
+          size -- file size
+          sha1 -- SHA1 digest of the file
+          sha256 -- SHA256 digest of the file
+          md5 -- MD5 digest of the file
+          is_dir -- 'True' if path is a directory
+          children -- list of children names
+        """
+        pathobj = pathobj or self
+        return self._accessor.stat(pathobj=pathobj)
 
     def with_name(self, name):
         """
