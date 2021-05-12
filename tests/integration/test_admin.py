@@ -88,6 +88,33 @@ class TestGroup:
         test_group.delete()
         assert artifactory.find_group(name) is None
 
+    def test_create_delete_with_user(self, artifactory):
+        name = "test_adding_user_to_group"
+
+        users = ["admin"]
+
+        # Remove if exist
+        test_group = artifactory.find_group(name)
+        if test_group is not None:
+            test_group.delete()
+
+        test_group = Group(artifactory=artifactory, name=name)
+
+        # CREATE
+        test_group.users = users
+        test_group.create()
+
+        del test_group
+        test_group = artifactory.find_group(name)
+        assert test_group is not None
+
+        test_group.read()
+        assert test_group.users is users
+
+        # DELETE
+        test_group.delete()
+        assert artifactory.find_group(name) is None
+
 
 class TestLocalRepositories:
     def test_create_delete(self, artifactory):

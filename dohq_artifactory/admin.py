@@ -219,9 +219,9 @@ class User(AdminObject):
 
         self.password = password
         self.admin = admin
-        self.profileUpdatable = profile_updatable
-        self.disableUIAccess = disable_ui
-        self.internalPasswordDisabled = False
+        self.profile_updatable = profile_updatable
+        self.disable_ui_access = disable_ui
+        self.internal_password_disabled = False
         self._groups = []
 
         self._lastLoggedIn = None
@@ -236,9 +236,9 @@ class User(AdminObject):
             "email": self.email,
             "password": self.password,
             "admin": self.admin,
-            "profileUpdatable": self.profileUpdatable,
-            "disableUIAccess": self.disableUIAccess,
-            "internalPasswordDisabled": self.internalPasswordDisabled,
+            "profileUpdatable": self.profile_updatable,
+            "disableUIAccess": self.disable_ui_access,
+            "internalPasswordDisabled": self.internal_password_disabled,
             "groups": self._groups,
         }
         return data_json
@@ -251,9 +251,9 @@ class User(AdminObject):
         self.name = response["name"]
         self.email = response.get("email")
         self.admin = response.get("admin")
-        self.profileUpdatable = response.get("profileUpdatable")
-        self.disableUIAccess = response.get("disableUIAccess")
-        self.internalPasswordDisabled = response.get("internalPasswordDisabled")
+        self.profile_updatable = response.get("profileUpdatable")
+        self.disable_ui_access = response.get("disableUIAccess")
+        self.internal_password_disabled = response.get("internalPasswordDisabled")
         self._groups = response.get("groups", [])
         self._lastLoggedIn = (
             isoparse(response["lastLoggedIn"]) if response.get("lastLoggedIn") else None
@@ -264,7 +264,7 @@ class User(AdminObject):
     def encryptedPassword(self):
         if self.password is None:
             raise ArtifactoryException(
-                "Please, set [self.password] before query encryptedPassword"
+                "Please, set [self.password] before query encrypted password"
             )
         logging.debug("User get encrypted password [{x.name}]".format(x=self))
         request_url = self._artifactory.drive + "/api/security/encryptedPassword"
@@ -273,8 +273,8 @@ class User(AdminObject):
             auth=(self.name, self.password),
         )
         raise_errors(r)
-        encryptedPassword = r.text
-        return encryptedPassword
+        encrypted_password = r.text
+        return encrypted_password
 
     @property
     def lastLoggedIn(self):
@@ -313,16 +313,23 @@ class User(AdminObject):
 
 
 class Group(AdminObject):
-    _uri = "security/groups"
+    _uri = "groups"
+    _uri_deletion = "security/groups"
 
     def __init__(self, artifactory, name):
         super(Group, self).__init__(artifactory)
 
         self.name = name
         self.description = ""
-        self.autoJoin = False
+        self.external = False
+        self.auto_join = False
         self.realm = "artifactory"
-        self.realmAttributes = None
+        self.new_user_default = False
+        self.realm_attributes = None
+        self.users = None
+
+        # Deprecated
+        self.auto_join = self.new_user_default
 
     def _create_json(self):
         """
@@ -331,36 +338,81 @@ class Group(AdminObject):
         data_json = {
             "name": self.name,
             "description": self.description,
-            "autoJoin": self.autoJoin,
+            "autoJoin": self.auto_join,
+            "external": self.external,
+            "newUserDefault": self.new_user_default,
             "realm": self.realm,
         }
+
+        if isinstance(self.users, list):
+            data_json.update({"usersInGroup": self.users})
+
         return data_json
 
     def _read_response(self, response):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
         """
-        self.name = response["name"]
-        self.description = response.get("description", None)
-        self.autoJoin = response["autoJoin"]
-        self.realm = response["realm"]
-        self.realmAttributes = response.get("realmAttributes", None)
+        self.name = response.get("name")
+        self.description = response.get("description")
+        self.auto_join = response.get("autoJoin")
+        self.realm = response.get("realm")
+        self.realm_attributes = response.get("realmAttributes")
+        self.external = response.get("external")
+        self.new_user_default = response.get("newUserDefault")
+        self.users = response.get("usersInGroup")
+
+    def delete(self):
+        """
+        Remove object
+        :return: None
+        TODO: New entrypoint would go like
+        /api/groups/delete and consumes ["list", "of", "groupnames"]
+        """
+        logging.debug("Remove {x.__class__.__name__} [{x.name}]".format(x=self))
+        request_url = self._artifactory.drive + "/api/{uri}/{x.name}".format(
+            uri=self._uri_deletion, x=self
+        )
+        r = self._session.delete(request_url, auth=self._auth)
+        r.raise_for_status()
+        rest_delay()
+
+    def create(self):
+        """
+        Create object
+        :return: None
+        """
+        logging.debug("Create {x.__class__.__name__} [{x.name}]".format(x=self))
+        data_json = self._create_json()
+        data_json.update(self.additional_params)
+        request_url = self._artifactory.drive + "/api/{uri}".format(
+            uri=self._uri, x=self
+        )
+        r = self._session.post(
+            request_url,
+            json=data_json,
+            headers={"Content-Type": "application/json"},
+            auth=self._auth,
+        )
+        r.raise_for_status()
+        rest_delay()
+        self.read()
 
 
 class GroupLDAP(Group):
-    def __init__(self, artifactory, name, realmAttributes=None):
+    def __init__(self, artifactory, name, realm_attributes=None):
         # Must be lower case: https://www.jfrog.com/confluence/display/RTF/LDAP+Groups#LDAPGroups-UsingtheRESTAPI
         name = name.lower()
         super(GroupLDAP, self).__init__(artifactory, name)
         self.realm = "ldap"
-        self.realmAttributes = realmAttributes
+        self.realm_attributes = realm_attributes
 
     def _create_json(self):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Security+Configuration+JSON
         """
         data_json = super(GroupLDAP, self)._create_json()
-        data_json.update({"realmAttributes": self.realmAttributes, "external": True})
+        data_json.update({"realmAttributes": self.realm_attributes, "external": True})
         return data_json
 
 
