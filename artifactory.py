@@ -747,19 +747,6 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         """
         Request remote file/directory status info
         Returns an object of class ArtifactoryFileStat.
-
-        The following fields are available:
-          ctime -- file creation time
-          mtime -- file modification time
-          created_by -- original uploader
-          modified_by -- last user modifying the file
-          mime_type -- MIME type of the file
-          size -- file size
-          sha1 -- SHA1 digest of the file
-          sha256 -- SHA256 digest of the file
-          md5 -- MD5 digest of the file
-          is_dir -- 'True' if path is a directory
-          children -- list of children names
         """
         jsn = self.get_stat_json(pathobj)
 
@@ -973,6 +960,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         sha256=None,
         parameters=None,
         explode_archive=None,
+        explode_archive_atomic=None,
     ):
         """
         Uploads a given file-like object
@@ -996,6 +984,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             headers["X-Checksum-Sha256"] = sha256
         if explode_archive:
             headers["X-Explode-Archive"] = "true"
+        if explode_archive_atomic:
+            headers["X-Explode-Archive-Atomic"] = "true"
 
         text, code = self.rest_put_stream(
             url,
@@ -1039,7 +1029,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if code not in (200, 201):
             raise RuntimeError(text)
 
-    def move(self, src, dst):
+    def move(self, src, dst, suppress_layouts=False):
         """
         Move artifact from src to dst
         """
@@ -1051,7 +1041,10 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             ]
         )
 
-        params = {"to": str(dst.relative_to(dst.drive)).rstrip("/")}
+        params = {
+            "to": str(dst.relative_to(dst.drive)).rstrip("/"),
+            "suppressLayouts": int(suppress_layouts),
+        }
 
         text, code = self.rest_post(
             url,
@@ -1310,6 +1303,44 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.timeout = self.timeout
         return obj
 
+    @property
+    def replication_status(self):
+        """
+        Get status of the repo replication
+        :return:
+            (dict): full response, where keys:
+                {status}= never_run|incomplete(running or interrupted)|error|warn|ok|inconsistent
+                {time}= time in ISO8601 format (yyyy-MM-dd'T'HH:mm:ss.SSSZ), or null if never completed
+        """
+        replication_url = self.drive + "/api/replication/" + self.repo
+        replication_obj = self.joinpath(replication_url)
+        resp = self._accessor.get_response(replication_obj).json()
+
+        return resp
+
+    def stat(self, pathobj=None):
+        """
+        Request remote file/directory status info
+        Returns an object of class ArtifactoryFileStat.
+        :param pathobj: (Optional) path like object for which to get stats.
+            if None is provided then applied to ArtifactoryPath itself
+
+        The following fields are available:
+          ctime -- file creation time
+          mtime -- file modification time
+          created_by -- original uploader
+          modified_by -- last user modifying the file
+          mime_type -- MIME type of the file
+          size -- file size
+          sha1 -- SHA1 digest of the file
+          sha256 -- SHA256 digest of the file
+          md5 -- MD5 digest of the file
+          is_dir -- 'True' if path is a directory
+          children -- list of children names
+        """
+        pathobj = pathobj or self
+        return self._accessor.stat(pathobj=pathobj)
+
     def with_name(self, name):
         """
         Return a new path with the file name changed.
@@ -1333,6 +1364,34 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.session = self.session
         obj.timeout = self.timeout
         return obj
+
+    def archive(self, archive_type="zip", check_sum=False):
+        """
+        Convert URL to the new link to download specified folder as archive according to REST API.
+        Requires Enable Folder Download to be set in artifactory.
+        :param: archive_type (str): one of possible archive types (supports zip/tar/tar.gz/tgz)
+        :param: check_sum (bool): defines of check sum is required along with download
+        :return: raw object for download
+        """
+        if self.is_file():
+            raise OSError("Only folders could be archived")
+
+        if archive_type not in ["zip", "tar", "tar.gz", "tgz"]:
+            raise NotImplementedError(archive_type + " is not support by current API")
+
+        archive_url = (
+            self.drive
+            + "/api/archive/download/"
+            + self.repo
+            + self.path_in_repo
+            + "?archiveType="
+            + archive_type
+        )
+
+        if check_sum:
+            archive_url += "&includeChecksumFiles=true"
+
+        return self.joinpath(archive_url)
 
     def relative_to(self, *other):
         """
@@ -1440,23 +1499,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         :param: check_sum (bool): defines of check sum is required along with download
         :return: raw object for download
         """
-        if archive_type not in ["zip", "tar", "tar.gz", "tgz"]:
-            raise NotImplementedError(archive_type + " is not support by current API")
-
-        archive_url = (
-            self.drive
-            + "/api/archive/download/"
-            + self.repo
-            + self.path_in_repo
-            + "?archiveType="
-            + archive_type
-        )
-
-        if check_sum:
-            archive_url += "&includeChecksumFiles=true"
-
-        with self.joinpath(archive_url) as archive_cls:
-            return self._accessor.open(archive_cls)
+        return self._accessor.open(self.archive(archive_type, check_sum))
 
     def owner(self):
         """
@@ -1560,6 +1603,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         sha256=None,
         parameters={},
         explode_archive=None,
+        explode_archive_atomic=None,
     ):
         """
         Upload the given file object to this path
@@ -1572,6 +1616,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             sha256=sha256,
             parameters=parameters,
             explode_archive=explode_archive,
+            explode_archive_atomic=explode_archive_atomic,
         )
 
     def deploy_file(
@@ -1582,6 +1627,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         calc_sha256=True,
         parameters={},
         explode_archive=False,
+        explode_archive_atomic=False,
     ):
         """
         Upload the given file to this path
@@ -1603,6 +1649,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                 sha256=sha256,
                 parameters=parameters,
                 explode_archive=explode_archive,
+                explode_archive_atomic=explode_archive_atomic,
             )
 
     def deploy_deb(
@@ -1629,7 +1676,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     def copy(self, dst, suppress_layouts=False):
         """
-        Copy artifact from this path to destinaiton.
+        Copy artifact from this path to destination.
         If files are on the same instance of artifactory, lightweight (local)
         copying will be attempted.
 
@@ -1680,9 +1727,15 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             with self.open() as fobj:
                 dst.deploy(fobj)
 
-    def move(self, dst):
+    def move(self, dst, suppress_layouts=False):
         """
         Move artifact from this path to destinaiton.
+
+        The suppress_layouts parameter, when set to True, will allow artifacts
+        from one path to be moved directly into another path without enforcing
+        repository layouts. The default behaviour is to move the repository
+        root, but remap the [org], [module], [baseVer], etc. structure to the
+        target repository.
         """
         if self.drive.rstrip("/") != dst.drive.rstrip("/"):
             raise NotImplementedError("Moving between instances is not implemented yet")

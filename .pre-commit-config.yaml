@@ -1,29 +1,29 @@
 repos:
   - repo: https://github.com/humitos/mirrors-autoflake
-    rev: master
+    rev: v1.1
     hooks:
       - id: autoflake
         args: ['-i', '--remove-all-unused-imports']
   - repo: https://github.com/psf/black
-    rev: stable
+    rev: 21.4b2
     hooks:
       - id: black
         language_version: python3
   - repo: https://github.com/asottile/blacken-docs
-    rev: v1.3.0
+    rev: v1.10.0
     hooks:
       - id: blacken-docs
         additional_dependencies: [black]
   -   repo: https://github.com/asottile/reorder_python_imports
-      rev: v1.8.0
+      rev: v2.5.0
       hooks:
       -   id: reorder-python-imports
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v2.4.0
+  - repo: https://github.com/pycqa/flake8
+    rev: 3.7.0
     hooks:
       - id: flake8
   - repo: https://github.com/Lucas-C/pre-commit-hooks-nodejs
-    rev: v1.1.0
+    rev: v1.1.1
     hooks:
       - id: markdown-toc
         name: README.md
@@ -35,6 +35,6 @@ repos:
         name: CONTRIBUTE.md
         files: CONTRIBUTE.md$
   - repo: https://github.com/alphagov/verify-travis-pre-commit-hook
-    rev: master
+    rev: 2d69b57aa5e58dd31c01002ae4abcdf9b54549a1
     hooks:
       - id: travis-yml-lint

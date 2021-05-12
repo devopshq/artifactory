@@ -24,6 +24,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
   * [Move Artifacts](#move-artifacts)
   * [Remove Artifacts](#remove-artifacts)
   * [Artifact properties](#artifact-properties)
+  * [Repository Scheduled Replication Status](#repository-scheduled-replication-status)
   * [Artifactory Query Language](#artifactory-query-language)
   * [FileStat](#filestat)
   * [Promote Docker image](#promote-docker-image)
@@ -209,6 +210,7 @@ path.writeto(
 ## Downloading Artifacts folder as archive ##
 Download artifact folder to a local filesystem as archive (supports zip/tar/tar.gz/tgz)
 Allows to specify archive type and request checksum for the folder
+
 Note: Archiving should be enabled on the server!
 ```python
 from artifactory import ArtifactoryPath
@@ -217,9 +219,12 @@ path = ArtifactoryPath(
     "http://my_url:8080/artifactory/my_repo/winx64/aas", auth=("user", "password")
 )
 
-with path.download_folder_archive(archive_type="zip", check_sum=False) as archive:
+with path.archive(archive_type="zip", check_sum=False) as archive:
     with open(r"D:\target.zip", "wb") as out:
         out.write(archive.read())
+
+# download folder archive in chunks
+path.archive().writeto(output="my.zip", chunk_size=100 * 1024)
 ```
 
 ## Uploading Artifacts ##
@@ -248,6 +253,21 @@ path = ArtifactoryPath(
 path.mkdir()
 
 path.deploy_file("./myapp-1.0.tar.gz", explode_archive=True)
+```
+
+Atomically deploy artifacts from archive: this will automatically extract the contents of the archive on the server preserving the archive's paths. This is primarily useful when you want Artifactory to see all the artifacts at once, e.g., for indexing purposes.
+
+```python
+from artifactory import ArtifactoryPath
+
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/libs-snapshot-local/myapp/1.0"
+)
+path.mkdir()
+
+path.deploy_file(
+    "./myapp-1.0.tar.gz", explode_archive=True, explode_archive_atomic=True
+)
 ```
 
 Deploy a debian package ```myapp-1.0.deb```
@@ -323,6 +343,12 @@ http://example.com/artifactory/published/production/product-1.0.0.tar.pom
 ## Move Artifacts
 Move artifact from this path to destination.
 
+The suppress_layouts parameter, when set to `True`, will allow artifacts
+from one path to be copied directly into another path without enforcing
+repository layouts. The default behaviour is to copy to the repository
+root, but remap the [org], [module], [baseVer], etc. structure to the
+target repository.
+
 ```python
 from artifactory import ArtifactoryPath
 
@@ -364,6 +390,24 @@ path.properties = properties
 # Remove properties
 properties.pop("release")
 path.properties = properties
+```
+
+## Repository Scheduled Replication Status ##
+Returns the status of scheduled  cron-based replication jobs define via the Artifactory UI on repositories.
+Supported by local, local-cached and remote repositories.
+
+Notes: Requires Artifactory Pro
+
+Security: Requires a user with 'read' permission (can be anonymous)
+```python
+from artifactory import ArtifactoryPath
+
+path = ArtifactoryPath(
+    "https://repo.jfrog.org/artifactory/repo1-cache/archetype-catalog.xml"
+)
+
+rep_status = path.replication_status
+print("status: ", rep_status["status"])
 ```
 
 ## Artifactory Query Language
@@ -425,7 +469,7 @@ path = ArtifactoryPath(
 )
 
 # Get FileStat
-stat = ArtifactoryPath.stat(path)
+stat = path.stat()
 print(stat)
 print(stat.md5)
 print(stat.sha1)
@@ -510,6 +554,14 @@ if group is None:
 
 # You can re-read from Artifactory
 group.read()
+
+# You can add multiple users at once to Group
+group.users = ["admin", "anonymous"]
+group.create()
+
+# You can remove all users from a Group
+group.users = []
+group.create()
 
 group.delete()
 ```

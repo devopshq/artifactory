@@ -337,7 +337,7 @@ class PureArtifactoryPathTest(unittest.TestCase):
 
 
 class ArtifactoryAccessorTest(unittest.TestCase):
-    """ Test the real artifactory integration """
+    """Test the real artifactory integration"""
 
     cls = artifactory._ArtifactoryAccessor
 
@@ -618,7 +618,7 @@ class ArtifactoryAccessorTest(unittest.TestCase):
 
 
 class ArtifactoryPathTest(unittest.TestCase):
-    """ Test the filesystem-accessing fuctionality """
+    """Test the filesystem-accessing fuctionality"""
 
     cls = artifactory.ArtifactoryPath
 
