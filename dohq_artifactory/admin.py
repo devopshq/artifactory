@@ -1054,7 +1054,7 @@ class Token(AdminObject):
         self.tokens = defaultdict(dict)
         del self.additional_params
 
-    def _create_and_update(self):
+    def _create_and_update(self, *args, **kwargs):
         """
         Create Token, Refresh Token:
         POST security/token
