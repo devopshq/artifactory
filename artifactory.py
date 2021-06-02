@@ -1951,6 +1951,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         :param progress_func: Provide custom function to print output or suppress print by setting to None
         :return: None
         """
+        if isinstance(out, bytes):
+            out = out.decode()
         if isinstance(out, str) or isinstance(out, pathlib.Path):
             context = open(out, "wb")
         else:
