@@ -1171,10 +1171,16 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         response = self.get_response(pathobj)
         file_size = int(response.headers.get("Content-Length", 0))
         bytes_read = 0
+        real_chunk = 0
         for chunk in response.iter_content(chunk_size=chunk_size):
-            bytes_read += len(chunk)
-            if callable(progress_func):
+            real_chunk += len(chunk)
+            if callable(progress_func) and real_chunk - chunk_size >= 0:
+                # Artifactory archives folders on fly and can reduce requested chunk size to 8kB, thus report
+                # only when real chunk size met
+                bytes_read += real_chunk
+                real_chunk = 0
                 progress_func(bytes_read, file_size)
+
             file.write(chunk)
 
 
@@ -1370,7 +1376,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         Convert URL to the new link to download specified folder as archive according to REST API.
         Requires Enable Folder Download to be set in artifactory.
         :param: archive_type (str): one of possible archive types (supports zip/tar/tar.gz/tgz)
-        :param: check_sum (bool): defines of check sum is required along with download
+        :param: check_sum (bool): defines if checksum is required along with download
         :return: raw object for download
         """
         if self.is_file():
@@ -1496,7 +1502,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         Convert URL to the new link to download specified folder as archive according to REST API.
         Requires Enable Folder Download to be set in artifactory.
         :param: archive_type (str): one of possible archive types (supports zip/tar/tar.gz/tgz)
-        :param: check_sum (bool): defines of check sum is required along with download
+        :param: check_sum (bool): defines if checksum is required along with download
         :return: raw object for download
         """
         return self._accessor.open(self.archive(archive_type, check_sum))
@@ -1947,7 +1953,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         Downloads large file in chunks and and call a progress function.
 
         :param out: file path of output file
-        :param chunk_size: chunk size in bytes, recommend. eg 1024*1024 is 1MiB
+        :param chunk_size: chunk size in bytes. eg 1024*1024 is 1MiB
         :param progress_func: Provide custom function to print output or suppress print by setting to None
         :return: None
         """
