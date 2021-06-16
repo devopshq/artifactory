@@ -262,6 +262,19 @@ class User(AdminObject):
 
     @property
     def encryptedPassword(self):
+        """
+        Method for backwards compatibility, see property encrypted_password
+        :return:
+        """
+        return self.encrypted_password
+
+    @property
+    def encrypted_password(self):
+        """
+        Get the encrypted password of the authenticated requestor
+        If you authenticate with an API key, the encrypted API key will be returned in the response.
+        :return: (str) encrypted password
+        """
         if self.password is None:
             raise ArtifactoryException(
                 "Please, set [self.password] before query encrypted password"

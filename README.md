@@ -530,7 +530,7 @@ group = artifactory_.find_group("groupname")
 user.add_to_group(group)
 user.update()  # Don't forget update :)
 
-enc_pwd = user.encryptedPassword
+enc_pwd = user.encrypted_password
 
 # You can re-read from Artifactory
 user.read()
