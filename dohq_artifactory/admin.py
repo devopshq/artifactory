@@ -1,3 +1,4 @@
+import json
 import logging
 import random
 import re
@@ -275,19 +276,29 @@ class User(AdminObject):
         If you authenticate with an API key, the encrypted API key will be returned in the response.
         :return: (str) encrypted password
         """
+        encrypted_password = self._authenticated_user_request(
+            api_url="/api/security/encryptedPassword", request_type=self._session.get
+        )
+
+        return encrypted_password
+
+    def _authenticated_user_request(self, api_url, request_type):
+        """
+        Send API request to artifactory to get user security parameters. auth should be provided
+        :param api_url: querying API url
+        :param request_type: session type, GET | POST | PUT | DELETE
+        :return:
+        """
         if self.password is None:
-            raise ArtifactoryException(
-                "Please, set [self.password] before query encrypted password"
-            )
-        logging.debug("User get encrypted password [{x.name}]".format(x=self))
-        request_url = self._artifactory.drive + "/api/security/encryptedPassword"
-        r = self._session.get(
+            raise ArtifactoryException("Please, set [self.password] before querying")
+
+        request_url = self._artifactory.drive + api_url
+        r = request_type(
             request_url,
             auth=(self.name, self.password),
         )
         raise_errors(r)
-        encrypted_password = r.text
-        return encrypted_password
+        return r.text
 
     @property
     def lastLoggedIn(self):
@@ -323,6 +334,92 @@ class User(AdminObject):
     @groups.deleter
     def groups(self):
         self._groups = []
+
+    @property
+    def api_key(self):
+        return self._ApiKeyHandler(self)
+
+    class _ApiKeyHandler:
+        def __init__(self, user):
+            """
+            :param user: User instance
+            """
+            self._user = user
+            self.url = "/api/security/apiKey"
+
+        def __repr__(self):
+            return self.get() or ""
+
+        def __str__(self):
+            return self.get() or ""
+
+        def get(self):
+            """
+            Get an API key for the current user
+            :return: (str) API key
+            """
+            response = self._user._authenticated_user_request(
+                api_url=self.url,
+                request_type=self._user._session.get,
+            )
+            api_key = json.loads(response).get("apiKey", None)
+
+            return api_key
+
+        def create(self):
+            """
+            Create an API key for the current user.
+            Returns an error if API key already exists - use api_key_regenerate to regenerate API key instead.
+            :return: (str) API key
+            """
+            response = self._user._authenticated_user_request(
+                api_url=self.url,
+                request_type=self._user._session.post,
+            )
+
+            api_key = json.loads(response)["apiKey"]
+
+            return api_key
+
+        def regenerate(self):
+            """
+            Regenerate an API key for the current user
+            :return: (str) API key
+            """
+            if self._user.api_key is None:
+                raise ArtifactoryException(
+                    "API key does not exist for {}. Please use api_key.create".format(
+                        self._user.name
+                    )
+                )
+
+            response = self._user._authenticated_user_request(
+                api_url=self.url,
+                request_type=self._user._session.put,
+            )
+            api_key = json.loads(response).get("apiKey", None)
+
+            return api_key
+
+        def revoke(self):
+            """
+            Revokes the current user's API key
+            :return: None
+            """
+            self._user._authenticated_user_request(
+                api_url=self.url, request_type=self._user._session.delete
+            )
+
+        def revoke_for_all_users(self):
+            """
+            Revokes all API keys currently defined in the system
+            Requires a privileged user (Admin only)
+            :return: None
+            """
+            self._user._authenticated_user_request(
+                api_url=self.url + "?deleteAll=1",
+                request_type=self._user._session.delete,
+            )
 
 
 class Group(AdminObject):

@@ -30,6 +30,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
   * [Promote Docker image](#promote-docker-image)
 - [Admin area](#admin-area)
   * [User](#user)
+    + [API Keys](#api-keys)
   * [Group](#group)
     + [Internal](#internal)
     + [GroupLDAP](#groupldap)
@@ -537,6 +538,32 @@ user.read()
 
 user.delete()
 ```
+
+### API Keys
+~~~python
+from dohq_artifactory import User
+
+user = User(artifactory_, "username")
+
+# create an API key
+user.api_key.create()
+
+# get API key
+user.api_key.get()
+# or using str() method
+my_key = str(user.api_key)
+# or using repr method
+print(user.api_key)
+
+# regenerate API key if one already exists
+user.api_key.regenerate()
+
+# remove API key for current user
+user.api_key.revoke()
+
+# remove all API keys in system, only if user has admin rights
+user.api_key.revoke_for_all_users()
+~~~
 
 ## Group
 ### Internal
