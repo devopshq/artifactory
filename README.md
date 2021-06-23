@@ -320,7 +320,7 @@ for p in dest:
 for p in ArtifactoryPath(
     "http://example.com/artifactory/published/product/product/1.0.0.tar"
 ):
-    print p
+    print (p)
 # http://example.com/artifactory/published/product/product/1.0.0/product-1.0.0.tar.gz
 # http://example.com/artifactory/published/product/product/1.0.0/product-1.0.0.tar.pom
 
