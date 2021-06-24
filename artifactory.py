@@ -1484,6 +1484,23 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                 continue
             yield self._make_child_relpath(name)
 
+    def read_text(self, encoding=None, errors=None):
+        """
+        Read file content
+        :param encoding: file encoding, by default Requests makes educated guesses about the encoding of
+            the response based on the HTTP headers
+        :param errors: not implemented
+        :return: (str) file content in string format
+        """
+        if errors:
+            raise NotImplementedError("Encoding errors cannot be handled")
+
+        response = self._accessor.get_response(self)
+        if encoding:
+            response.encoding = encoding
+
+        return response.text
+
     def open(self, mode="r", buffering=-1, encoding=None, errors=None, newline=None):
         """
         Open the given Artifactory URI and return a file-like object
@@ -1491,9 +1508,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         The only difference is that this object doesn't support seek()
         """
         if mode != "r" or buffering != -1 or encoding or errors or newline:
-            raise NotImplementedError(
-                "Only the default open() " + "arguments are supported"
-            )
+            raise NotImplementedError("Only the default open() arguments are supported")
 
         return self._accessor.open(self)
 
