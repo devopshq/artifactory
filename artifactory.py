@@ -1015,9 +1015,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             [
                 src.drive.rstrip("/"),
                 "api/copy",
-                requests.utils.quote(
-                    str(src.relative_to(src.drive)).rstrip("/")
-                ),
+                requests.utils.quote(str(src.relative_to(src.drive)).rstrip("/")),
             ]
         )
 
@@ -1046,9 +1044,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             [
                 src.drive.rstrip("/"),
                 "api/move",
-                requests.utils.quote(
-                    str(src.relative_to(src.drive)).rstrip("/")
-                ),
+                requests.utils.quote(str(src.relative_to(src.drive)).rstrip("/")),
             ]
         )
 
