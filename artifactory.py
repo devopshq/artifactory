@@ -863,7 +863,14 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         # if stat.is_dir:
         #     raise IsADirectoryError(1, "Operation not permitted: {!r}".format(pathobj))
 
-        url = str(pathobj)
+        url = "/".join(
+            [
+                pathobj.drive.rstrip("/"),
+                requests.utils.quote(
+                    str(pathobj.relative_to(pathobj.drive)).strip("/")
+                ),
+            ]
+        )
         text, code = self.rest_del(
             url,
             session=pathobj.session,
@@ -1008,7 +1015,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             [
                 src.drive.rstrip("/"),
                 "api/copy",
-                str(src.relative_to(src.drive)).rstrip("/"),
+                requests.utils.quote(
+                    str(src.relative_to(src.drive)).rstrip("/")
+                ),
             ]
         )
 
@@ -1037,7 +1046,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             [
                 src.drive.rstrip("/"),
                 "api/move",
-                str(src.relative_to(src.drive)).rstrip("/"),
+                requests.utils.quote(
+                    str(src.relative_to(src.drive)).rstrip("/")
+                ),
             ]
         )
 
@@ -1066,7 +1077,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             [
                 pathobj.drive.rstrip("/"),
                 "api/storage",
-                str(pathobj.relative_to(pathobj.drive)).strip("/"),
+                requests.utils.quote(
+                    str(pathobj.relative_to(pathobj.drive)).strip("/")
+                ),
             ]
         )
 
@@ -1098,7 +1111,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             [
                 pathobj.drive.rstrip("/"),
                 "api/storage",
-                str(pathobj.relative_to(pathobj.drive)).strip("/"),
+                requests.utils.quote(
+                    str(pathobj.relative_to(pathobj.drive)).strip("/")
+                ),
             ]
         )
 
@@ -1132,7 +1147,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             [
                 pathobj.drive.rstrip("/"),
                 "api/storage",
-                str(pathobj.relative_to(pathobj.drive)).strip("/"),
+                requests.utils.quote(
+                    str(pathobj.relative_to(pathobj.drive)).strip("/")
+                ),
             ]
         )
 
