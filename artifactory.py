@@ -37,6 +37,7 @@ from itertools import islice
 
 import dateutil.parser
 import requests
+from requests.utils import requote_uri
 
 from dohq_artifactory.admin import Group
 from dohq_artifactory.admin import PermissionTarget
@@ -621,7 +622,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         Perform a GET request to url with requests.session
         """
         res = session.get(
-            url,
+            requote_uri(url),
             params=params,
             headers=headers,
             verify=verify,
@@ -644,7 +645,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         Perform a PUT request to url with requests.session
         """
         res = session.put(
-            url,
+            requote_uri(url),
             params=params,
             headers=headers,
             verify=verify,
@@ -667,7 +668,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         Perform a POST request to url with requests.session
         """
         res = session.post(
-            url,
+            requote_uri(url),
             params=params,
             headers=headers,
             verify=verify,
@@ -683,7 +684,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         Perform a DELETE request to url with requests.session
         """
         res = session.delete(
-            url, params=params, verify=verify, cert=cert, timeout=timeout
+            requote_uri(url), params=params, verify=verify, cert=cert, timeout=timeout
         )
         return res.text, res.status_code
 
@@ -702,7 +703,12 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         This is specifically to upload files.
         """
         res = session.put(
-            url, headers=headers, data=stream, verify=verify, cert=cert, timeout=timeout
+            requote_uri(url),
+            headers=headers,
+            data=stream,
+            verify=verify,
+            cert=cert,
+            timeout=timeout,
         )
         return res.text, res.status_code
 
@@ -712,7 +718,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         This is specifically to download files.
         """
         response = session.get(
-            url, stream=True, verify=verify, cert=cert, timeout=timeout
+            requote_uri(url), stream=True, verify=verify, cert=cert, timeout=timeout
         )
         return response
 
