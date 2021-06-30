@@ -337,9 +337,9 @@ class User(AdminObject):
 
     @property
     def api_key(self):
-        return self._ApiKeyHandler(self)
+        return self._ApiKeyManager(self)
 
-    class _ApiKeyHandler:
+    class _ApiKeyManager:
         def __init__(self, user):
             """
             :param user: User instance
@@ -362,7 +362,7 @@ class User(AdminObject):
                 api_url=self.url,
                 request_type=self._user._session.get,
             )
-            api_key = json.loads(response).get("apiKey", None)
+            api_key = json.loads(response).get("apiKey", "")
 
             return api_key
 
@@ -386,7 +386,7 @@ class User(AdminObject):
             Regenerate an API key for the current user
             :return: (str) API key
             """
-            if self._user.api_key is None:
+            if not self.get():
                 raise ArtifactoryException(
                     "API key does not exist for {}. Please use api_key.create".format(
                         self._user.name
@@ -397,7 +397,7 @@ class User(AdminObject):
                 api_url=self.url,
                 request_type=self._user._session.put,
             )
-            api_key = json.loads(response).get("apiKey", None)
+            api_key = json.loads(response).get("apiKey", "")
 
             return api_key
 
