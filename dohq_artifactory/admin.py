@@ -385,9 +385,7 @@ class Group(AdminObject):
         logging.debug("Create {x.__class__.__name__} [{x.name}]".format(x=self))
         data_json = self._create_json()
         data_json.update(self.additional_params)
-        request_url = self._artifactory.drive + "/api/{uri}".format(
-            uri=self._uri, x=self
-        )
+        request_url = self._artifactory.drive + "/api/{uri}".format(uri=self._uri)
         r = self._session.post(
             request_url,
             json=data_json,
