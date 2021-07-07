@@ -2108,6 +2108,119 @@ class ArtifactorySaaSPath(ArtifactoryPath):
         raise NotImplementedError()
 
 
+class ArtifactoryBuild(ArtifactoryPath):
+    def __new__(cls, *args, **kwargs):
+        """
+        pathlib.Path overrides __new__ in order to create objects
+        of different classes based on platform. This magic prevents
+        us from adding an 'auth' argument to the constructor.
+        So we have to first construct ArtifactoryPath by Pathlib and
+        only then add auth information.
+        """
+        obj = super().__new__(cls, *args, **kwargs)
+        obj.project = kwargs.get("project", "")
+        return obj
+
+    @property
+    def builds(self):
+        """
+        Get all available builds on Artifactory
+        :return: (list) list of available build names
+        """
+        all_builds = []
+        url = ""
+        if self.project:
+            url = f"?project='{self.project}'"
+
+        obj = self.joinpath(url)
+        resp = self._accessor.get_response(obj).json()
+
+        if "builds" in self._get_build_api_response(url):
+            for build in resp["builds"]:
+                all_builds.append(build["uri"][1:])
+
+        return all_builds
+
+    def get_build_runs(self, build_name):
+        """
+        Get information about build runs
+        :param build_name: name of the build
+        :return: (dict) json response with build runs info
+        """
+        return self._get_info(build_name)
+
+    def get_build_info(self, build_name, build_number):
+        """
+        Get information about specified build run
+        :param build_name: name of the build
+        :param build_number: number of the build to query
+        :return: (dict) json response with build run info
+        """
+        return self._get_info(build_name, build_number)
+
+    def _get_info(self, build_name, build_number=""):
+        url = build_name
+        if build_number:
+            url += f"/{build_number}"
+        return self._get_build_api_response(url)
+
+    def _get_build_api_response(self, url):
+        url = f"{self.drive}/api/build/{url}"
+        obj = self.joinpath(url)
+        resp = self._accessor.get_response(obj).json()
+        return resp
+
+    def get_build_diff(self, build_name, build_number1, build_number2):
+        """
+        Compares build with build_number1 to build_number2
+        :param build_name: name of the build
+        :param build_number1: number of the build
+        :param build_number2: number of second build to compare
+        :return: (dict) json response with difference
+        """
+        url = f"{build_name}/{build_number1}?diff={build_number2}"
+        return self._get_build_api_response(url)
+
+    def build_promotion(
+        self,
+        ci_user,
+        timestamp,
+        dry_run,
+        properties,
+        scopes,
+        status="staged",
+        comment="",
+        dependencies=False,
+        target_repo="",
+        source_repo="",
+        fail_fast=True,
+        require_copy=False,
+        artifacts=True,
+    ):
+        """
+         Change the status of a build, optionally moving or copying the build's artifacts and its dependencies to a
+         target repository and setting properties on promoted artifacts.
+        All artifacts from all scopes are included by default while dependencies are not. Scopes are additive (or).
+        From version 5.7, the target repository can be a virtual repository.
+        :param status: new build status (any string)
+        :param comment: An optional comment describing the reason for promotion. Default: ""
+        :param ci_user: The user that invoked promotion from the CI server
+        :param timestamp: the time the promotion command was received by Artifactory (It needs to be unique)
+            the format is: 'yyyy-MM-dd'T'HH:mm:ss.SSSZ'. Example: '2016-02-11T18:30:24.825+0200'
+        :param dry_run: run without executing any operation in Artifactory, but get the results to check if
+            the operation can succeed. Default: false
+        :param source_repo: optional repository from which the build's artifacts will be copied/moved
+        :param target_repo: optional repository to move or copy the build's artifacts and/or dependencies
+        :param require_copy: whether to copy instead of move, when a target repository is specified. Default: false
+        :param artifacts: whether to move/copy the build's artifacts. Default: true
+        :param dependencies: whether to move/copy the build's dependencies. Default: false.
+        :param scopes: an array of dependency scopes to include when "dependencies" is true
+        :param properties: a list of properties to attach to the build's artifacts (regardless if "targetRepo" is used).
+        :param fail_fast: fail and abort the operation upon receiving an error. Default: true
+        :return:
+        """
+
+
 def walk(pathobj, topdown=True):
     """
     os.walk like function to traverse the URI like a file system.
