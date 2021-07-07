@@ -23,6 +23,7 @@ to manipulate artifactory paths. See pathlib docs for details how
 pure paths can be used.
 """
 import collections
+import datetime
 import errno
 import fnmatch
 import hashlib
@@ -666,7 +667,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         Perform a POST request to url with requests.session
         """
         url = quote_url(url)
-        res = session.post(
+        response = session.post(
             url,
             params=params,
             headers=headers,
@@ -674,7 +675,10 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=cert,
             timeout=timeout,
         )
-        return res.text, res.status_code
+        if response.status_code not in (200, 201):
+            raise RuntimeError(response.text)
+
+        return response
 
     def rest_del(
         self, url, params=None, session=None, verify=True, cert=None, timeout=None
@@ -1025,7 +1029,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             "suppressLayouts": int(suppress_layouts),
         }
 
-        text, code = self.rest_post(
+        self.rest_post(
             url,
             params=params,
             session=src.session,
@@ -1033,9 +1037,6 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=src.cert,
             timeout=src.timeout,
         )
-
-        if code not in (200, 201):
-            raise RuntimeError(text)
 
     def move(self, src, dst, suppress_layouts=False):
         """
@@ -1054,7 +1055,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             "suppressLayouts": int(suppress_layouts),
         }
 
-        text, code = self.rest_post(
+        self.rest_post(
             url,
             params=params,
             session=src.session,
@@ -1062,9 +1063,6 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=src.cert,
             timeout=src.timeout,
         )
-
-        if code not in (200, 201):
-            raise RuntimeError(text)
 
     def get_properties(self, pathobj):
         """
@@ -2183,14 +2181,15 @@ class ArtifactoryBuild(ArtifactoryPath):
 
     def build_promotion(
         self,
+        build_name,
+        build_number,
         ci_user,
-        timestamp,
         dry_run,
         properties,
-        scopes,
         status="staged",
         comment="",
         dependencies=False,
+        scopes=None,
         target_repo="",
         source_repo="",
         fail_fast=True,
@@ -2198,15 +2197,15 @@ class ArtifactoryBuild(ArtifactoryPath):
         artifacts=True,
     ):
         """
-         Change the status of a build, optionally moving or copying the build's artifacts and its dependencies to a
-         target repository and setting properties on promoted artifacts.
+        Change the status of a build, optionally moving or copying the build's artifacts and its dependencies to a
+        target repository and setting properties on promoted artifacts.
         All artifacts from all scopes are included by default while dependencies are not. Scopes are additive (or).
         From version 5.7, the target repository can be a virtual repository.
+        :param build_name: name of the build
+        :param build_number: number of the build to promote
         :param status: new build status (any string)
         :param comment: An optional comment describing the reason for promotion. Default: ""
         :param ci_user: The user that invoked promotion from the CI server
-        :param timestamp: the time the promotion command was received by Artifactory (It needs to be unique)
-            the format is: 'yyyy-MM-dd'T'HH:mm:ss.SSSZ'. Example: '2016-02-11T18:30:24.825+0200'
         :param dry_run: run without executing any operation in Artifactory, but get the results to check if
             the operation can succeed. Default: false
         :param source_repo: optional repository from which the build's artifacts will be copied/moved
@@ -2215,10 +2214,53 @@ class ArtifactoryBuild(ArtifactoryPath):
         :param artifacts: whether to move/copy the build's artifacts. Default: true
         :param dependencies: whether to move/copy the build's dependencies. Default: false.
         :param scopes: an array of dependency scopes to include when "dependencies" is true
-        :param properties: a list of properties to attach to the build's artifacts (regardless if "targetRepo" is used).
+        :param properties: (dict) properties to attach to the build's artifacts (regardless if "targetRepo" is used).
         :param fail_fast: fail and abort the operation upon receiving an error. Default: true
         :return:
         """
+        url = f"/api/build/promote/{build_name}/{build_number}"
+
+        if not isinstance(properties, dict):
+            raise ArtifactoryException("properties must be a dict")
+
+        iso_time = datetime.datetime.now().astimezone().isoformat()
+        params = {
+            "status": status,
+            "comment": comment,
+            "ciUser": ci_user,
+            "timestamp": iso_time,
+            "dryRun": dry_run,
+            "copy": require_copy,
+            "artifacts": artifacts,
+            "dependencies": dependencies,
+            "properties": properties,
+            "failFast": fail_fast,
+        }
+        if source_repo:
+            params["sourceRepo"] = source_repo
+
+        if target_repo:
+            params["targetRepo"] = target_repo
+
+        if dependencies:
+            if not scopes:
+                raise ArtifactoryException(
+                    "Dependencies set to True but no scopes provided"
+                )
+
+            if not isinstance(scopes, list):
+                raise ArtifactoryException("scopes must be a list")
+
+            params["scopes"] = scopes
+
+        self.rest_post(
+            url,
+            params=params,
+            session=self.session,
+            verify=self.verify,
+            cert=self.cert,
+            timeout=self.timeout,
+        )
 
 
 def walk(pathobj, topdown=True):
