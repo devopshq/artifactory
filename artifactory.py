@@ -863,7 +863,14 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         # if stat.is_dir:
         #     raise IsADirectoryError(1, "Operation not permitted: {!r}".format(pathobj))
 
-        url = str(pathobj)
+        url = "/".join(
+            [
+                pathobj.drive.rstrip("/"),
+                requests.utils.quote(
+                    str(pathobj.relative_to(pathobj.drive)).strip("/")
+                ),
+            ]
+        )
         text, code = self.rest_del(
             url,
             session=pathobj.session,
@@ -1008,7 +1015,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             [
                 src.drive.rstrip("/"),
                 "api/copy",
-                str(src.relative_to(src.drive)).rstrip("/"),
+                requests.utils.quote(str(src.relative_to(src.drive)).rstrip("/")),
             ]
         )
 
@@ -1037,7 +1044,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             [
                 src.drive.rstrip("/"),
                 "api/move",
-                str(src.relative_to(src.drive)).rstrip("/"),
+                requests.utils.quote(str(src.relative_to(src.drive)).rstrip("/")),
             ]
         )
 
@@ -1066,7 +1073,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             [
                 pathobj.drive.rstrip("/"),
                 "api/storage",
-                str(pathobj.relative_to(pathobj.drive)).strip("/"),
+                requests.utils.quote(
+                    str(pathobj.relative_to(pathobj.drive)).strip("/")
+                ),
             ]
         )
 
@@ -1098,7 +1107,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             [
                 pathobj.drive.rstrip("/"),
                 "api/storage",
-                str(pathobj.relative_to(pathobj.drive)).strip("/"),
+                requests.utils.quote(
+                    str(pathobj.relative_to(pathobj.drive)).strip("/")
+                ),
             ]
         )
 
@@ -1132,7 +1143,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             [
                 pathobj.drive.rstrip("/"),
                 "api/storage",
-                str(pathobj.relative_to(pathobj.drive)).strip("/"),
+                requests.utils.quote(
+                    str(pathobj.relative_to(pathobj.drive)).strip("/")
+                ),
             ]
         )
 
@@ -1171,10 +1184,16 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         response = self.get_response(pathobj)
         file_size = int(response.headers.get("Content-Length", 0))
         bytes_read = 0
+        real_chunk = 0
         for chunk in response.iter_content(chunk_size=chunk_size):
-            bytes_read += len(chunk)
-            if callable(progress_func):
+            real_chunk += len(chunk)
+            if callable(progress_func) and real_chunk - chunk_size >= 0:
+                # Artifactory archives folders on fly and can reduce requested chunk size to 8kB, thus report
+                # only when real chunk size met
+                bytes_read += real_chunk
+                real_chunk = 0
                 progress_func(bytes_read, file_size)
+
             file.write(chunk)
 
 
@@ -1370,7 +1389,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         Convert URL to the new link to download specified folder as archive according to REST API.
         Requires Enable Folder Download to be set in artifactory.
         :param: archive_type (str): one of possible archive types (supports zip/tar/tar.gz/tgz)
-        :param: check_sum (bool): defines of check sum is required along with download
+        :param: check_sum (bool): defines if checksum is required along with download
         :return: raw object for download
         """
         if self.is_file():
@@ -1478,6 +1497,23 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                 continue
             yield self._make_child_relpath(name)
 
+    def read_text(self, encoding=None, errors=None):
+        """
+        Read file content
+        :param encoding: file encoding, by default Requests makes educated guesses about the encoding of
+            the response based on the HTTP headers
+        :param errors: not implemented
+        :return: (str) file content in string format
+        """
+        if errors:
+            raise NotImplementedError("Encoding errors cannot be handled")
+
+        response = self._accessor.get_response(self)
+        if encoding:
+            response.encoding = encoding
+
+        return response.text
+
     def open(self, mode="r", buffering=-1, encoding=None, errors=None, newline=None):
         """
         Open the given Artifactory URI and return a file-like object
@@ -1485,9 +1521,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         The only difference is that this object doesn't support seek()
         """
         if mode != "r" or buffering != -1 or encoding or errors or newline:
-            raise NotImplementedError(
-                "Only the default open() " + "arguments are supported"
-            )
+            raise NotImplementedError("Only the default open() arguments are supported")
 
         return self._accessor.open(self)
 
@@ -1496,7 +1530,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         Convert URL to the new link to download specified folder as archive according to REST API.
         Requires Enable Folder Download to be set in artifactory.
         :param: archive_type (str): one of possible archive types (supports zip/tar/tar.gz/tgz)
-        :param: check_sum (bool): defines of check sum is required along with download
+        :param: check_sum (bool): defines if checksum is required along with download
         :return: raw object for download
         """
         return self._accessor.open(self.archive(archive_type, check_sum))
@@ -1947,7 +1981,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         Downloads large file in chunks and and call a progress function.
 
         :param out: file path of output file
-        :param chunk_size: chunk size in bytes, recommend. eg 1024*1024 is 1MiB
+        :param chunk_size: chunk size in bytes. eg 1024*1024 is 1MiB
         :param progress_func: Provide custom function to print output or suppress print by setting to None
         :return: None
         """
