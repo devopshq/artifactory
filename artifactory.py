@@ -2179,15 +2179,15 @@ class ArtifactoryBuild(ArtifactoryPath):
         url = f"{build_name}/{build_number1}?diff={build_number2}"
         return self._get_build_api_response(url)
 
-    def build_promotion(
+    def promote_build(
         self,
         build_name,
         build_number,
         ci_user,
-        dry_run,
         properties,
         status="staged",
         comment="",
+        dry_run=False,
         dependencies=False,
         scopes=None,
         target_repo="",
