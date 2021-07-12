@@ -605,8 +605,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
     Implements operations with Artifactory REST API
     """
 
+    @staticmethod
     def rest_get(
-        self,
         url,
         params=None,
         headers=None,
@@ -629,8 +629,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         )
         return res.text, res.status_code
 
+    @staticmethod
     def rest_put(
-        self,
         url,
         params=None,
         headers=None,
@@ -653,8 +653,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         )
         return res.text, res.status_code
 
+    @staticmethod
     def rest_post(
-        self,
         url,
         params=None,
         headers=None,
@@ -675,14 +675,12 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=cert,
             timeout=timeout,
         )
-        if response.status_code not in (200, 201):
-            raise RuntimeError(response.text)
+        response.raise_for_status()
 
         return response
 
-    def rest_del(
-        self, url, params=None, session=None, verify=True, cert=None, timeout=None
-    ):
+    @staticmethod
+    def rest_del(url, params=None, session=None, verify=True, cert=None, timeout=None):
         """
         Perform a DELETE request to url with requests.session
         """
@@ -692,8 +690,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         )
         return res.text, res.status_code
 
+    @staticmethod
     def rest_put_stream(
-        self,
         url,
         stream,
         headers=None,
@@ -712,7 +710,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         )
         return res.text, res.status_code
 
-    def rest_get_stream(self, url, session=None, verify=True, cert=None, timeout=None):
+    @staticmethod
+    def rest_get_stream(url, session=None, verify=True, cert=None, timeout=None):
         """
         Perform a chunked GET request to url with requests.session
         This is specifically to download files.
@@ -2200,7 +2199,6 @@ class ArtifactoryBuild(ArtifactoryPath):
         Change the status of a build, optionally moving or copying the build's artifacts and its dependencies to a
         target repository and setting properties on promoted artifacts.
         All artifacts from all scopes are included by default while dependencies are not. Scopes are additive (or).
-        From version 5.7, the target repository can be a virtual repository.
         :param build_name: name of the build
         :param build_number: number of the build to promote
         :param status: new build status (any string)

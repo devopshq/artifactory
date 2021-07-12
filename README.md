@@ -498,9 +498,6 @@ path.promote_docker_image("docker-staging", "docker-prod", "my-application", "0.
 
 ## Builds
 ### Get all builds
-Since: 2.2.0  
-Security: Requires a privileged user (can be anonymous).  
-From version 6.6, requires read permission for the build or basic read.
 ~~~python
 from artifactory import ArtifactoryBuild
 
@@ -509,9 +506,6 @@ print(arti_build.builds)
 ~~~
 
 ### Build Runs
-Since: 2.2.0  
-Security: Requires a privileged user (can be anonymous).   
-From version 6.6, requires read permission for the build or basic read.
 ~~~python
 from artifactory import ArtifactoryBuild
 
@@ -520,10 +514,6 @@ print(arti_build.get_build_runs("lucene-core-release"))
 ~~~
 
 ### Build Info
-Since: 2.2.0  
-Notes: Requires JFrog Container Registry or Artifactory Pro.  
-Security: Requires a privileged user with deploy permissions.   
-From version 6.6, requires read permission for the build.
 ~~~python
 from artifactory import ArtifactoryBuild
 
@@ -532,10 +522,8 @@ print(arti_build.get_build_info("lucene-core-release", build_number=5))
 ~~~
 
 ### Builds Diff
-Description: Compare a build artifacts/dependencies/environment with an older build to see what 
+Compare a build artifacts/dependencies/environment with an older build to see what 
 has changed (new artifacts added, old dependencies deleted etc).  
-Since: 2.6.6  
-Security: Requires a privileged user. From version 6.6, requires read permission for the build.
 ~~~python
 from artifactory import ArtifactoryBuild
 
@@ -544,10 +532,9 @@ print(arti_build.get_build_diff("lucene-core-release", build_number1=5, build_nu
 ~~~
 
 ### Build Promotion
-Description: Change the status of a build, optionally moving or copying the build's artifacts and its dependencies 
+Change the status of a build, optionally moving or copying the build's artifacts and its dependencies 
 to a target repository and setting properties on promoted artifacts.  
 All artifacts from all scopes are included by default while dependencies are not. Scopes are additive (or). 
-From version 5.7, the target repository can be a virtual repository.
 
 ~~~python
 from artifactory import ArtifactoryBuild
