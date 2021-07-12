@@ -351,7 +351,7 @@ def encode_properties(parameters):
     return ";".join(result)
 
 
-# Declare contextlib class that was enabled in Py 3.7. Declare for compatibility with 3.5
+# Declare contextlib class that was enabled in Py 3.7. Declare for compatibility with 3.6
 # this class is taken and modified from standard module contextlib
 class nullcontext:
     """Context manager that does no additional processing.
