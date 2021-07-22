@@ -1514,6 +1514,14 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         return response.text
 
+    def read_bytes(self):
+        """
+        Read file content as bytes
+        :return: (bytes) file content in bytes format
+        """
+        response = self._accessor.get_response(self)
+        return response.content
+
     def open(self, mode="r", buffering=-1, encoding=None, errors=None, newline=None):
         """
         Open the given Artifactory URI and return a file-like object
