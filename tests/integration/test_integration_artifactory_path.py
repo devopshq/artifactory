@@ -183,3 +183,16 @@ def test_open(path):
     s.write("Some test string")
     p.deploy(s)
     p.unlink()
+
+
+def test_read_and_write(path):
+    p = path("/integration-artifactory-path-repo/foo")
+
+    if p.exists():
+        p.rmdir()
+
+    p.write_text("Some test string")
+    assert p.read_bytes() == b"Some test string"
+    assert p.read_text() == "Some test string"
+
+    p.unlink()
