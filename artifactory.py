@@ -26,6 +26,7 @@ import collections
 import errno
 import fnmatch
 import hashlib
+import io
 import json
 import logging
 import os
@@ -1521,6 +1522,27 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         response = self._accessor.get_response(self)
         return response.content
+
+    def write_bytes(self, data):
+        """
+        Write file content as bytes
+        :param data (bytes): Data to be written to file
+        """
+        md5 = hashlib.md5(data).hexdigest()
+        sha1 = hashlib.sha1(data).hexdigest()
+        sha256 = hashlib.sha256(data).hexdigest()
+
+        fobj = io.BytesIO(data)
+        self.deploy(fobj, md5=md5, sha1=sha1, sha256=sha256)
+        return len(data)
+
+    def write_text(self, data, encoding="utf-8", errors="strict"):
+        """
+        Write file content as text
+        :param data (str): Text to be written to file
+        """
+        raw_data = data.encode(encoding, errors)
+        return self.write_bytes(raw_data)
 
     def open(self, mode="r", buffering=-1, encoding=None, errors=None, newline=None):
         """
