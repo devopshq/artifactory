@@ -824,7 +824,12 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if pathobj.exists():
             raise OSError(17, "File exists: '%s'" % str(pathobj))
 
-        url = str(pathobj) + "/"
+        url = "/".join(
+            [
+                pathobj.drive.rstrip("/"),
+                requests.utils.quote(str(pathobj.relative_to(pathobj.drive)).strip("/")),
+            ]
+        ) + "/"
         text, code = self.rest_put(
             url,
             session=pathobj.session,
@@ -845,7 +850,12 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if not stat.is_dir:
             raise OSError(20, "Not a directory: '%s'" % str(pathobj))
 
-        url = str(pathobj) + "/"
+        url = "/".join(
+            [
+                pathobj.drive.rstrip("/"),
+                requests.utils.quote(str(pathobj.relative_to(pathobj.drive)).strip("/")),
+            ]
+        ) + "/"
 
         text, code = self.rest_del(
             url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert
@@ -892,7 +902,12 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if pathobj.exists():
             return
 
-        url = str(pathobj)
+        url = "/".join(
+            [
+                pathobj.drive.rstrip("/"),
+                requests.utils.quote(str(pathobj.relative_to(pathobj.drive)).strip("/")),
+            ]
+        )
         text, code = self.rest_put(
             url,
             session=pathobj.session,
@@ -944,7 +959,13 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         :param pathobj: ArtifactoryPath object
         :return: request response
         """
-        url = str(pathobj)
+        url = "/".join(
+            [
+                pathobj.drive.rstrip("/"),
+                requests.utils.quote(str(pathobj.relative_to(pathobj.drive)).strip("/")),
+            ]
+        )
+
         response = self.rest_get_stream(
             url,
             session=pathobj.session,
@@ -976,7 +997,12 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if isinstance(fobj, urllib3.response.HTTPResponse):
             fobj = HTTPResponseWrapper(fobj)
 
-        url = str(pathobj)
+        url = "/".join(
+            [
+                pathobj.drive.rstrip("/"),
+                requests.utils.quote(str(pathobj.relative_to(pathobj.drive)).strip("/")),
+            ]
+        )
 
         if parameters:
             url += ";%s" % encode_matrix_parameters(parameters)
