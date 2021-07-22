@@ -824,12 +824,17 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if pathobj.exists():
             raise OSError(17, "File exists: '%s'" % str(pathobj))
 
-        url = "/".join(
-            [
-                pathobj.drive.rstrip("/"),
-                requests.utils.quote(str(pathobj.relative_to(pathobj.drive)).strip("/")),
-            ]
-        ) + "/"
+        url = (
+            "/".join(
+                [
+                    pathobj.drive.rstrip("/"),
+                    requests.utils.quote(
+                        str(pathobj.relative_to(pathobj.drive)).strip("/")
+                    ),
+                ]
+            )
+            + "/"
+        )
         text, code = self.rest_put(
             url,
             session=pathobj.session,
@@ -850,12 +855,17 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if not stat.is_dir:
             raise OSError(20, "Not a directory: '%s'" % str(pathobj))
 
-        url = "/".join(
-            [
-                pathobj.drive.rstrip("/"),
-                requests.utils.quote(str(pathobj.relative_to(pathobj.drive)).strip("/")),
-            ]
-        ) + "/"
+        url = (
+            "/".join(
+                [
+                    pathobj.drive.rstrip("/"),
+                    requests.utils.quote(
+                        str(pathobj.relative_to(pathobj.drive)).strip("/")
+                    ),
+                ]
+            )
+            + "/"
+        )
 
         text, code = self.rest_del(
             url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert
@@ -905,7 +915,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         url = "/".join(
             [
                 pathobj.drive.rstrip("/"),
-                requests.utils.quote(str(pathobj.relative_to(pathobj.drive)).strip("/")),
+                requests.utils.quote(
+                    str(pathobj.relative_to(pathobj.drive)).strip("/")
+                ),
             ]
         )
         text, code = self.rest_put(
@@ -962,7 +974,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         url = "/".join(
             [
                 pathobj.drive.rstrip("/"),
-                requests.utils.quote(str(pathobj.relative_to(pathobj.drive)).strip("/")),
+                requests.utils.quote(
+                    str(pathobj.relative_to(pathobj.drive)).strip("/")
+                ),
             ]
         )
 
@@ -1000,7 +1014,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         url = "/".join(
             [
                 pathobj.drive.rstrip("/"),
-                requests.utils.quote(str(pathobj.relative_to(pathobj.drive)).strip("/")),
+                requests.utils.quote(
+                    str(pathobj.relative_to(pathobj.drive)).strip("/")
+                ),
             ]
         )
 
