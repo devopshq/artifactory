@@ -372,6 +372,13 @@ class nullcontext:
         pass
 
 
+def quote_url(url):
+    parsed_url = urllib3.util.parse_url(url)
+    quoted_path = requests.utils.quote(url.rpartition(parsed_url.host)[2])
+    quoted_url = f'{parsed_url.scheme}://{parsed_url.host}{quoted_path}'
+    return quoted_url
+
+
 class _ArtifactoryFlavour(pathlib._Flavour):
     """
     Implements Artifactory-specific pure path manipulations.
@@ -497,23 +504,7 @@ class _ArtifactoryFlavour(pathlib._Flavour):
         """
         parsed_url = urllib3.util.parse_url(url)
 
-        path = parsed_url.path
-
-        if path in url:
-            # URL doesn't contain percent-encoded byptes
-            # http://example.com/dir/file.html
-            # No further processing necessary
-            return path
-
-        unquoted_path = urllib.parse.unquote(parsed_url.path)
-        if unquoted_path in url:
-            # URL contained /?#@: and is percent-encoded by urllib3.util.parse_url()
-            # http://example.com/d:r/f:le.html became http://example.com/d%3Ar/f%3Ale.html
-            # Decode back to http://example.com/d:r/f:le.html using urllib.parse.unquote()
-            return unquoted_path
-
-        # Is this ever reached?
-        raise ValueError("Can't parse URL {}".format(url))
+        return url.rpartition(parsed_url.host)[2]
 
     def casefold(self, string):
         """
@@ -620,6 +611,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         """
         Perform a GET request to url with requests.session
         """
+        url = quote_url(url)
         res = session.get(
             url,
             params=params,
@@ -643,6 +635,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         """
         Perform a PUT request to url with requests.session
         """
+        url = quote_url(url)
         res = session.put(
             url,
             params=params,
@@ -666,6 +659,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         """
         Perform a POST request to url with requests.session
         """
+        url = quote_url(url)
         res = session.post(
             url,
             params=params,
@@ -682,6 +676,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         """
         Perform a DELETE request to url with requests.session
         """
+        url = quote_url(url)
         res = session.delete(
             url, params=params, verify=verify, cert=cert, timeout=timeout
         )
@@ -701,6 +696,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         Perform a chunked PUT request to url with requests.session
         This is specifically to upload files.
         """
+        url = quote_url(url)
         res = session.put(
             url, headers=headers, data=stream, verify=verify, cert=cert, timeout=timeout
         )
@@ -711,6 +707,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         Perform a chunked GET request to url with requests.session
         This is specifically to download files.
         """
+        url = quote_url(url)
         response = session.get(
             url, stream=True, verify=verify, cert=cert, timeout=timeout
         )
@@ -866,9 +863,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         url = "/".join(
             [
                 pathobj.drive.rstrip("/"),
-                requests.utils.quote(
-                    str(pathobj.relative_to(pathobj.drive)).strip("/")
-                ),
+                str(pathobj.relative_to(pathobj.drive)).strip("/"),
             ]
         )
         text, code = self.rest_del(
@@ -1015,7 +1010,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             [
                 src.drive.rstrip("/"),
                 "api/copy",
-                requests.utils.quote(str(src.relative_to(src.drive)).rstrip("/")),
+                str(src.relative_to(src.drive)).rstrip("/"),
             ]
         )
 
@@ -1044,7 +1039,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             [
                 src.drive.rstrip("/"),
                 "api/move",
-                requests.utils.quote(str(src.relative_to(src.drive)).rstrip("/")),
+                str(src.relative_to(src.drive)).rstrip("/"),
             ]
         )
 
@@ -1073,9 +1068,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             [
                 pathobj.drive.rstrip("/"),
                 "api/storage",
-                requests.utils.quote(
-                    str(pathobj.relative_to(pathobj.drive)).strip("/")
-                ),
+                str(pathobj.relative_to(pathobj.drive)).strip("/"),
             ]
         )
 
@@ -1107,9 +1100,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             [
                 pathobj.drive.rstrip("/"),
                 "api/storage",
-                requests.utils.quote(
-                    str(pathobj.relative_to(pathobj.drive)).strip("/")
-                ),
+                str(pathobj.relative_to(pathobj.drive)).strip("/"),
             ]
         )
 
@@ -1143,9 +1134,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             [
                 pathobj.drive.rstrip("/"),
                 "api/storage",
-                requests.utils.quote(
-                    str(pathobj.relative_to(pathobj.drive)).strip("/")
-                ),
+                str(pathobj.relative_to(pathobj.drive)).strip("/"),
             ]
         )
 
