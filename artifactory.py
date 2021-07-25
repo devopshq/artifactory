@@ -375,9 +375,7 @@ class nullcontext:
 def quote_url(url):
     parsed_url = urllib3.util.parse_url(url)
     quoted_path = requests.utils.quote(url.rpartition(parsed_url.host)[2])
-    quoted_url = "{}://{}{}".format(
-        parsed_url.scheme, parsed_url.host, quoted_path
-    )
+    quoted_url = "{}://{}{}".format(parsed_url.scheme, parsed_url.host, quoted_path)
 
     return quoted_url
 
