@@ -66,14 +66,34 @@ class ArtifactoryFlavorTest(unittest.TestCase):
 
     def test_quote_url(self):
         check = self._check_quote_url
-        check("https://example.com/artifactory/foo", "https://example.com/artifactory/foo")
-        check("https://example.com/artifactory/foo/#1", "https://example.com/artifactory/foo/%231")
-        check("https://example.com/artifactory/foo/#1/", "https://example.com/artifactory/foo/%231/")
-        check("https://example.com/artifactory/foo/#1/bar", "https://example.com/artifactory/foo/%231/bar")
+        check(
+            "https://example.com/artifactory/foo", "https://example.com/artifactory/foo"
+        )
+        check(
+            "https://example.com/artifactory/foo/#1",
+            "https://example.com/artifactory/foo/%231",
+        )
+        check(
+            "https://example.com/artifactory/foo/#1/",
+            "https://example.com/artifactory/foo/%231/",
+        )
+        check(
+            "https://example.com/artifactory/foo/#1/bar",
+            "https://example.com/artifactory/foo/%231/bar",
+        )
 
-        check("https://example.com/artifactory/foo/?1", "https://example.com/artifactory/foo/%3F1")
-        check("https://example.com/artifactory/foo/?1/", "https://example.com/artifactory/foo/%3F1/")
-        check("https://example.com/artifactory/foo/?1/bar", "https://example.com/artifactory/foo/%3F1/bar")
+        check(
+            "https://example.com/artifactory/foo/?1",
+            "https://example.com/artifactory/foo/%3F1",
+        )
+        check(
+            "https://example.com/artifactory/foo/?1/",
+            "https://example.com/artifactory/foo/%3F1/",
+        )
+        check(
+            "https://example.com/artifactory/foo/?1/bar",
+            "https://example.com/artifactory/foo/%3F1/bar",
+        )
 
     def _check_splitroot(self, arg, expected):
         f = self.flavour.splitroot
