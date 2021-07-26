@@ -678,7 +678,7 @@ class ArtifactoryPathTest(unittest.TestCase):
 
         for arti in artis:
             for reponame in reponames:
-                c = P("http://b/"+arti).joinpath(reponame)
+                c = P("http://b/" + arti).joinpath(reponame)
                 self.assertEqual(c.root, "/reponame/")
 
 
