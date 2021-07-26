@@ -407,6 +407,10 @@ class _ArtifactoryFlavour(pathlib._Flavour):
         drv2, root2, parts2 = super(_ArtifactoryFlavour, self).join_parsed_parts(
             drv, root, parts, drv2, root2, parts2
         )
+
+        if not root2 and len(parts2) > 1:
+            root2 = self.sep + parts2.pop(1) + self.sep
+
         # quick hack for https://github.com/devopshq/artifactory/issues/29
         # drive or repository must start with / , if not - add it
         if not drv2.endswith("/") and not root2.startswith("/"):
