@@ -271,12 +271,23 @@ path.deploy_file(
 )
 ```
 
-Deploy a debian package ```myapp-1.0.deb```
+Deploy a debian package ```myapp-1.0.deb``` to the repository root
 
 ```python
 from artifactory import ArtifactoryPath
 
-path = ArtifactoryPath("http://my-artifactory/artifactory/ubuntu-local/pool")
+path = ArtifactoryPath("http://my-artifactory/artifactory/ubuntu-local/")
+path.deploy_deb(
+    "./myapp-1.0.deb", distribution="trusty", component="main", architecture="amd64"
+)
+```
+
+Deploy a debian package ```myapp-1.0.deb``` to a sub-folder
+
+```python
+from artifactory import ArtifactoryPath
+
+path = ArtifactoryPath("http://my-artifactory/artifactory/ubuntu-local/pool/myapp-1.0.deb")
 path.deploy_deb(
     "./myapp-1.0.deb", distribution="trusty", component="main", architecture="amd64"
 )
