@@ -704,6 +704,20 @@ class ArtifactoryPathTest(unittest.TestCase):
         b = P("http://b/artifactory/reponame/folder/path.xml")
         self.assertEqual(b.path_in_repo, "/folder/path.xml")
 
+    def test_joinpath_repo(self):
+        """
+        https://github.com/devopshq/artifactory/issues/239
+        """
+
+        P = self.cls
+        artis = ["", "artifactory", "artifactory/"]
+        reponames = ["reponame", "/reponame", "reponame/", "/reponame/"]
+
+        for arti in artis:
+            for reponame in reponames:
+                c = P("http://b/" + arti).joinpath(reponame)
+                self.assertEqual(c.root, "/reponame/")
+
 
 class ArtifactorySaaSPathTest(unittest.TestCase):
 
