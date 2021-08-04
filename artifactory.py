@@ -720,6 +720,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         response = session.get(
             url, stream=True, verify=verify, cert=cert, timeout=timeout
         )
+        response.raise_for_status()
         return response
 
     def get_stat_json(self, pathobj):
@@ -956,9 +957,6 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=pathobj.cert,
             timeout=pathobj.timeout,
         )
-        code = response.status_code
-        if code != 200:
-            raise RuntimeError(code)
 
         return response
 
@@ -2105,15 +2103,119 @@ class ArtifactorySaaSPath(ArtifactoryPath):
         raise NotImplementedError()
 
 
-class ArtifactoryBuild(ArtifactoryPath):
+class ArtifactoryBuild:
+    __slots__ = ("name", "last_started", "build_manager")
+
+    def __init__(self, name, last_started, build_manager):
+        self.name = name
+        self.last_started = last_started
+        self.build_manager = build_manager
+
+    def __repr__(self):
+        return self.name
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def runs(self):
+        """
+        Get information about build runs
+        :return: List[ArtifactoryBuildRun]
+        """
+        return self.build_manager.get_build_runs(self.name)
+
+
+class ArtifactoryBuildRun:
+    __slots__ = ("run_number", "started", "build_name", "build_manager")
+
+    def __init__(self, run_number, started, build_name, build_manager):
+        self.run_number = run_number
+        self.started = started
+        self.build_name = build_name
+        self.build_manager = build_manager
+
+    def __repr__(self):
+        return self.run_number
+
+    def __str__(self):
+        return self.run_number
+
+    @property
+    def info(self):
+        """
+        Get information about specified build run
+        :return: (dict) json response with build run info
+        """
+        return self.build_manager.get_build_info(self.build_name, self.run_number)
+
+    def diff(self, build_num_to_compare):
+        """
+        Compares build with build_number1 to build_number2
+        :param build_num_to_compare: number of second build to compare
+        :return: (dict) json response with difference
+        """
+
+        diff = self.build_manager.get_build_diff(
+            self.build_name, self.run_number, build_num_to_compare
+        )
+        return diff
+
+    def promote(
+        self,
+        ci_user,
+        properties,
+        status="staged",
+        comment="",
+        dry_run=False,
+        dependencies=False,
+        scopes=None,
+        target_repo="",
+        source_repo="",
+        fail_fast=True,
+        require_copy=False,
+        artifacts=True,
+    ):
+        """
+        Change the status of a build, optionally moving or copying the build's artifacts and its dependencies to a
+        target repository and setting properties on promoted artifacts.
+        All artifacts from all scopes are included by default while dependencies are not. Scopes are additive (or).
+        :param status: new build status (any string)
+        :param comment: An optional comment describing the reason for promotion. Default: ""
+        :param ci_user: The user that invoked promotion from the CI server
+        :param dry_run: run without executing any operation in Artifactory, but get the results to check if
+            the operation can succeed. Default: false
+        :param source_repo: optional repository from which the build's artifacts will be copied/moved
+        :param target_repo: optional repository to move or copy the build's artifacts and/or dependencies
+        :param require_copy: whether to copy instead of move, when a target repository is specified. Default: false
+        :param artifacts: whether to move/copy the build's artifacts. Default: true
+        :param dependencies: whether to move/copy the build's dependencies. Default: false.
+        :param scopes: an array of dependency scopes to include when "dependencies" is true
+        :param properties: (dict) properties to attach to the build's artifacts (regardless if "targetRepo" is used).
+        :param fail_fast: fail and abort the operation upon receiving an error. Default: true
+        :return: None
+        """
+
+        self.build_manager.promote_build(
+            self.build_name,
+            self.run_number,
+            ci_user,
+            properties,
+            status,
+            comment,
+            dry_run,
+            dependencies,
+            scopes,
+            target_repo,
+            source_repo,
+            fail_fast,
+            require_copy,
+            artifacts,
+        )
+
+
+class ArtifactoryBuildManager(ArtifactoryPath):
     def __new__(cls, *args, **kwargs):
-        """
-        pathlib.Path overrides __new__ in order to create objects
-        of different classes based on platform. This magic prevents
-        us from adding an 'auth' argument to the constructor.
-        So we have to first construct ArtifactoryPath by Pathlib and
-        only then add auth information.
-        """
         obj = super().__new__(cls, *args, **kwargs)
         obj.project = kwargs.get("project", "")
         return obj
@@ -2129,12 +2231,15 @@ class ArtifactoryBuild(ArtifactoryPath):
         if self.project:
             url = f"?project='{self.project}'"
 
-        obj = self.joinpath(url)
-        resp = self._accessor.get_response(obj).json()
-
-        if "builds" in self._get_build_api_response(url):
+        resp = self._get_build_api_response(url)
+        if "builds" in resp:
             for build in resp["builds"]:
-                all_builds.append(build["uri"][1:])
+                arti_build = ArtifactoryBuild(
+                    name=build["uri"][1:],
+                    last_started=build["lastStarted"],
+                    build_manager=self,
+                )
+                all_builds.append(arti_build)
 
         return all_builds
 
@@ -2142,9 +2247,23 @@ class ArtifactoryBuild(ArtifactoryPath):
         """
         Get information about build runs
         :param build_name: name of the build
-        :return: (dict) json response with build runs info
+        :return: List[ArtifactoryBuildRun]
         """
-        return self._get_info(build_name)
+        resp = self._get_info(build_name)
+        all_runs = []
+        if "buildsNumbers" not in resp:
+            print("No build runs for requested build")
+        else:
+            for build_run in resp["buildsNumbers"]:
+                artifactory_run = ArtifactoryBuildRun(
+                    run_number=build_run["uri"][1:],
+                    started=build_run["started"],
+                    build_name=build_name,
+                    build_manager=self,
+                )
+                all_runs.append(artifactory_run)
+
+        return all_runs
 
     def get_build_info(self, build_name, build_number):
         """

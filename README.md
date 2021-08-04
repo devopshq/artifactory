@@ -29,11 +29,6 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
   * [FileStat](#filestat)
   * [Promote Docker image](#promote-docker-image)
   * [Builds](#builds)
-    + [Get all builds](#get-all-builds)
-    + [Build Runs](#build-runs)
-    + [Build Info](#build-info)
-    + [Builds Diff](#builds-diff)
-    + [Build Promotion](#build-promotion)
 - [Admin area](#admin-area)
   * [User](#user)
     + [API Keys](#api-keys)
@@ -497,53 +492,43 @@ path.promote_docker_image("docker-staging", "docker-prod", "my-application", "0.
 ```
 
 ## Builds
-### Get all builds
 ~~~python
-from artifactory import ArtifactoryBuild
+from artifactory import ArtifactoryBuildManager
 
-arti_build = ArtifactoryBuild("https://repo.jfrog.org/artifactory", project="proj_name")
-print(arti_build.builds)
-~~~
+arti_build = ArtifactoryBuildManager("https://repo.jfrog.org/artifactory", project="proj_name", auth=("admin", "admin"))
 
-### Build Runs
-~~~python
-from artifactory import ArtifactoryBuild
+# Get all builds
+all_builds = arti_build.builds
+print(all_builds)
 
-arti_build = ArtifactoryBuild("https://repo.jfrog.org/artifactory", project="1")
-print(arti_build.get_build_runs("lucene-core-release"))
-~~~
+# Build Runs
+build1 = all_builds[0]
+all_runs = build1.runs
+print(all_runs)
 
-### Build Info
-~~~python
-from artifactory import ArtifactoryBuild
+# Build Info
+build_number1 = all_runs[0]
+print(build_number1.info)
 
-arti_build = ArtifactoryBuild("https://repo.jfrog.org/artifactory", auth=("admin", "admin"))
-print(arti_build.get_build_info("lucene-core-release", build_number=5))
-~~~
+# Builds Diff
+"""
+  Compare a build artifacts/dependencies/environment with an older build to see what 
+  has changed (new artifacts added, old dependencies deleted etc).  
+"""
+print(build_number1.diff(3))
 
-### Builds Diff
-Compare a build artifacts/dependencies/environment with an older build to see what 
-has changed (new artifacts added, old dependencies deleted etc).  
-~~~python
-from artifactory import ArtifactoryBuild
 
-arti_build = ArtifactoryBuild("https://repo.jfrog.org/artifactory", auth=("admin", "admin"))
-print(arti_build.get_build_diff("lucene-core-release", build_number1=5, build_number2=4))
-~~~
+# Build Promotion
+"""
+  Change the status of a build, optionally moving or copying the build's artifacts and its dependencies 
+  to a target repository and setting properties on promoted artifacts.  
+  All artifacts from all scopes are included by default while dependencies are not. Scopes are additive (or)
+"""
 
-### Build Promotion
-Change the status of a build, optionally moving or copying the build's artifacts and its dependencies 
-to a target repository and setting properties on promoted artifacts.  
-All artifacts from all scopes are included by default while dependencies are not. Scopes are additive (or). 
-
-~~~python
-from artifactory import ArtifactoryBuild
-
-arti_build = ArtifactoryBuild("https://repo.jfrog.org/artifactory", auth=("admin", "admin"))
-print(arti_build.promote_build("lucene-core-release", build_number=5, ci_user="admin", properties={                               
+build_number1.promote(ci_user="admin", properties={                               
      "components": ["c1","c3","c14"],
      "release-name": ["fb3-ga"]
- }))
+ })
 ~~~
 
 # Admin area
