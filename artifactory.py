@@ -23,6 +23,7 @@ to manipulate artifactory paths. See pathlib docs for details how
 pure paths can be used.
 """
 import collections
+import datetime
 import errno
 import fnmatch
 import hashlib
@@ -350,7 +351,7 @@ def encode_properties(parameters):
     return ";".join(result)
 
 
-# Declare contextlib class that was enabled in Py 3.7. Declare for compatibility with 3.5
+# Declare contextlib class that was enabled in Py 3.7. Declare for compatibility with 3.6
 # this class is taken and modified from standard module contextlib
 class nullcontext:
     """Context manager that does no additional processing.
@@ -604,8 +605,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
     Implements operations with Artifactory REST API
     """
 
+    @staticmethod
     def rest_get(
-        self,
         url,
         params=None,
         headers=None,
@@ -628,8 +629,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         )
         return res.text, res.status_code
 
+    @staticmethod
     def rest_put(
-        self,
         url,
         params=None,
         headers=None,
@@ -652,8 +653,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         )
         return res.text, res.status_code
 
+    @staticmethod
     def rest_post(
-        self,
         url,
         params=None,
         headers=None,
@@ -666,7 +667,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         Perform a POST request to url with requests.session
         """
         url = quote_url(url)
-        res = session.post(
+        response = session.post(
             url,
             params=params,
             headers=headers,
@@ -674,11 +675,12 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=cert,
             timeout=timeout,
         )
-        return res.text, res.status_code
+        response.raise_for_status()
 
-    def rest_del(
-        self, url, params=None, session=None, verify=True, cert=None, timeout=None
-    ):
+        return response
+
+    @staticmethod
+    def rest_del(url, params=None, session=None, verify=True, cert=None, timeout=None):
         """
         Perform a DELETE request to url with requests.session
         """
@@ -688,8 +690,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         )
         return res.text, res.status_code
 
+    @staticmethod
     def rest_put_stream(
-        self,
         url,
         stream,
         headers=None,
@@ -708,7 +710,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         )
         return res.text, res.status_code
 
-    def rest_get_stream(self, url, session=None, verify=True, cert=None, timeout=None):
+    @staticmethod
+    def rest_get_stream(url, session=None, verify=True, cert=None, timeout=None):
         """
         Perform a chunked GET request to url with requests.session
         This is specifically to download files.
@@ -717,6 +720,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         response = session.get(
             url, stream=True, verify=verify, cert=cert, timeout=timeout
         )
+        response.raise_for_status()
         return response
 
     def get_stat_json(self, pathobj):
@@ -953,9 +957,6 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=pathobj.cert,
             timeout=pathobj.timeout,
         )
-        code = response.status_code
-        if code != 200:
-            raise RuntimeError(code)
 
         return response
 
@@ -1025,7 +1026,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             "suppressLayouts": int(suppress_layouts),
         }
 
-        text, code = self.rest_post(
+        self.rest_post(
             url,
             params=params,
             session=src.session,
@@ -1033,9 +1034,6 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=src.cert,
             timeout=src.timeout,
         )
-
-        if code not in (200, 201):
-            raise RuntimeError(text)
 
     def move(self, src, dst, suppress_layouts=False):
         """
@@ -1054,7 +1052,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             "suppressLayouts": int(suppress_layouts),
         }
 
-        text, code = self.rest_post(
+        self.rest_post(
             url,
             params=params,
             session=src.session,
@@ -1062,9 +1060,6 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=src.cert,
             timeout=src.timeout,
         )
-
-        if code not in (200, 201):
-            raise RuntimeError(text)
 
     def get_properties(self, pathobj):
         """
@@ -2106,6 +2101,283 @@ class ArtifactorySaaSPath(ArtifactoryPath):
         Artifactory doesn't have symlinks
         """
         raise NotImplementedError()
+
+
+class ArtifactoryBuild:
+    __slots__ = ("name", "last_started", "build_manager")
+
+    def __init__(self, name, last_started, build_manager):
+        self.name = name
+        self.last_started = last_started
+        self.build_manager = build_manager
+
+    def __repr__(self):
+        return self.name
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def runs(self):
+        """
+        Get information about build runs
+        :return: List[ArtifactoryBuildRun]
+        """
+        return self.build_manager.get_build_runs(self.name)
+
+
+class ArtifactoryBuildRun:
+    __slots__ = ("run_number", "started", "build_name", "build_manager")
+
+    def __init__(self, run_number, started, build_name, build_manager):
+        self.run_number = run_number
+        self.started = started
+        self.build_name = build_name
+        self.build_manager = build_manager
+
+    def __repr__(self):
+        return self.run_number
+
+    def __str__(self):
+        return self.run_number
+
+    @property
+    def info(self):
+        """
+        Get information about specified build run
+        :return: (dict) json response with build run info
+        """
+        return self.build_manager.get_build_info(self.build_name, self.run_number)
+
+    def diff(self, build_num_to_compare):
+        """
+        Compares build with build_number1 to build_number2
+        :param build_num_to_compare: number of second build to compare
+        :return: (dict) json response with difference
+        """
+
+        diff = self.build_manager.get_build_diff(
+            self.build_name, self.run_number, build_num_to_compare
+        )
+        return diff
+
+    def promote(
+        self,
+        ci_user,
+        properties,
+        status="staged",
+        comment="",
+        dry_run=False,
+        dependencies=False,
+        scopes=None,
+        target_repo="",
+        source_repo="",
+        fail_fast=True,
+        require_copy=False,
+        artifacts=True,
+    ):
+        """
+        Change the status of a build, optionally moving or copying the build's artifacts and its dependencies to a
+        target repository and setting properties on promoted artifacts.
+        All artifacts from all scopes are included by default while dependencies are not. Scopes are additive (or).
+        :param status: new build status (any string)
+        :param comment: An optional comment describing the reason for promotion. Default: ""
+        :param ci_user: The user that invoked promotion from the CI server
+        :param dry_run: run without executing any operation in Artifactory, but get the results to check if
+            the operation can succeed. Default: false
+        :param source_repo: optional repository from which the build's artifacts will be copied/moved
+        :param target_repo: optional repository to move or copy the build's artifacts and/or dependencies
+        :param require_copy: whether to copy instead of move, when a target repository is specified. Default: false
+        :param artifacts: whether to move/copy the build's artifacts. Default: true
+        :param dependencies: whether to move/copy the build's dependencies. Default: false.
+        :param scopes: an array of dependency scopes to include when "dependencies" is true
+        :param properties: (dict) properties to attach to the build's artifacts (regardless if "targetRepo" is used).
+        :param fail_fast: fail and abort the operation upon receiving an error. Default: true
+        :return: None
+        """
+
+        self.build_manager.promote_build(
+            self.build_name,
+            self.run_number,
+            ci_user,
+            properties,
+            status,
+            comment,
+            dry_run,
+            dependencies,
+            scopes,
+            target_repo,
+            source_repo,
+            fail_fast,
+            require_copy,
+            artifacts,
+        )
+
+
+class ArtifactoryBuildManager(ArtifactoryPath):
+    def __new__(cls, *args, **kwargs):
+        obj = super().__new__(cls, *args, **kwargs)
+        obj.project = kwargs.get("project", "")
+        return obj
+
+    @property
+    def builds(self):
+        """
+        Get all available builds on Artifactory
+        :return: (list) list of available build names
+        """
+        all_builds = []
+        url = ""
+        if self.project:
+            url = f"?project='{self.project}'"
+
+        resp = self._get_build_api_response(url)
+        if "builds" in resp:
+            for build in resp["builds"]:
+                arti_build = ArtifactoryBuild(
+                    name=build["uri"][1:],
+                    last_started=build["lastStarted"],
+                    build_manager=self,
+                )
+                all_builds.append(arti_build)
+
+        return all_builds
+
+    def get_build_runs(self, build_name):
+        """
+        Get information about build runs
+        :param build_name: name of the build
+        :return: List[ArtifactoryBuildRun]
+        """
+        resp = self._get_info(build_name)
+        all_runs = []
+        if "buildsNumbers" not in resp:
+            print("No build runs for requested build")
+        else:
+            for build_run in resp["buildsNumbers"]:
+                artifactory_run = ArtifactoryBuildRun(
+                    run_number=build_run["uri"][1:],
+                    started=build_run["started"],
+                    build_name=build_name,
+                    build_manager=self,
+                )
+                all_runs.append(artifactory_run)
+
+        return all_runs
+
+    def get_build_info(self, build_name, build_number):
+        """
+        Get information about specified build run
+        :param build_name: name of the build
+        :param build_number: number of the build to query
+        :return: (dict) json response with build run info
+        """
+        return self._get_info(build_name, build_number)
+
+    def _get_info(self, build_name, build_number=""):
+        url = build_name
+        if build_number:
+            url += f"/{build_number}"
+        return self._get_build_api_response(url)
+
+    def _get_build_api_response(self, url):
+        url = f"{self.drive}/api/build/{url}"
+        obj = self.joinpath(url)
+        resp = self._accessor.get_response(obj).json()
+        return resp
+
+    def get_build_diff(self, build_name, build_number1, build_number2):
+        """
+        Compares build with build_number1 to build_number2
+        :param build_name: name of the build
+        :param build_number1: number of the build
+        :param build_number2: number of second build to compare
+        :return: (dict) json response with difference
+        """
+        url = f"{build_name}/{build_number1}?diff={build_number2}"
+        return self._get_build_api_response(url)
+
+    def promote_build(
+        self,
+        build_name,
+        build_number,
+        ci_user,
+        properties,
+        status="staged",
+        comment="",
+        dry_run=False,
+        dependencies=False,
+        scopes=None,
+        target_repo="",
+        source_repo="",
+        fail_fast=True,
+        require_copy=False,
+        artifacts=True,
+    ):
+        """
+        Change the status of a build, optionally moving or copying the build's artifacts and its dependencies to a
+        target repository and setting properties on promoted artifacts.
+        All artifacts from all scopes are included by default while dependencies are not. Scopes are additive (or).
+        :param build_name: name of the build
+        :param build_number: number of the build to promote
+        :param status: new build status (any string)
+        :param comment: An optional comment describing the reason for promotion. Default: ""
+        :param ci_user: The user that invoked promotion from the CI server
+        :param dry_run: run without executing any operation in Artifactory, but get the results to check if
+            the operation can succeed. Default: false
+        :param source_repo: optional repository from which the build's artifacts will be copied/moved
+        :param target_repo: optional repository to move or copy the build's artifacts and/or dependencies
+        :param require_copy: whether to copy instead of move, when a target repository is specified. Default: false
+        :param artifacts: whether to move/copy the build's artifacts. Default: true
+        :param dependencies: whether to move/copy the build's dependencies. Default: false.
+        :param scopes: an array of dependency scopes to include when "dependencies" is true
+        :param properties: (dict) properties to attach to the build's artifacts (regardless if "targetRepo" is used).
+        :param fail_fast: fail and abort the operation upon receiving an error. Default: true
+        :return:
+        """
+        url = f"/api/build/promote/{build_name}/{build_number}"
+
+        if not isinstance(properties, dict):
+            raise ArtifactoryException("properties must be a dict")
+
+        iso_time = datetime.datetime.now().astimezone().isoformat()
+        params = {
+            "status": status,
+            "comment": comment,
+            "ciUser": ci_user,
+            "timestamp": iso_time,
+            "dryRun": dry_run,
+            "copy": require_copy,
+            "artifacts": artifacts,
+            "dependencies": dependencies,
+            "properties": properties,
+            "failFast": fail_fast,
+        }
+        if source_repo:
+            params["sourceRepo"] = source_repo
+
+        if target_repo:
+            params["targetRepo"] = target_repo
+
+        if dependencies:
+            if not scopes:
+                raise ArtifactoryException(
+                    "Dependencies set to True but no scopes provided"
+                )
+
+            if not isinstance(scopes, list):
+                raise ArtifactoryException("scopes must be a list")
+
+            params["scopes"] = scopes
+
+        self.rest_post(
+            url,
+            params=params,
+            session=self.session,
+            verify=self.verify,
+            cert=self.cert,
+            timeout=self.timeout,
+        )
 
 
 def walk(pathobj, topdown=True):
