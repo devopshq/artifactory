@@ -67,7 +67,10 @@ else:
 
 
 class AdminObject(object):
+    prefix_uri = "api"
     _uri = None
+    resource_name = "name"
+    params = {}
 
     def __init__(self, artifactory):
         self.additional_params = {}
@@ -75,14 +78,15 @@ class AdminObject(object):
         self.name = None
 
         self._artifactory = artifactory.top
+        self.base_url = self._artifactory.drive
         self._auth = self._artifactory.auth
         self._session = self._artifactory.session
 
     def __repr__(self):
-        return "<{self.__class__.__name__} {self.name}>".format(self=self)
+        return f"<{self.__class__.__name__} {self.__getattribute__(self.resource_name)}>"
 
     def __str__(self):
-        return self.name
+        return self.__getattribute__(self.resource_name)
 
     def _create_json(self):
         """
@@ -96,7 +100,7 @@ class AdminObject(object):
         Create object
         :return: None
         """
-        logging.debug("Create {x.__class__.__name__} [{x.name}]".format(x=self))
+        logging.debug(f"Create {self.__class__.__name__} [{self.__getattribute__(self.resource_name)}]")
         self._create_and_update(self._session.put)
 
     def _create_and_update(self, method):
@@ -106,8 +110,10 @@ class AdminObject(object):
         """
         data_json = self._create_json()
         data_json.update(self.additional_params)
-        request_url = self._artifactory.drive + "/api/{uri}/{x.name}".format(
-            uri=self._uri, x=self
+        request_url = self.base_url + "/{prefix_uri}/{uri}/{key}".format(
+            prefix_uri=self.prefix_uri,
+            uri=self._uri,
+            key=self.__getattribute__(self.__getattribute__('resource_name'))
         )
         r = method(
             request_url,
@@ -134,21 +140,24 @@ class AdminObject(object):
         True if object exist,
         False else
         """
-        logging.debug("Read {x.__class__.__name__} [{x.name}]".format(x=self))
-        request_url = self._artifactory.drive + "/api/{uri}/{x.name}".format(
-            uri=self._uri, x=self
+        logging.debug(f"Read {self.__class__.__name__} [{self.__getattribute__(self.resource_name)}]")
+        request_url = self.base_url + "/{prefix_uri}/{uri}/{key}".format(
+            prefix_uri=self.prefix_uri,
+            uri=self._uri,
+            key=self.__getattribute__(self.resource_name)
         )
         r = self._session.get(
             request_url,
             auth=self._auth,
+            params=self.params
         )
         if 404 == r.status_code or 400 == r.status_code:
             logging.debug(
-                "{x.__class__.__name__} [{x.name}] does not exist".format(x=self)
+                f"{self.__class__.__name__} [{self.__getattribute__(self.resource_name)}] does not exist"
             )
             return False
         else:
-            logging.debug("{x.__class__.__name__} [{x.name}] exist".format(x=self))
+            logging.debug(f"{self.__class__.__name__} [{self.__getattribute__(self.resource_name)}] exist")
             raise_errors(r)
             response = r.json()
             self.raw = response
@@ -162,7 +171,9 @@ class AdminObject(object):
         List of objects
         """
         # logging.debug('List {x.__class__.__name__} [{x.name}]'.format(x=self))
-        request_url = self._artifactory.drive + "/api/{uri}".format(uri=self._uri)
+        request_url = self.base_url + "/{prefix_uri}/{uri}".format(
+            prefix_uri=self.prefix_uri, uri=self._uri
+        )
         response = self._session.get(
             request_url,
             auth=self._auth,
@@ -170,7 +181,7 @@ class AdminObject(object):
         if response.status_code == 200:
             # logging.debug('{x.__class__.__name__} [{x.name}] does not exist'.format(x=self))
             json_response = response.json()
-            return [item.get("name") for item in json_response]
+            return [item.get(self.resource_name) for item in json_response]
         else:
             # logging.debug('{x.__class__.__name__} [{x.name}] exist'.format(x=self))
             return "failed"
@@ -188,9 +199,11 @@ class AdminObject(object):
         Remove object
         :return: None
         """
-        logging.debug("Remove {x.__class__.__name__} [{x.name}]".format(x=self))
-        request_url = self._artifactory.drive + "/api/{uri}/{x.name}".format(
-            uri=self._uri, x=self
+        logging.debug(f"Remove {self.__class__.__name__} [{self.__getattribute__(self.resource_name)}]")
+        request_url = self.base_url + "/{prefix_uri}/{uri}/{key}".format(
+            prefix_uri=self.prefix_uri,
+            uri=self._uri,
+            key=self.__getattribute__(self.resource_name)
         )
         r = self._session.delete(
             request_url,
@@ -292,7 +305,7 @@ class User(AdminObject):
         if self.password is None:
             raise ArtifactoryException("Please, set [self.password] before querying")
 
-        request_url = self._artifactory.drive + api_url
+        request_url = self.base_url + api_url
         r = request_type(
             request_url,
             auth=(self.name, self.password),
@@ -423,23 +436,21 @@ class User(AdminObject):
 
 
 class Group(AdminObject):
-    _uri = "groups"
-    _uri_deletion = "security/groups"
+    _uri = "security/groups"
+    params = {"includeUsers": "true"}
 
     def __init__(self, artifactory, name):
         super(Group, self).__init__(artifactory)
 
         self.name = name
         self.description = ""
-        self.external = False
         self.auto_join = False
+        self.admin_privileges = False
         self.realm = "artifactory"
-        self.new_user_default = False
         self.realm_attributes = None
         self.users = None
-
-        # Deprecated
-        self.auto_join = self.new_user_default
+        self.watch_manager = False
+        self.policy_manager = False
 
     def _create_json(self):
         """
@@ -449,14 +460,13 @@ class Group(AdminObject):
             "name": self.name,
             "description": self.description,
             "autoJoin": self.auto_join,
-            "external": self.external,
-            "newUserDefault": self.new_user_default,
+            "adminPrivileges": self.admin_privileges,
             "realm": self.realm,
+            "realmAttributes": self.realm_attributes,
+            "userNames": self.users,
+            "watchManager": self.watch_manager,
+            "policyManager": self.policy_manager
         }
-
-        if isinstance(self.users, list):
-            data_json.update({"usersInGroup": self.users})
-
         return data_json
 
     def _read_response(self, response):
@@ -466,45 +476,12 @@ class Group(AdminObject):
         self.name = response.get("name")
         self.description = response.get("description")
         self.auto_join = response.get("autoJoin")
+        self.admin_privileges = response.get("adminPrivileges")
         self.realm = response.get("realm")
         self.realm_attributes = response.get("realmAttributes")
-        self.external = response.get("external")
-        self.new_user_default = response.get("newUserDefault")
-        self.users = response.get("usersInGroup")
-
-    def delete(self):
-        """
-        Remove object
-        :return: None
-        TODO: New entrypoint would go like
-        /api/groups/delete and consumes ["list", "of", "groupnames"]
-        """
-        logging.debug("Remove {x.__class__.__name__} [{x.name}]".format(x=self))
-        request_url = self._artifactory.drive + "/api/{uri}/{x.name}".format(
-            uri=self._uri_deletion, x=self
-        )
-        r = self._session.delete(request_url, auth=self._auth)
-        r.raise_for_status()
-        rest_delay()
-
-    def create(self):
-        """
-        Create object
-        :return: None
-        """
-        logging.debug("Create {x.__class__.__name__} [{x.name}]".format(x=self))
-        data_json = self._create_json()
-        data_json.update(self.additional_params)
-        request_url = self._artifactory.drive + "/api/{uri}".format(uri=self._uri)
-        r = self._session.post(
-            request_url,
-            json=data_json,
-            headers={"Content-Type": "application/json"},
-            auth=self._auth,
-        )
-        r.raise_for_status()
-        rest_delay()
-        self.read()
+        self.users = response.get("userNames")
+        self.watch_manager = response.get("watchManager")
+        self.policy_manager = response.get("policyManager")
 
 
 class GroupLDAP(Group):
@@ -1181,7 +1158,7 @@ class Token(AdminObject):
         :return: None
         """
         payload = self._prepare_request()
-        request_url = self._artifactory.drive + "/api/{uri}".format(uri=self._uri)
+        request_url = self.base_url + "/api/{uri}".format(uri=self._uri)
         r = self._session.post(
             request_url,
             data=payload,
@@ -1257,7 +1234,7 @@ class Token(AdminObject):
         False else
         """
         logging.debug("Read {x.__class__.__name__} [{x.name}]".format(x=self))
-        request_url = self._artifactory.drive + "/api/{uri}".format(uri=self._uri)
+        request_url = self.base_url + "/api/{uri}".format(uri=self._uri)
         r = self._session.get(request_url, auth=self._auth)
         if 404 == r.status_code or 400 == r.status_code:
             logging.debug(
@@ -1282,7 +1259,7 @@ class Token(AdminObject):
         revoke (calling it deletion to be consistent with other classes) a token
         """
         logging.debug("Delete {x.__class__.__name__} [{x.name}]".format(x=self))
-        request_url = self._artifactory.drive + "/api/{uri}".format(
+        request_url = self.base_url + "/api/{uri}".format(
             uri=self._uri + "/revoke"
         )
         payload = self._prepare_deletion()
@@ -1290,3 +1267,110 @@ class Token(AdminObject):
         r = self._session.post(request_url, data=payload, auth=self._auth)
         r.raise_for_status()
         rest_delay()
+
+
+class Project(AdminObject):
+    prefix_uri = "access/api"
+    _uri = "v1/projects"
+    resource_name = "project_key"
+
+    def __init__(
+        self,
+        artifactory,
+        project_key,
+        display_name=None,
+        description="",
+        manage_members=True,
+        manage_resources=True,
+        manage_security_assets=True,
+        index_resources=True,
+        allow_ignore_rules=True,
+        storage_quota_bytes=-1,
+        soft_limit=False,
+        storage_quota_email_notification=True
+    ):
+        self._artifactory = artifactory.top
+        self.base_url = self._artifactory.drive.rpartition('/artifactory')[0]
+        self._auth = self._artifactory.auth
+        self._session = self._artifactory.session
+
+        self.display_name = display_name
+        self.project_key = project_key
+        self.description = description
+        self.manage_members = manage_members
+        self.manage_resources = manage_resources
+        self.manage_security_assets = manage_security_assets
+        self.index_resources = index_resources
+        self.allow_ignore_rules = allow_ignore_rules
+        self.storage_quota_bytes = storage_quota_bytes
+        self.soft_limit = soft_limit
+        self.storage_quota_email_notification = storage_quota_email_notification
+
+    def create(self):
+        """
+        Create object
+        :return: None
+        """
+        data_json = self._create_json()
+        request_url = self.base_url + "/{prefix_uri}/{uri}".format(
+            prefix_uri=self.prefix_uri, uri=self._uri
+        )
+        r = self._session.post(
+            request_url,
+            json=data_json,
+            headers={"Content-Type": "application/json"},
+            auth=self._auth,
+        )
+        raise_errors(r)
+        rest_delay()
+        self.read()
+
+    def update(self):
+        """
+        Update object
+        :return: None
+        """
+        data_json = self._create_json()
+        request_url = self.base_url + "/{prefix_uri}/{uri}/{key}".format(
+            prefix_uri=self.prefix_uri,
+            uri=self._uri,
+            key=self.__getattribute__(self.resource_name)
+        )
+        r = self._session.put(
+            request_url,
+            json=data_json,
+            headers={"Content-Type": "application/json"},
+            auth=self._auth,
+        )
+        raise_errors(r)
+        rest_delay()
+        self.read()
+
+    def _create_json(self):
+        data_json = {
+            "display_name": self.display_name,
+            "project_key": self.project_key,
+            "description": self.description,
+            "admin_privileges": {
+                "manage_members": self.manage_members,
+                "manage_resources": self.manage_resources,
+                "manage_security_assets": self.manage_security_assets,
+                "index_resources": self.index_resources,
+                "allow_ignore_rules": self.allow_ignore_rules
+            },
+            "storage_quota_bytes": self.storage_quota_bytes
+        }
+        return data_json
+
+    def _read_response(self, response):
+        self.display_name = response.get("display_name")
+        self.project_key = response.get("project_key")
+        self.description = response.get("description")
+        self.manage_members = response.get("admin_privileges").get("manage_members")
+        self.manage_resources = response.get("admin_privileges").get("manage_resources")
+        self.manage_security_assets = response.get("admin_privileges").get("manage_security_assets")
+        self.index_resources = response.get("admin_privileges").get("index_resources")
+        self.allow_ignore_rules = response.get("admin_privileges").get("allow_ignore_rules")
+        self.storage_quota_bytes = response.get("storage_quota_bytes")
+        self.soft_limit = response.get("soft_limit")
+        self.storage_quota_email_notification = response.get("storage_quota_email_notification")

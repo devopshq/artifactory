@@ -59,15 +59,13 @@ def artifactory_auth():
     config = configparser.ConfigParser()
     config.read(config_path)
 
-    username = config.get("artifactory", "username")
-    password = config.get("artifactory", "password")
-    auth = (username, password)
-    yield auth
+    token = config.get("artifactory", "token")
+    yield token
 
 
 @pytest.fixture(scope="session")
 def artifactory(artifactory_server, artifactory_auth):
-    artifactory_ = ArtifactoryPath(artifactory_server, auth=artifactory_auth)
+    artifactory_ = ArtifactoryPath(artifactory_server, token=artifactory_auth)
     yield artifactory_
 
 
@@ -110,7 +108,7 @@ def integration_artifactory_path_repo(artifactory):
         repo_.create()
 
     # Remove all file from repo
-    repo_path = ArtifactoryPath(str(artifactory) + "/" + name, auth=artifactory.auth)
+    repo_path = ArtifactoryPath(str(artifactory) + "/" + name, token=artifactory.auth.token)
     for path_ in repo_path.glob("*"):
         path_.unlink()
     yield repo_
@@ -137,7 +135,7 @@ def user1(artifactory):
     if user is not None:
         user.delete()
     user = User(
-        artifactory=artifactory, name=name, email=name, password=generate_password()
+        artifactory=artifactory, name=name, email=f"{name}@example.com", password="Pa55w@rd"
     )
     user.create()
     yield user
@@ -151,7 +149,7 @@ def user2(artifactory):
     if user is not None:
         user.delete()
     user = User(
-        artifactory=artifactory, name=name, email=name, password=generate_password()
+        artifactory=artifactory, name=name, email=f"{name}@example.com", password="Pa55w@rd"
     )
     user.create()
     yield user
