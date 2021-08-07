@@ -202,9 +202,7 @@ class TestProject:
             test_project.delete()
 
         test_project = Project(
-            artifactory=artifactory,
-            project_key=project_key,
-            display_name=display_name
+            artifactory=artifactory, project_key=project_key, display_name=display_name
         )
 
         # CREATE
@@ -226,9 +224,7 @@ class TestProject:
             test_project.delete()
 
         test_project = Project(
-            artifactory=artifactory,
-            project_key=project_key,
-            display_name=display_name
+            artifactory=artifactory, project_key=project_key, display_name=display_name
         )
 
         # CREATE
