@@ -1248,13 +1248,18 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         # Auth section
         apikey = kwargs.get("apikey")
+        token = kwargs.get("token")
         auth_type = kwargs.get("auth_type")
-        if apikey is None:
+
+        if apikey:
+            logging.debug("Use XJFrogApiAuth apikey")
+            obj.auth = XJFrogArtApiAuth(apikey=apikey)
+        elif token:
+            logging.debug("Use XJFrogApiAuth token")
+            obj.auth = XJFrogArtApiAuth(token=token)
+        else:
             auth = kwargs.get("auth")
             obj.auth = auth if auth_type is None else auth_type(*auth)
-        else:
-            logging.debug("Use XJFrogApiAuth")
-            obj.auth = XJFrogArtApiAuth(apikey)
 
         if obj.auth is None and cfg_entry:
             auth = (cfg_entry["username"], cfg_entry["password"])
