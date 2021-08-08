@@ -18,7 +18,7 @@ class TestUser:
             artifactory=artifactory,
             name=user_name,
             email="test_user@example.com",
-            password="password",
+            password="Pa55w@rd",
             profile_updatable=True,
         )
 
@@ -42,7 +42,7 @@ class TestUser:
             artifactory=artifactory,
             name=user_name,
             email="test_user@example.com",
-            password="oldpassword",
+            password="oldPa55w@rd",
         )
 
         # CREATE
@@ -51,9 +51,9 @@ class TestUser:
 
         # UPDATE
         test_user = artifactory.find_user(user_name)  # type: User
-        test_user.password = "oldpassword"
+        test_user.password = "oldPa55w@rd"
         current_pwd = test_user.encryptedPassword
-        test_user.password = "newpassword"
+        test_user.password = "newPa55w@rd"
         test_user.update()
         new_pwd = test_user.encryptedPassword
 
@@ -109,7 +109,7 @@ class TestGroup:
         assert test_group is not None
 
         test_group.read()
-        assert test_group.users is users
+        assert test_group.users == users
 
         # DELETE
         test_group.delete()
