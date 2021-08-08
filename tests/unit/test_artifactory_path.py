@@ -67,6 +67,14 @@ class ArtifactoryFlavorTest(unittest.TestCase):
     def test_quote_url(self):
         check = self._check_quote_url
         check(
+            "https://example.com:80/artifactory/foo",
+            "https://example.com:80/artifactory/foo"
+        )
+        check(
+            "https://example.com:80/artifactory/foo/#1",
+            "https://example.com:80/artifactory/foo/%231",
+        )
+        check(
             "https://example.com/artifactory/foo", "https://example.com/artifactory/foo"
         )
         check(
