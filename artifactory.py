@@ -47,7 +47,7 @@ from dohq_artifactory.admin import RepositoryLocal
 from dohq_artifactory.admin import RepositoryRemote
 from dohq_artifactory.admin import RepositoryVirtual
 from dohq_artifactory.admin import User
-from dohq_artifactory.auth import XJFrogArtApiAuth
+from dohq_artifactory.auth import XJFrogArtApiAuth, XJFrogArtBearerAuth
 from dohq_artifactory.exception import ArtifactoryException
 
 try:
@@ -1263,8 +1263,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             logging.debug("Use XJFrogApiAuth apikey")
             obj.auth = XJFrogArtApiAuth(apikey=apikey)
         elif token:
-            logging.debug("Use XJFrogApiAuth token")
-            obj.auth = XJFrogArtApiAuth(token=token)
+            logging.debug("Use XJFrogArtBearerAuth token")
+            obj.auth = XJFrogArtBearerAuth(token=token)
         else:
             auth = kwargs.get("auth")
             obj.auth = auth if auth_type is None else auth_type(*auth)
