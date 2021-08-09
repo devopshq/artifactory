@@ -47,7 +47,8 @@ from dohq_artifactory.admin import RepositoryLocal
 from dohq_artifactory.admin import RepositoryRemote
 from dohq_artifactory.admin import RepositoryVirtual
 from dohq_artifactory.admin import User
-from dohq_artifactory.auth import XJFrogArtApiAuth, XJFrogArtBearerAuth
+from dohq_artifactory.auth import XJFrogArtApiAuth
+from dohq_artifactory.auth import XJFrogArtBearerAuth
 from dohq_artifactory.exception import ArtifactoryException
 
 try:
