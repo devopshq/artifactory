@@ -191,8 +191,10 @@ def test_read_and_write(path):
     if p.exists():
         p.rmdir()
 
-    p.write_text("Some test string")
-    assert p.read_bytes() == b"Some test string"
-    assert p.read_text() == "Some test string"
+    # If the length of sequence is less than 32, there will be a warning msg.
+    # UserWarning: Trying to detect encoding from a tiny portion of (16) byte(s).
+    p.write_text("Some test string ensure length > 32")
+    assert p.read_bytes() == b"Some test string ensure length > 32"
+    assert p.read_text() == "Some test string ensure length > 32"
 
     p.unlink()
