@@ -73,9 +73,12 @@ pip install dohq-artifactory==0.5.dev243
 # Usage
 
 ## Authentication ##
+
 `dohq-artifactory` supports these ways of authentication:
-- Username and password (or [API KEY](https://www.jfrog.com/confluence/display/RTF/Updating+Your+Profile#UpdatingYourProfile-APIKey)) to access restricted resources, you can pass ```auth``` parameter to ArtifactoryPath.
+
+- Username and password (or [API KEY](https://www.jfrog.com/confluence/display/RTF/Updating+Your+Profile#UpdatingYourProfile-APIKey), or [Access Tokens](https://www.jfrog.com/confluence/display/JFROG/Access+Tokens#AccessTokens-UsingTokens)) to access restricted resources, you can pass ```auth``` parameter to ArtifactoryPath.
 - [API KEY](https://www.jfrog.com/confluence/display/RTF/Updating+Your+Profile#UpdatingYourProfile-APIKey) can pass with `apikey` parameter.
+- [Access Token](https://www.jfrog.com/confluence/display/JFROG/Access+Tokens#AccessTokens-UsingTokens) can pass with `token` parameter.
 
 ```python
 from artifactory import ArtifactoryPath
@@ -85,10 +88,15 @@ path = ArtifactoryPath(
     "http://my-artifactory/artifactory/myrepo/restricted-path", apikey="MY_API_KEY"
 )
 
+# Access Token
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/myrepo/restricted-path", token="MY_ACCESS_TOKEN"
+)
+
 # User and password OR API_KEY
 path = ArtifactoryPath(
     "http://my-artifactory/artifactory/myrepo/restricted-path",
-    auth=("USERNAME", "PASSWORD or API_KEY"),
+    auth=("USERNAME", "PASSWORD, API_KEY or ACCESS_TOKEN"),
 )
 
 # Other authentication types
