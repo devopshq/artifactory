@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from dohq_artifactory.admin import Group
 from dohq_artifactory.admin import PermissionTarget
+from dohq_artifactory.admin import Project
 from dohq_artifactory.admin import RepositoryLocal
 from dohq_artifactory.admin import User
 
@@ -187,3 +188,63 @@ class TestTargetPermission:
         permission.add_group(group1, PermissionTarget.READ)
         permission.update()
         assert "group1" in permission.raw["principals"]["groups"]
+
+
+class TestProject:
+    def test_create_delete(self, artifactory_token):
+        # Illegal project key length; valid length: 3 <= key <= 6
+        # Name must start with a lowercase letter and only contain lowercase
+        # letters and digits.Name
+        project_key = "t1k1"
+        display_name = "test_create_delete_display_name"
+
+        # Remove if project exist
+        test_project = artifactory_token.find_project(project_key)
+        if test_project is not None:
+            test_project.delete()
+
+        test_project = Project(
+            artifactory=artifactory_token,
+            project_key=project_key,
+            display_name=display_name
+        )
+
+        # CREATE
+        test_project.create()
+        assert artifactory_token.find_project(project_key) is not None
+
+        # DELETE
+        test_project.delete()
+        assert artifactory_token.find_project(test_project) is None
+
+    def test_create_update(self, artifactory_token):
+        project_key = "t1k1"
+        display_name = "test_create_delete_display_name"
+        description = "test_create_delete_description"
+
+        # Remove if project exist
+        test_project = artifactory_token.find_project(project_key)
+        if test_project is not None:
+            test_project.delete()
+
+        test_project = Project(
+            artifactory=artifactory_token,
+            project_key=project_key,
+            display_name=display_name
+        )
+
+        # CREATE
+        test_project.create()
+        assert artifactory_token.find_project(project_key) is not None
+
+        # UPDATE
+        test_project.description = description
+        test_project.update()
+        del test_project
+
+        test_project = artifactory_token.find_project(project_key)
+        assert test_project.description == description
+
+        # DELETE
+        test_project.delete()
+        assert artifactory_token.find_project(project_key) is None

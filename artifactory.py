@@ -42,6 +42,7 @@ import requests
 
 from dohq_artifactory.admin import Group
 from dohq_artifactory.admin import PermissionTarget
+from dohq_artifactory.admin import Project
 from dohq_artifactory.admin import Repository
 from dohq_artifactory.admin import RepositoryLocal
 from dohq_artifactory.admin import RepositoryRemote
@@ -2005,6 +2006,12 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     def find_permission_target(self, name):
         obj = PermissionTarget(self, name)
+        if obj.read():
+            return obj
+        return None
+
+    def find_project(self, project_key):
+        obj = Project(self, project_key)
         if obj.read():
             return obj
         return None
