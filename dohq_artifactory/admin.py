@@ -99,7 +99,9 @@ class AdminObject(object):
         Create object
         :return: None
         """
-        logging.debug(f"Create {self.__class__.__name__} [{getattr(self, self.resource_name)}]")
+        logging.debug(
+            f"Create {self.__class__.__name__} [{getattr(self, self.resource_name)}]"
+        )
         self._create_and_update(self._session.put)
 
     def _create_and_update(self, method):
@@ -135,7 +137,9 @@ class AdminObject(object):
         True if object exist,
         False else
         """
-        logging.debug(f"Read {self.__class__.__name__} [{getattr(self, self.resource_name)}]")
+        logging.debug(
+            f"Read {self.__class__.__name__} [{getattr(self, self.resource_name)}]"
+        )
         request_url = f"{self.base_url}/{self.prefix_uri}/{self._uri}/{getattr(self, self.resource_name)}"
         r = self._session.get(request_url, auth=self._auth)
         if 404 == r.status_code or 400 == r.status_code:
@@ -144,7 +148,9 @@ class AdminObject(object):
             )
             return False
         else:
-            logging.debug(f"{self.__class__.__name__} [{getattr(self, self.resource_name)}] exist")
+            logging.debug(
+                f"{self.__class__.__name__} [{getattr(self, self.resource_name)}] exist"
+            )
             raise_errors(r)
             response = r.json()
             self.raw = response
@@ -176,7 +182,9 @@ class AdminObject(object):
         Update object
         :return: None
         """
-        logging.debug(f"Create {self.__class__.__name__} [{getattr(self, self.resource_name)}]")
+        logging.debug(
+            f"Create {self.__class__.__name__} [{getattr(self, self.resource_name)}]"
+        )
         self._create_and_update(self._session.post)
 
     def delete(self):
@@ -184,7 +192,9 @@ class AdminObject(object):
         Remove object
         :return: None
         """
-        logging.debug(f"Remove {self.__class__.__name__} [{getattr(self, self.resource_name)}]")
+        logging.debug(
+            f"Remove {self.__class__.__name__} [{getattr(self, self.resource_name)}]"
+        )
         request_url = f"{self.base_url}/{self.prefix_uri}/{self._uri}/{getattr(self, self.resource_name)}"
         r = self._session.delete(
             request_url,
@@ -473,7 +483,9 @@ class Group(AdminObject):
         TODO: New entrypoint would go like
         /api/groups/delete and consumes ["list", "of", "groupnames"]
         """
-        logging.debug(f"Remove {self.__class__.__name__} [{getattr(self, self.resource_name)}]")
+        logging.debug(
+            f"Remove {self.__class__.__name__} [{getattr(self, self.resource_name)}]"
+        )
         request_url = f"{self.base_url}/{self.prefix_uri}/{self._uri_deletion}/{getattr(self, self.resource_name)}"
         r = self._session.delete(request_url, auth=self._auth)
         r.raise_for_status()
@@ -484,7 +496,9 @@ class Group(AdminObject):
         Create object
         :return: None
         """
-        logging.debug(f"Create {self.__class__.__name__} [{getattr(self, self.resource_name)}]")
+        logging.debug(
+            f"Create {self.__class__.__name__} [{getattr(self, self.resource_name)}]"
+        )
         data_json = self._create_json()
         data_json.update(self.additional_params)
         request_url = f"{self.base_url}/{self.prefix_uri}/{self._uri}"
@@ -1248,7 +1262,9 @@ class Token(AdminObject):
         True if object exist,
         False else
         """
-        logging.debug(f"Read {self.__class__.__name__} [{getattr(self, self.resource_name)}]")
+        logging.debug(
+            f"Read {self.__class__.__name__} [{getattr(self, self.resource_name)}]"
+        )
         request_url = f"{self.base_url}/{self.prefix_uri}/{self._uri}"
         r = self._session.get(request_url, auth=self._auth)
         if 404 == r.status_code or 400 == r.status_code:
@@ -1257,7 +1273,9 @@ class Token(AdminObject):
             )
             return False
         else:
-            logging.debug("{self.__class__.__name__} [{getattr(self, self.resource_name)}] exist")
+            logging.debug(
+                "{self.__class__.__name__} [{getattr(self, self.resource_name)}] exist"
+            )
             r.raise_for_status()
             response = r.json()
             self.raw = response
@@ -1273,7 +1291,9 @@ class Token(AdminObject):
         POST security/token/revoke
         revoke (calling it deletion to be consistent with other classes) a token
         """
-        logging.debug(f"Delete {self.__class__.__name__} [{getattr(self, self.resource_name)}]")
+        logging.debug(
+            f"Delete {self.__class__.__name__} [{getattr(self, self.resource_name)}]"
+        )
         request_url = f"{self.base_url}/{self.prefix_uri}/{self._uri}/revoke"
         payload = self._prepare_deletion()
 
@@ -1300,11 +1320,11 @@ class Project(AdminObject):
         allow_ignore_rules=True,
         storage_quota_bytes=-1,
         soft_limit=False,
-        storage_quota_email_notification=True
+        storage_quota_email_notification=True,
     ):
         self._artifactory = artifactory.top
         # TODO: What if 'artifactory' is not in 'drive'
-        self.base_url = self._artifactory.drive.rpartition('/artifactory')[0]
+        self.base_url = self._artifactory.drive.rpartition("/artifactory")[0]
         self._auth = self._artifactory.auth
         self._session = self._artifactory.session
 
@@ -1348,7 +1368,7 @@ class Project(AdminObject):
         request_url = self.base_url + "/{prefix_uri}/{uri}/{key}".format(
             prefix_uri=self.prefix_uri,
             uri=self._uri,
-            key=getattr(self, self.resource_name)
+            key=getattr(self, self.resource_name),
         )
         r = self._session.put(
             request_url,
@@ -1370,9 +1390,9 @@ class Project(AdminObject):
                 "manage_resources": self.manage_resources,
                 "manage_security_assets": self.manage_security_assets,
                 "index_resources": self.index_resources,
-                "allow_ignore_rules": self.allow_ignore_rules
+                "allow_ignore_rules": self.allow_ignore_rules,
             },
-            "storage_quota_bytes": self.storage_quota_bytes
+            "storage_quota_bytes": self.storage_quota_bytes,
         }
         return data_json
 
@@ -1382,9 +1402,15 @@ class Project(AdminObject):
         self.description = response.get("description")
         self.manage_members = response.get("admin_privileges").get("manage_members")
         self.manage_resources = response.get("admin_privileges").get("manage_resources")
-        self.manage_security_assets = response.get("admin_privileges").get("manage_security_assets")
+        self.manage_security_assets = response.get("admin_privileges").get(
+            "manage_security_assets"
+        )
         self.index_resources = response.get("admin_privileges").get("index_resources")
-        self.allow_ignore_rules = response.get("admin_privileges").get("allow_ignore_rules")
+        self.allow_ignore_rules = response.get("admin_privileges").get(
+            "allow_ignore_rules"
+        )
         self.storage_quota_bytes = response.get("storage_quota_bytes")
         self.soft_limit = response.get("soft_limit")
-        self.storage_quota_email_notification = response.get("storage_quota_email_notification")
+        self.storage_quota_email_notification = response.get(
+            "storage_quota_email_notification"
+        )

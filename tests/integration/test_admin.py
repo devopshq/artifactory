@@ -206,7 +206,7 @@ class TestProject:
         test_project = Project(
             artifactory=artifactory_token,
             project_key=project_key,
-            display_name=display_name
+            display_name=display_name,
         )
 
         # CREATE
@@ -230,7 +230,7 @@ class TestProject:
         test_project = Project(
             artifactory=artifactory_token,
             project_key=project_key,
-            display_name=display_name
+            display_name=display_name,
         )
 
         # CREATE
