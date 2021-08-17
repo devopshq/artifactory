@@ -726,6 +726,27 @@ repo.read()
 repo.delete()
 ```
 
+## Project
+```python
+# Find
+from artifactory import ArtifactoryPath
+from dohq_artifactory import Project
+
+artifactory_ = ArtifactoryPath(
+    "http://my-artifactory/artifactory/myrepo/restricted-path", token="MY_TOKEN"
+)
+project = artifactory_.find_project("t1k1")
+
+# Create
+if project is None:
+    project = Project(artifactory_, "t1k1", "t1k1_display_name")
+    project.create()
+
+# You can re-read from Artifactory
+project.read()
+
+project.delete()
+```
 
 ## Get repository of any type
 ```python
@@ -1097,6 +1118,7 @@ artifactory_.find_user("name")
 artifactory_.find_group("name")
 artifactory_.find_repository_local("name")
 artifactory_.find_permission_target("name")
+artifactory_.find_project("project_key")
 ```
 
 # Advanced
