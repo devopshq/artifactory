@@ -65,8 +65,25 @@ def artifactory_auth():
 
 
 @pytest.fixture(scope="session")
+def artifactory_auth_token():
+    config_path = os.path.join(os.path.dirname(__file__), "test.cfg")
+    config = configparser.ConfigParser()
+    config.read(config_path)
+
+    token = config.get("artifactory", "token")
+
+    yield token
+
+
+@pytest.fixture(scope="session")
 def artifactory(artifactory_server, artifactory_auth):
     artifactory_ = ArtifactoryPath(artifactory_server, auth=artifactory_auth)
+    yield artifactory_
+
+
+@pytest.fixture(scope="session")
+def artifactory_token(artifactory_server, artifactory_auth_token):
+    artifactory_ = ArtifactoryPath(artifactory_server, token=artifactory_auth_token)
     yield artifactory_
 
 
