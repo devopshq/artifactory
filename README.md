@@ -38,6 +38,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
   * [RepositoryLocal](#repositorylocal)
   * [RepositoryVirtual](#repositoryvirtual)
   * [RepositoryRemote](#repositoryremote)
+  * [Project](#project)
   * [Get repository of any type](#get-repository-of-any-type)
   * [Iterate over repository artifacts](#iterate-over-repository-artifacts)
   * [Access repository child item](#access-repository-child-item)
