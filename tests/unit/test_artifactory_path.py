@@ -389,48 +389,43 @@ class ArtifactoryAccessorTest(unittest.TestCase):
     cls = artifactory._ArtifactoryAccessor
 
     def setUp(self):
-        self.file_stat = """
-            {
-                "repo" : "ext-release-local",
-                "path" : "/org/company/tool/1.0/tool-1.0.tar.gz",
-                "created" : "2014-02-24T21:20:59.999+04:00",
-                "createdBy" : "someuser",
-                "lastModified" : "2014-02-24T21:20:36.000+04:00",
-                "modifiedBy" : "anotheruser",
-                "lastUpdated" : "2014-02-24T21:20:36.000+04:00",
-                "downloadUri" : "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz",
-                "mimeType" : "application/octet-stream",
-                "size" : "26776462",
-                "checksums" : {
-                    "sha1" : "fc6c9e8ba6eaca4fa97868ac900570282133c095",
-                    "sha256" : "fc6c9e8ba6eaca4fa97868ac900570282133c095fc6c9e8ba6eaca4fa97868ac900570282133c095",
-                    "md5" : "2af7d54a09e9c36d704cb3a2de28aff3"
-                },
-                "originalChecksums" : {
-                    "sha1" : "fc6c9e8ba6eaca4fa97868ac900570282133c095",
-                    "sha256" : "fc6c9e8ba6eaca4fa97868ac900570282133c095fc6c9e8ba6eaca4fa97868ac900570282133c095",
-                    "md5" : "2af7d54a09e9c36d704cb3a2de28aff3"
-                },
-                "uri" : "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
-            }
-        """
-        self.dir_stat = """
-            {
-                "repo" : "libs-release-local",
-                "path" : "/",
-                "created" : "2014-02-18T15:35:29.361+04:00",
-                "lastModified" : "2014-02-18T15:35:29.361+04:00",
-                "lastUpdated" : "2014-02-18T15:35:29.361+04:00",
-                "children" : [ {
-                    "uri" : "/.index",
-                    "folder" : true
-                }, {
-                    "uri" : "/com",
-                    "folder" : true
-                } ],
-                "uri" : "http://artifactory.local/artifactory/api/storage/libs-release-local"
-            }
-        """
+        self.file_stat = {
+            "repo": "ext-release-local",
+            "path": "/org/company/tool/1.0/tool-1.0.tar.gz",
+            "created": "2014-02-24T21:20:59.999+04:00",
+            "createdBy": "someuser",
+            "lastModified": "2014-02-24T21:20:36.000+04:00",
+            "modifiedBy": "anotheruser",
+            "lastUpdated": "2014-02-24T21:20:36.000+04:00",
+            "downloadUri": "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz",
+            "mimeType": "application/octet-stream",
+            "size": "26776462",
+            "checksums": {
+                "sha1": "fc6c9e8ba6eaca4fa97868ac900570282133c095",
+                "sha256": "fc6c9e8ba6eaca4fa97868ac900570282133c095fc6c9e8ba6eaca4fa97868ac900570282133c095",
+                "md5": "2af7d54a09e9c36d704cb3a2de28aff3",
+            },
+            "originalChecksums": {
+                "sha1": "fc6c9e8ba6eaca4fa97868ac900570282133c095",
+                "sha256": "fc6c9e8ba6eaca4fa97868ac900570282133c095fc6c9e8ba6eaca4fa97868ac900570282133c095",
+                "md5": "2af7d54a09e9c36d704cb3a2de28aff3",
+            },
+            "uri": "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz",
+        }
+
+        self.dir_stat = {
+            "repo": "libs-release-local",
+            "path": "/",
+            "created": "2014-02-18T15:35:29.361+04:00",
+            "lastModified": "2014-02-18T15:35:29.361+04:00",
+            "lastUpdated": "2014-02-18T15:35:29.361+04:00",
+            "children": [
+                {"uri": "/.index", "folder": True},
+                {"uri": "/com", "folder": True},
+            ],
+            "uri": "http://artifactory.local/artifactory/api/storage/libs-release-local",
+        }
+
         self.property_data = """{
           "properties" : {
             "test" : [ "test_property" ],
@@ -440,124 +435,176 @@ class ArtifactoryAccessorTest(unittest.TestCase):
           "uri" : "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
         }"""
 
+    @responses.activate
     def test_stat(self):
+        """
+        Test file stat. Check that stat(ArtifactoryPath) can take argument
+        :return:
+        """
         a = self.cls()
-        P = ArtifactoryPath
 
         # Regular File
-        p = P(
-            "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        path = ArtifactoryPath(
+            "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
         )
 
-        a.rest_get = MM(return_value=(self.file_stat, 200))
+        constructed_url = (
+            "http://artifactory.local/artifactory"
+            "/api/storage"
+            "/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        )
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=200,
+            json=self.file_stat,
+        )
 
-        s = a.stat(p)
+        stats = a.stat(path)
         self.assertEqual(
-            s.ctime, dateutil.parser.parse("2014-02-24T21:20:59.999+04:00")
+            stats.ctime, dateutil.parser.parse("2014-02-24T21:20:59.999+04:00")
         )
         self.assertEqual(
-            s.mtime, dateutil.parser.parse("2014-02-24T21:20:36.000+04:00")
+            stats.mtime, dateutil.parser.parse("2014-02-24T21:20:36.000+04:00")
         )
-        self.assertEqual(s.created_by, "someuser")
-        self.assertEqual(s.modified_by, "anotheruser")
-        self.assertEqual(s.mime_type, "application/octet-stream")
-        self.assertEqual(s.size, 26776462)
-        self.assertEqual(s.sha1, "fc6c9e8ba6eaca4fa97868ac900570282133c095")
+        self.assertEqual(stats.created_by, "someuser")
+        self.assertEqual(stats.modified_by, "anotheruser")
+        self.assertEqual(stats.mime_type, "application/octet-stream")
+        self.assertEqual(stats.size, 26776462)
+        self.assertEqual(stats.sha1, "fc6c9e8ba6eaca4fa97868ac900570282133c095")
         self.assertEqual(
-            s.sha256,
+            stats.sha256,
             "fc6c9e8ba6eaca4fa97868ac900570282133c095fc6c9e8ba6eaca4fa97868ac900570282133c095",
         )
-        self.assertEqual(s.md5, "2af7d54a09e9c36d704cb3a2de28aff3")
-        self.assertEqual(s.is_dir, False)
+        self.assertEqual(stats.md5, "2af7d54a09e9c36d704cb3a2de28aff3")
+        self.assertEqual(stats.is_dir, False)
 
         # Directory
-        p = P("http://artifactory.local/artifactory/api/storage/libs-release-local")
+        path = ArtifactoryPath(
+            "http://artifactory.local/artifactory/libs-release-local"
+        )
 
-        a.rest_get = MM(return_value=(self.dir_stat, 200))
+        constructed_url = (
+            "http://artifactory.local/artifactory" "/api/storage" "/libs-release-local"
+        )
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=200,
+            json=self.dir_stat,
+        )
 
-        s = a.stat(p)
+        stats = a.stat(path)
         self.assertEqual(
-            s.ctime, dateutil.parser.parse("2014-02-18T15:35:29.361+04:00")
+            stats.ctime, dateutil.parser.parse("2014-02-18T15:35:29.361+04:00")
         )
         self.assertEqual(
-            s.mtime, dateutil.parser.parse("2014-02-18T15:35:29.361+04:00")
+            stats.mtime, dateutil.parser.parse("2014-02-18T15:35:29.361+04:00")
         )
-        self.assertEqual(s.created_by, None)
-        self.assertEqual(s.modified_by, None)
-        self.assertEqual(s.mime_type, None)
-        self.assertEqual(s.size, 0)
-        self.assertEqual(s.sha1, None)
-        self.assertEqual(s.sha256, None)
-        self.assertEqual(s.md5, None)
-        self.assertEqual(s.is_dir, True)
+        self.assertEqual(stats.created_by, None)
+        self.assertEqual(stats.modified_by, None)
+        self.assertEqual(stats.mime_type, None)
+        self.assertEqual(stats.size, 0)
+        self.assertEqual(stats.sha1, None)
+        self.assertEqual(stats.sha256, None)
+        self.assertEqual(stats.md5, None)
+        self.assertEqual(stats.is_dir, True)
 
+    @responses.activate
     def test_stat_no_sha256(self):
-        a = self.cls()
-        P = ArtifactoryPath
-
-        # Regular File
-        p = P(
-            "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
-        )
-        file_stat = """
-            {
-                "repo" : "ext-release-local",
-                "path" : "/org/company/tool/1.0/tool-1.0.tar.gz",
-                "created" : "2014-02-24T21:20:59.999+04:00",
-                "createdBy" : "someuser",
-                "lastModified" : "2014-02-24T21:20:36.000+04:00",
-                "modifiedBy" : "anotheruser",
-                "lastUpdated" : "2014-02-24T21:20:36.000+04:00",
-                "downloadUri" : "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz",
-                "mimeType" : "application/octet-stream",
-                "size" : "26776462",
-                "checksums" : {
-                    "sha1" : "fc6c9e8ba6eaca4fa97868ac900570282133c095",
-                    "md5" : "2af7d54a09e9c36d704cb3a2de28aff3"
-                },
-                "originalChecksums" : {
-                    "sha1" : "fc6c9e8ba6eaca4fa97868ac900570282133c095",
-                    "md5" : "2af7d54a09e9c36d704cb3a2de28aff3"
-                },
-                "uri" : "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
-            }
+        """
+        Test file stats. No sha256 checksum is available.
+        Check that stat() works on instance itself
+        :return:
         """
 
-        a.rest_get = MM(return_value=(file_stat, 200))
+        # Regular File
+        path = ArtifactoryPath(
+            "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        )
+        constructed_url = (
+            "http://artifactory.local/artifactory"
+            "/api/storage"
+            "/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        )
+        file_stat = {
+            "repo": "ext-release-local",
+            "path": "/org/company/tool/1.0/tool-1.0.tar.gz",
+            "created": "2014-02-24T21:20:59.999+04:00",
+            "createdBy": "someuser",
+            "lastModified": "2014-02-24T21:20:36.000+04:00",
+            "modifiedBy": "anotheruser",
+            "lastUpdated": "2014-02-24T21:20:36.000+04:00",
+            "downloadUri": "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz",
+            "mimeType": "application/octet-stream",
+            "size": "26776462",
+            "checksums": {
+                "sha1": "fc6c9e8ba6eaca4fa97868ac900570282133c095",
+                "md5": "2af7d54a09e9c36d704cb3a2de28aff3",
+            },
+            "originalChecksums": {
+                "sha1": "fc6c9e8ba6eaca4fa97868ac900570282133c095",
+                "md5": "2af7d54a09e9c36d704cb3a2de28aff3",
+            },
+            "uri": constructed_url,
+        }
 
-        s = a.stat(p)
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=200,
+            json=file_stat,
+        )
+
+        stats = path.stat()
         self.assertEqual(
-            s.ctime, dateutil.parser.parse("2014-02-24T21:20:59.999+04:00")
+            stats.ctime, dateutil.parser.parse("2014-02-24T21:20:59.999+04:00")
         )
         self.assertEqual(
-            s.mtime, dateutil.parser.parse("2014-02-24T21:20:36.000+04:00")
+            stats.mtime, dateutil.parser.parse("2014-02-24T21:20:36.000+04:00")
         )
-        self.assertEqual(s.created_by, "someuser")
-        self.assertEqual(s.modified_by, "anotheruser")
-        self.assertEqual(s.mime_type, "application/octet-stream")
-        self.assertEqual(s.size, 26776462)
-        self.assertEqual(s.sha1, "fc6c9e8ba6eaca4fa97868ac900570282133c095")
-        self.assertEqual(s.sha256, None)
+        self.assertEqual(stats.created_by, "someuser")
+        self.assertEqual(stats.modified_by, "anotheruser")
+        self.assertEqual(stats.mime_type, "application/octet-stream")
+        self.assertEqual(stats.size, 26776462)
+        self.assertEqual(stats.sha1, "fc6c9e8ba6eaca4fa97868ac900570282133c095")
+        self.assertEqual(stats.sha256, None)
 
+    @responses.activate
     def test_listdir(self):
         a = self.cls()
 
         # Directory
         path = ArtifactoryPath(
-            "http://artifactory.local/artifactory/api/storage/libs-release-local"
+            "http://artifactory.local/artifactory/libs-release-local"
         )
 
-        a.rest_get = MM(return_value=(self.dir_stat, 200))
+        constructed_url = (
+            "http://artifactory.local/artifactory/api/storage/libs-release-local"
+        )
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=200,
+            json=self.dir_stat,
+        )
         children = a.listdir(path)
 
         self.assertEqual(children, [".index", "com"])
 
         # Regular File
         path = ArtifactoryPath(
-            "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+            "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
         )
-
-        a.rest_get = MM(return_value=(self.file_stat, 200))
+        constructed_url = (
+            "http://artifactory.local/artifactory/api/storage/libs-release-local"
+        )
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=200,
+            json=self.file_stat,
+        )
 
         self.assertRaises(OSError, a.listdir, path)
 
