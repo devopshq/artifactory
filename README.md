@@ -28,6 +28,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
   * [Artifactory Query Language](#artifactory-query-language)
   * [FileStat](#filestat)
   * [Promote Docker image](#promote-docker-image)
+  * [Builds](#builds)
 - [Admin area](#admin-area)
   * [User](#user)
     + [API Keys](#api-keys)
@@ -37,6 +38,7 @@ This module is intended to serve as a logical descendant of [pathlib](https://do
   * [RepositoryLocal](#repositorylocal)
   * [RepositoryVirtual](#repositoryvirtual)
   * [RepositoryRemote](#repositoryremote)
+  * [Project](#project)
   * [Get repository of any type](#get-repository-of-any-type)
   * [Iterate over repository artifacts](#iterate-over-repository-artifacts)
   * [Access repository child item](#access-repository-child-item)
@@ -72,9 +74,12 @@ pip install dohq-artifactory==0.5.dev243
 # Usage
 
 ## Authentication ##
+
 `dohq-artifactory` supports these ways of authentication:
+
 - Username and password (or [API KEY](https://www.jfrog.com/confluence/display/RTF/Updating+Your+Profile#UpdatingYourProfile-APIKey)) to access restricted resources, you can pass ```auth``` parameter to ArtifactoryPath.
 - [API KEY](https://www.jfrog.com/confluence/display/RTF/Updating+Your+Profile#UpdatingYourProfile-APIKey) can pass with `apikey` parameter.
+- [Access Token](https://www.jfrog.com/confluence/display/JFROG/Access+Tokens#AccessTokens-UsingTokens) can pass with `token` parameter.
 
 ```python
 from artifactory import ArtifactoryPath
@@ -82,6 +87,11 @@ from artifactory import ArtifactoryPath
 # API_KEY
 path = ArtifactoryPath(
     "http://my-artifactory/artifactory/myrepo/restricted-path", apikey="MY_API_KEY"
+)
+
+# Access Token
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/myrepo/restricted-path", token="MY_ACCESS_TOKEN"
 )
 
 # User and password OR API_KEY
@@ -495,13 +505,53 @@ print(stat.size)
 
 ## Promote Docker image
 Promotes a Docker image in a registry to another registry.
-```
+```python
 from artifactory import ArtifactoryPath
 
 path = ArtifactoryPath("http://example.com/artifactory")
 
 path.promote_docker_image("docker-staging", "docker-prod", "my-application", "0.5.1")
 ```
+
+## Builds
+~~~python
+from artifactory import ArtifactoryBuildManager
+
+arti_build = ArtifactoryBuildManager("https://repo.jfrog.org/artifactory", project="proj_name", auth=("admin", "admin"))
+
+# Get all builds
+all_builds = arti_build.builds
+print(all_builds)
+
+# Build Runs
+build1 = all_builds[0]
+all_runs = build1.runs
+print(all_runs)
+
+# Build Info
+build_number1 = all_runs[0]
+print(build_number1.info)
+
+# Builds Diff
+"""
+  Compare a build artifacts/dependencies/environment with an older build to see what 
+  has changed (new artifacts added, old dependencies deleted etc).  
+"""
+print(build_number1.diff(3))
+
+
+# Build Promotion
+"""
+  Change the status of a build, optionally moving or copying the build's artifacts and its dependencies 
+  to a target repository and setting properties on promoted artifacts.  
+  All artifacts from all scopes are included by default while dependencies are not. Scopes are additive (or)
+"""
+
+build_number1.promote(ci_user="admin", properties={                               
+     "components": ["c1","c3","c14"],
+     "release-name": ["fb3-ga"]
+ })
+~~~
 
 # Admin area
 You can manipulate with user\group\repository and permission. First, create `ArtifactoryPath` object without a repository
@@ -690,6 +740,27 @@ repo.read()
 repo.delete()
 ```
 
+## Project
+```python
+# Find
+from artifactory import ArtifactoryPath
+from dohq_artifactory import Project
+
+artifactory_ = ArtifactoryPath(
+    "http://my-artifactory/artifactory/myrepo/restricted-path", token="MY_TOKEN"
+)
+project = artifactory_.find_project("t1k1")
+
+# Create
+if project is None:
+    project = Project(artifactory_, "t1k1", "t1k1_display_name")
+    project.create()
+
+# You can re-read from Artifactory
+project.read()
+
+project.delete()
+```
 
 ## Get repository of any type
 ```python
@@ -1061,6 +1132,7 @@ artifactory_.find_user("name")
 artifactory_.find_group("name")
 artifactory_.find_repository_local("name")
 artifactory_.find_permission_target("name")
+artifactory_.find_project("project_key")
 ```
 
 # Advanced

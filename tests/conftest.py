@@ -5,7 +5,6 @@ import sys
 import pytest
 
 from artifactory import ArtifactoryPath
-from dohq_artifactory import generate_password
 from dohq_artifactory import Group
 from dohq_artifactory import PermissionTarget
 from dohq_artifactory import RepositoryLocal
@@ -66,8 +65,25 @@ def artifactory_auth():
 
 
 @pytest.fixture(scope="session")
+def artifactory_auth_token():
+    config_path = os.path.join(os.path.dirname(__file__), "test.cfg")
+    config = configparser.ConfigParser()
+    config.read(config_path)
+
+    token = config.get("artifactory", "token")
+
+    yield token
+
+
+@pytest.fixture(scope="session")
 def artifactory(artifactory_server, artifactory_auth):
     artifactory_ = ArtifactoryPath(artifactory_server, auth=artifactory_auth)
+    yield artifactory_
+
+
+@pytest.fixture(scope="session")
+def artifactory_token(artifactory_server, artifactory_auth_token):
+    artifactory_ = ArtifactoryPath(artifactory_server, token=artifactory_auth_token)
     yield artifactory_
 
 
@@ -137,7 +153,10 @@ def user1(artifactory):
     if user is not None:
         user.delete()
     user = User(
-        artifactory=artifactory, name=name, email=name, password=generate_password()
+        artifactory=artifactory,
+        name=name,
+        email=f"{name}@example.com",
+        password="Pa55w@rd",
     )
     user.create()
     yield user
@@ -151,7 +170,10 @@ def user2(artifactory):
     if user is not None:
         user.delete()
     user = User(
-        artifactory=artifactory, name=name, email=name, password=generate_password()
+        artifactory=artifactory,
+        name=name,
+        email=f"{name}@example.com",
+        password="Pa55w@rd",
     )
     user.create()
     yield user

@@ -8,6 +8,7 @@ import dateutil
 from mock import MagicMock as MM
 
 import artifactory
+from artifactory import quote_url
 
 
 class UtilTest(unittest.TestCase):
@@ -58,6 +59,50 @@ class ArtifactoryFlavorTest(unittest.TestCase):
     def tearDown(self):
         artifactory.global_config = None
 
+    def _check_quote_url(self, arg, expected):
+        f = quote_url
+        actual = f(arg)
+        self.assertEqual(actual, expected)
+
+    def test_quote_url(self):
+        check = self._check_quote_url
+        check(
+            "https://example.com:80/artifactory/foo",
+            "https://example.com:80/artifactory/foo",
+        )
+        check(
+            "https://example.com:80/artifactory/foo/#1",
+            "https://example.com:80/artifactory/foo/%231",
+        )
+        check(
+            "https://example.com/artifactory/foo", "https://example.com/artifactory/foo"
+        )
+        check(
+            "https://example.com/artifactory/foo/#1",
+            "https://example.com/artifactory/foo/%231",
+        )
+        check(
+            "https://example.com/artifactory/foo/#1/",
+            "https://example.com/artifactory/foo/%231/",
+        )
+        check(
+            "https://example.com/artifactory/foo/#1/bar",
+            "https://example.com/artifactory/foo/%231/bar",
+        )
+
+        check(
+            "https://example.com/artifactory/foo/?1",
+            "https://example.com/artifactory/foo/%3F1",
+        )
+        check(
+            "https://example.com/artifactory/foo/?1/",
+            "https://example.com/artifactory/foo/%3F1/",
+        )
+        check(
+            "https://example.com/artifactory/foo/?1/bar",
+            "https://example.com/artifactory/foo/%3F1/bar",
+        )
+
     def _check_splitroot(self, arg, expected):
         f = self.flavour.splitroot
         actual = f(arg)
@@ -101,7 +146,7 @@ class ArtifactoryFlavorTest(unittest.TestCase):
         check("https://a/b/~", ("https://a", "/b/", "~"))
         check("https://a/b/!", ("https://a", "/b/", "!"))
         check("https://a/b/@", ("https://a", "/b/", "@"))
-        # check("https://a/b/#", ("https://a", "/b/", "#"))
+        check("https://a/b/#", ("https://a", "/b/", "#"))
         check("https://a/b/$", ("https://a", "/b/", "$"))
         check("https://a/b/%", ("https://a", "/b/", "%"))
         check("https://a/b/^", ("https://a", "/b/", "^"))
@@ -122,7 +167,7 @@ class ArtifactoryFlavorTest(unittest.TestCase):
         check("https://a/b/,", ("https://a", "/b/", ","))
         check("https://a/b/<", ("https://a", "/b/", "<"))
         check("https://a/b/>", ("https://a", "/b/", ">"))
-        # check("https://a/b/?", ("https://a", "/b/", "?"))
+        check("https://a/b/?", ("https://a", "/b/", "?"))
 
     def test_splitroot_custom_drv(self):
         """https://github.com/devopshq/artifactory/issues/31 and
@@ -666,6 +711,20 @@ class ArtifactoryPathTest(unittest.TestCase):
         P = self.cls
         b = P("http://b/artifactory/reponame/folder/path.xml")
         self.assertEqual(b.path_in_repo, "/folder/path.xml")
+
+    def test_joinpath_repo(self):
+        """
+        https://github.com/devopshq/artifactory/issues/239
+        """
+
+        P = self.cls
+        artis = ["", "artifactory", "artifactory/"]
+        reponames = ["reponame", "/reponame", "reponame/", "/reponame/"]
+
+        for arti in artis:
+            for reponame in reponames:
+                c = P("http://b/" + arti).joinpath(reponame)
+                self.assertEqual(c.root, "/reponame/")
 
 
 class ArtifactorySaaSPathTest(unittest.TestCase):

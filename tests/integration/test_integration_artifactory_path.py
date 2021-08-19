@@ -183,3 +183,18 @@ def test_open(path):
     s.write("Some test string")
     p.deploy(s)
     p.unlink()
+
+
+def test_read_and_write(path):
+    p = path("/integration-artifactory-path-repo/foo")
+
+    if p.exists():
+        p.rmdir()
+
+    # If the length of sequence is less than 32, there will be a warning msg.
+    # UserWarning: Trying to detect encoding from a tiny portion of (16) byte(s).
+    p.write_text("Some test string ensure length > 32")
+    assert p.read_bytes() == b"Some test string ensure length > 32"
+    assert p.read_text() == "Some test string ensure length > 32"
+
+    p.unlink()
