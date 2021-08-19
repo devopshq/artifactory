@@ -5,9 +5,11 @@ import tempfile
 import unittest
 
 import dateutil
+import responses
 from mock import MagicMock as MM
 
 import artifactory
+from artifactory import ArtifactoryPath
 from artifactory import quote_url
 
 
@@ -440,7 +442,7 @@ class ArtifactoryAccessorTest(unittest.TestCase):
 
     def test_stat(self):
         a = self.cls()
-        P = artifactory.ArtifactoryPath
+        P = ArtifactoryPath
 
         # Regular File
         p = P(
@@ -491,7 +493,7 @@ class ArtifactoryAccessorTest(unittest.TestCase):
 
     def test_stat_no_sha256(self):
         a = self.cls()
-        P = artifactory.ArtifactoryPath
+        P = ArtifactoryPath
 
         # Regular File
         p = P(
@@ -539,32 +541,32 @@ class ArtifactoryAccessorTest(unittest.TestCase):
 
     def test_listdir(self):
         a = self.cls()
-        P = artifactory.ArtifactoryPath
 
         # Directory
-        p = P("http://artifactory.local/artifactory/api/storage/libs-release-local")
+        path = ArtifactoryPath(
+            "http://artifactory.local/artifactory/api/storage/libs-release-local"
+        )
 
         a.rest_get = MM(return_value=(self.dir_stat, 200))
-
-        children = a.listdir(p)
+        children = a.listdir(path)
 
         self.assertEqual(children, [".index", "com"])
 
         # Regular File
-        p = P(
+        path = ArtifactoryPath(
             "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
         )
 
         a.rest_get = MM(return_value=(self.file_stat, 200))
 
-        self.assertRaises(OSError, a.listdir, p)
+        self.assertRaises(OSError, a.listdir, path)
 
     def test_mkdir(self):
         pass
 
     def test_deploy(self):
         a = self.cls()
-        P = artifactory.ArtifactoryPath
+        P = ArtifactoryPath
 
         p = P("http://b/artifactory/c/d")
 
@@ -583,8 +585,6 @@ class ArtifactoryAccessorTest(unittest.TestCase):
         )
 
     def test_get_properties(self):
-        a = self.cls()
-        P = artifactory.ArtifactoryPath
         properties = {
             "test": ["test_property"],
             "removethis": ["removethis_property"],
@@ -592,55 +592,48 @@ class ArtifactoryAccessorTest(unittest.TestCase):
         }
 
         # Regular File
-        p = P(
+        path = ArtifactoryPath(
             "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
         )
 
-        p._accessor.rest_get = MM(return_value=(self.property_data, 200))
+        path._accessor.rest_get = MM(return_value=(self.property_data, 200))
 
-        self.assertEqual(p.properties, properties)
+        self.assertEqual(path.properties, properties)
 
+    @responses.activate
     def test_set_properties(self):
-        a = self.cls()
-        P = artifactory.ArtifactoryPath
+        """
+        Test set properties on ArtifactoryPath.
+        Reference properties (see _set_properties) use additional property 'removethis' that isn't used in this test,
+        thus, get, then delete, then put requests are called
+        :return: None
+        """
         properties = {
             "test": ["test_property"],
             "time": ["2018-01-16 12:17:44.135143"],
             "addthis": ["addthis"],
         }
 
-        # Regular File
-        p = P(
-            "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
-        )
-
-        p._accessor.rest_get = MM(return_value=(self.property_data, 200))
-        p._accessor.rest_del = MM(return_value=("", 204))
-        p._accessor.rest_put = MM(return_value=("", 204))
-        p.properties = properties
+        self._set_properties(properties)
 
         # Must delete only removed property
-        p._accessor.rest_del.assert_called_once()
-        calls = p._accessor.rest_del.mock_calls
-
-        kwargs = calls[0][2]  # '', args, kwargs, _
-        properties_del = kwargs["params"]["properties"]
-        self.assertEqual(properties_del, "removethis")
+        # rest delete is a second call, use index 1
+        self.assertEqual(responses.calls[1].request.params["properties"], "removethis")
 
         # Must put all property
-        p._accessor.rest_put.assert_called_once()
-        calls = p._accessor.rest_put.mock_calls
-
-        kwargs = calls[0][2]  # '', args, kwargs, _
-        properties_put = kwargs["params"]["properties"]
         self.assertEqual(
-            properties_put,
+            responses.calls[2].request.params["properties"],
             "addthis=addthis;test=test_property;time=2018-01-16 12:17:44.135143",
         )
 
+    @responses.activate
     def test_set_properties_without_remove(self):
-        a = self.cls()
-        P = artifactory.ArtifactoryPath
+        """
+        Test set properties on ArtifactoryPath.
+        Reference properties (see _set_properties) haven't properties that aren't used in this test,
+        thus, only get and put requests are called
+        :return: None
+        """
         properties = {
             "test": ["test_property"],
             "time": ["2018-01-16 12:17:44.135143"],
@@ -648,24 +641,60 @@ class ArtifactoryAccessorTest(unittest.TestCase):
             "removethis": ["removethis_property"],
         }
 
-        # Regular File
-        p = P(
-            "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        self._set_properties(properties)
+        self.assertEqual(
+            responses.calls[1].request.params["properties"],
+            "addthis=addthis;removethis=removethis_property;test=test_property;time=2018-01-16 12:17:44.135143",
         )
 
-        p._accessor.rest_get = MM(return_value=(self.property_data, 200))
-        p._accessor.rest_del = MM(return_value=("", 204))
-        p._accessor.rest_put = MM(return_value=("", 204))
-        p.properties = properties
-
-        # Must delete only removed property
-        p._accessor.rest_del.assert_not_called()
+    def _set_properties(self, properties):
+        """
+        Function to mock responses on HTTP requests
+        :param properties: properties to assign on ArtifactoryPath
+        :return: None
+        """
+        # Regular File
+        path = ArtifactoryPath(
+            "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        )
+        constructed_url = (
+            "http://artifactory.local/artifactory"
+            "/api/storage/"
+            "ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        )
+        reference_props = {
+            "test": ["test_property"],
+            "removethis": ["removethis_property"],
+            "time": ["2018-01-16 12:17:44.135143"],
+        }
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=204,
+            json={
+                "properties": reference_props,
+                "uri": constructed_url,
+            },
+        )
+        responses.add(
+            responses.DELETE,
+            constructed_url,
+            status=204,
+            body="",
+        )
+        responses.add(
+            responses.PUT,
+            constructed_url,
+            status=204,
+            body="",
+        )
+        path.properties = properties
 
 
 class ArtifactoryPathTest(unittest.TestCase):
     """Test the filesystem-accessing fuctionality"""
 
-    cls = artifactory.ArtifactoryPath
+    cls = ArtifactoryPath
 
     def test_basic(self):
         P = self.cls
@@ -728,7 +757,6 @@ class ArtifactoryPathTest(unittest.TestCase):
 
 
 class ArtifactorySaaSPathTest(unittest.TestCase):
-
     cls = artifactory.ArtifactorySaaSPath
 
     def test_basic(self):
@@ -799,7 +827,7 @@ class TestArtifactoryConfig(unittest.TestCase):
 
 class TestArtifactoryAql(unittest.TestCase):
     def setUp(self):
-        self.aql = artifactory.ArtifactoryPath("http://b/artifactory")
+        self.aql = ArtifactoryPath("http://b/artifactory")
 
     def test_create_aql_text_simple(self):
         args = ["items.find", {"repo": "myrepo"}]
