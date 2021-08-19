@@ -584,6 +584,7 @@ class ArtifactoryAccessorTest(unittest.TestCase):
             url, f, headers={}, session=p.session, verify=True, cert=None, timeout=None
         )
 
+    @responses.activate
     def test_get_properties(self):
         properties = {
             "test": ["test_property"],
@@ -591,12 +592,7 @@ class ArtifactoryAccessorTest(unittest.TestCase):
             "time": ["2018-01-16 12:17:44.135143"],
         }
 
-        # Regular File
-        path = ArtifactoryPath(
-            "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
-        )
-
-        path._accessor.rest_get = MM(return_value=(self.property_data, 200))
+        path = self._mock_properties_response()
 
         self.assertEqual(path.properties, properties)
 
@@ -614,7 +610,8 @@ class ArtifactoryAccessorTest(unittest.TestCase):
             "addthis": ["addthis"],
         }
 
-        self._set_properties(properties)
+        path = self._mock_properties_response()
+        path.properties = properties
 
         # Must delete only removed property
         # rest delete is a second call, use index 1
@@ -641,17 +638,17 @@ class ArtifactoryAccessorTest(unittest.TestCase):
             "removethis": ["removethis_property"],
         }
 
-        self._set_properties(properties)
+        path = self._mock_properties_response()
+        path.properties = properties
         self.assertEqual(
             responses.calls[1].request.params["properties"],
             "addthis=addthis;removethis=removethis_property;test=test_property;time=2018-01-16 12:17:44.135143",
         )
 
-    def _set_properties(self, properties):
+    def _mock_properties_response(self):
         """
         Function to mock responses on HTTP requests
-        :param properties: properties to assign on ArtifactoryPath
-        :return: None
+        :return: ArtifactoryPath instance object
         """
         # Regular File
         path = ArtifactoryPath(
@@ -688,7 +685,7 @@ class ArtifactoryAccessorTest(unittest.TestCase):
             status=204,
             body="",
         )
-        path.properties = properties
+        return path
 
 
 class ArtifactoryPathTest(unittest.TestCase):

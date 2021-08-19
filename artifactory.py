@@ -627,9 +627,17 @@ class _ArtifactoryAccessor(pathlib._Accessor):
     ):
         """
         Perform a GET request to url with requests.session
+        :param url:
+        :param params:
+        :param headers:
+        :param session:
+        :param verify:
+        :param cert:
+        :param timeout:
+        :return: response object
         """
         url = quote_url(url)
-        res = session.get(
+        response = session.get(
             url,
             params=params,
             headers=headers,
@@ -637,7 +645,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=cert,
             timeout=timeout,
         )
-        return res
+        return response
 
     @staticmethod
     def rest_put(
@@ -754,17 +762,19 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             ]
         )
 
-        text, code = self.rest_get(
+        response = self.rest_get(
             url,
             session=pathobj.session,
             verify=pathobj.verify,
             cert=pathobj.cert,
             timeout=pathobj.timeout,
         )
+        code = response.status_code
+        text = response.text
         if code == 404 and ("Unable to find item" in text or "Not Found" in text):
             raise OSError(2, "No such file or directory: '%s'" % url)
-        if code != 200:
-            raise RuntimeError(text)
+
+        response.raise_for_status()
 
         return json.loads(text)
 
