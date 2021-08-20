@@ -377,17 +377,30 @@ class nullcontext:
 
 
 def quote_url(url):
+    """
+    Quote URL to allow URL fragment identifier as artifact folder or file names.
+    See https://en.wikipedia.org/wiki/Percent-encoding#Reserved_characters
+    Function will percent-encode the URL
+
+    Note: if anybody for some reason (actually this should not be allowed) will require = or ; sign in artifact name,
+    then have to change this function
+    :param url: (str) URL that should be quoted
+    :return: (str) quoted URL
+    """
     parsed_url = urllib3.util.parse_url(url)
     if parsed_url.port:
         quoted_path = requests.utils.quote(
-            url.rpartition(f"{parsed_url.host}:{parsed_url.port}")[2]
+            url.rpartition(f"{parsed_url.host}:{parsed_url.port}")[2],
+            safe="/;=",  # ; and = signs are used in Artifactory Matrix Parameters
         )
         quoted_url = (
             f"{parsed_url.scheme}://{parsed_url.host}:{parsed_url.port}{quoted_path}"
         )
     else:
-        quoted_path = requests.utils.quote(url.rpartition(parsed_url.host)[2])
-        quoted_url = "{}://{}{}".format(parsed_url.scheme, parsed_url.host, quoted_path)
+        quoted_path = requests.utils.quote(
+            url.rpartition(parsed_url.host)[2], safe="/;="
+        )
+        quoted_url = f"{parsed_url.scheme}://{parsed_url.host}{quoted_path}"
 
     return quoted_url
 
@@ -1716,8 +1729,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         target = self
 
-        if self.is_dir():
-            target = self / pathlib.Path(file_name).name
+        if target.is_dir():
+            target = target / pathlib.Path(file_name).name
 
         with open(file_name, "rb") as fobj:
             target.deploy(
