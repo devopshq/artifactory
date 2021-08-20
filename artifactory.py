@@ -627,9 +627,17 @@ class _ArtifactoryAccessor(pathlib._Accessor):
     ):
         """
         Perform a GET request to url with requests.session
+        :param url:
+        :param params:
+        :param headers:
+        :param session:
+        :param verify:
+        :param cert:
+        :param timeout:
+        :return: response object
         """
         url = quote_url(url)
-        res = session.get(
+        response = session.get(
             url,
             params=params,
             headers=headers,
@@ -637,7 +645,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=cert,
             timeout=timeout,
         )
-        return res.text, res.status_code
+        return response
 
     @staticmethod
     def rest_put(
@@ -693,12 +701,20 @@ class _ArtifactoryAccessor(pathlib._Accessor):
     def rest_del(url, params=None, session=None, verify=True, cert=None, timeout=None):
         """
         Perform a DELETE request to url with requests.session
+        :param url: url
+        :param params: request parameters
+        :param session:
+        :param verify:
+        :param cert:
+        :param timeout:
+        :return: request response object
         """
         url = quote_url(url)
-        res = session.delete(
+        response = session.delete(
             url, params=params, verify=verify, cert=cert, timeout=timeout
         )
-        return res.text, res.status_code
+        response.raise_for_status()
+        return response
 
     @staticmethod
     def rest_put_stream(
@@ -746,17 +762,19 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             ]
         )
 
-        text, code = self.rest_get(
+        response = self.rest_get(
             url,
             session=pathobj.session,
             verify=pathobj.verify,
             cert=pathobj.cert,
             timeout=pathobj.timeout,
         )
+        code = response.status_code
+        text = response.text
         if code == 404 and ("Unable to find item" in text or "Not Found" in text):
             raise OSError(2, "No such file or directory: '%s'" % url)
-        if code != 200:
-            raise RuntimeError(text)
+
+        response.raise_for_status()
 
         return json.loads(text)
 
@@ -864,21 +882,14 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         url = str(pathobj) + "/"
 
-        text, code = self.rest_del(
+        self.rest_del(
             url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert
         )
 
-        if code not in (200, 202, 204):
-            raise RuntimeError("Failed to delete directory: '%s'" % text)
-
     def unlink(self, pathobj):
         """
-        Removes a file
+        Removes a file or folder
         """
-
-        # TODO: Why do we forbid remove folder?
-        # if stat.is_dir:
-        #     raise IsADirectoryError(1, "Operation not permitted: {!r}".format(pathobj))
 
         url = "/".join(
             [
@@ -886,16 +897,13 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                 str(pathobj.relative_to(pathobj.drive)).strip("/"),
             ]
         )
-        text, code = self.rest_del(
+        self.rest_del(
             url,
             session=pathobj.session,
             verify=pathobj.verify,
             cert=pathobj.cert,
             timeout=pathobj.timeout,
         )
-
-        if code not in (200, 202, 204):
-            raise FileNotFoundError("Failed to delete file: {} {!r}".format(code, text))
 
     def touch(self, pathobj):
         """
@@ -1085,7 +1093,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         params = "properties"
 
-        text, code = self.rest_get(
+        response = self.rest_get(
             url,
             params=params,
             session=pathobj.session,
@@ -1093,13 +1101,14 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=pathobj.cert,
             timeout=pathobj.timeout,
         )
-
+        code = response.status_code
+        text = response.text
         if code == 404 and ("Unable to find item" in text or "Not Found" in text):
             raise OSError(2, "No such file or directory: '%s'" % url)
         if code == 404 and "No properties could be found" in text:
             return {}
-        if code != 200:
-            raise RuntimeError(text)
+
+        response.raise_for_status()
 
         return json.loads(text)["properties"]
 
@@ -1154,7 +1163,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if not recursive:
             params["recursive"] = "0"
 
-        text, code = self.rest_del(
+        self.rest_del(
             url,
             params=params,
             session=pathobj.session,
@@ -1162,11 +1171,6 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=pathobj.cert,
             timeout=pathobj.timeout,
         )
-
-        if code == 404 and ("Unable to find item" in text or "Not Found" in text):
-            raise OSError(2, "No such file or directory: '%s'" % url)
-        if code != 204:
-            raise RuntimeError(text)
 
     def scandir(self, pathobj):
         return _ScandirIter((pathobj.joinpath(x) for x in self.listdir(pathobj)))
