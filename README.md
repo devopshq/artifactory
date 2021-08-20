@@ -235,7 +235,7 @@ with path.archive(archive_type="zip", check_sum=False) as archive:
         out.write(archive.read())
 
 # download folder archive in chunks
-path.archive().writeto(output="my.zip", chunk_size=100 * 1024)
+path.archive().writeto(out="my.zip", chunk_size=100 * 1024)
 ```
 
 ## Uploading Artifacts ##
