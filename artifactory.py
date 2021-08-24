@@ -774,7 +774,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         code = response.status_code
         text = response.text
         if code == 404 and ("Unable to find item" in text or "Not Found" in text):
-            raise OSError(2, "No such file or directory: '%s'" % url)
+            raise OSError(2, f"No such file or directory: {url}")
 
         response.raise_for_status()
 
@@ -893,19 +893,41 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         Removes a file or folder
         """
 
+        if not pathobj.exists():
+            raise OSError(2, f"No such file or directory: {pathobj}")
+
         url = "/".join(
             [
                 pathobj.drive.rstrip("/"),
                 str(pathobj.relative_to(pathobj.drive)).strip("/"),
             ]
         )
-        self.rest_del(
-            url,
-            session=pathobj.session,
-            verify=pathobj.verify,
-            cert=pathobj.cert,
-            timeout=pathobj.timeout,
-        )
+
+        try:
+            self.rest_del(
+                url,
+                session=pathobj.session,
+                verify=pathobj.verify,
+                cert=pathobj.cert,
+                timeout=pathobj.timeout,
+            )
+        except requests.exceptions.HTTPError as err:
+            if err.response.status_code == 404:
+                # since we performed existence check we can say it is permissions issue
+                # see https://github.com/devopshq/artifactory/issues/36
+                errors = json.loads(err.response.text)["errors"][0]
+                message = errors["message"]
+                docs_url = (
+                    "https://www.jfrog.com/confluence/display/JFROG/General+Security+Settings"
+                    "#GeneralSecuritySettings-HideExistenceofUnauthorizedResources"
+                )
+                message = (
+                    "Error 404. \nThis might be a result of insufficient Artifactory privileges to "
+                    "delete artifacts. \nPlease check that your account have enough permissions and try again.\n"
+                    f"See more: {docs_url} \n"
+                ) + message
+                err.args = (message,)
+                raise
 
     def touch(self, pathobj):
         """
