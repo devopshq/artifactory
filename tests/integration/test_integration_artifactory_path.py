@@ -6,6 +6,8 @@ import tempfile
 import pytest
 
 import artifactory
+from artifactory import sha1sum
+from artifactory import sha256sum
 
 if sys.version_info[0] < 3:
     import StringIO as io
@@ -169,6 +171,81 @@ def test_deploy_file(path):
     with p.open() as fd:
         result = fd.read()
     assert result == b"Some test string"
+
+    p.unlink()
+
+
+def test_deploy_file_by_checksum(path):
+    p = path("/integration-artifactory-path-repo/foo")
+    p1 = path("/integration-artifactory-path-repo/bar")
+
+    if p.exists():
+        p.unlink()
+    if p1.exists():
+        p1.unlink()
+
+    tf = tempfile.NamedTemporaryFile()
+    tf.write(b"Some test string")
+    tf.flush()
+
+    sha1 = sha1sum(tf.name)
+    sha256 = sha256sum(tf.name)
+
+    sha1_non_existent = "1111111111111111111111111111111111111111"
+    sha256_non_existent = (
+        "1111111111111111111111111111111111111111111111111111111111111111"
+    )
+
+    p.deploy_file(tf.name)
+    tf.close()
+    with p.open() as fd:
+        result = fd.read()
+    assert result == b"Some test string"
+
+    # The matrix is a full list of all possible combinations
+    # 1st row is for 1st parameter of deploy_by_checksum
+    # 2nd row is for 2nd parameter and 3rd is for 3rd parameter
+    # matrix = [
+    #     [sha1, sha1_non_existent, None],
+    #     [sha256, sha256_non_existent, None],
+    #     [sha1, sha1_non_existent, sha256, sha256_non_existent, None]
+    # ]
+
+    p1.deploy_by_checksum(sha1=sha1)
+    with p1.open() as fd:
+        result = fd.read()
+    p1.unlink()
+    assert result == b"Some test string"
+
+    with pytest.raises(RuntimeError) as excinfo:
+        p.deploy_by_checksum(sha1=sha1_non_existent)
+
+    p1.deploy_by_checksum(sha256=sha256)
+    with p1.open() as fd:
+        result = fd.read()
+    p1.unlink()
+    assert result == b"Some test string"
+
+    with pytest.raises(RuntimeError) as excinfo:
+        p.deploy_by_checksum(sha256=sha256_non_existent)
+
+    p1.deploy_by_checksum(checksum=sha1)
+    with p1.open() as fd:
+        result = fd.read()
+    p1.unlink()
+    assert result == b"Some test string"
+
+    with pytest.raises(RuntimeError) as excinfo:
+        p.deploy_by_checksum(checksum=sha1_non_existent)
+
+    p1.deploy_by_checksum(checksum=sha256)
+    with p1.open() as fd:
+        result = fd.read()
+    p1.unlink()
+    assert result == b"Some test string"
+
+    with pytest.raises(RuntimeError) as excinfo:
+        p.deploy_by_checksum(checksum=sha256_non_existent)
 
     p.unlink()
 

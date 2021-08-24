@@ -1030,11 +1030,30 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         parameters=None,
         explode_archive=None,
         explode_archive_atomic=None,
+        checksum=None,
+        by_checksum=None,
     ):
         """
         Uploads a given file-like object
         HTTP chunked encoding will be attempted
+
+        If by_checksum is True, fobj should be None
+
+        :param pathobj: ArtifactoryPath object
+        :param fobj: file object to be deployed
+        :param md5:
+        :param sha1:
+        :param sha256:
+        :param parameters: Artifact properties
+        :param explode_archive(bool): True: archive will be exploded upon deployment
+        :param explode_archive_atomic(bool): True: archive will be exploded in an atomic operation upon deployment
+        :param checksum: sha1Value or sha256Value
+        :param by_checksum(bool): True: deploy artifact by checksum
         """
+
+        if fobj and by_checksum:
+            raise RuntimeError("Either fobj or by_checksum, but not both")
+
         if isinstance(fobj, urllib3.response.HTTPResponse):
             fobj = HTTPResponseWrapper(fobj)
 
@@ -1055,6 +1074,10 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             headers["X-Explode-Archive"] = "true"
         if explode_archive_atomic:
             headers["X-Explode-Archive-Atomic"] = "true"
+        if by_checksum:
+            headers["X-Checksum-Deploy"] = "true"
+            if checksum:
+                headers["X-Checksum"] = checksum
 
         text, code = self.rest_put_stream(
             url,
@@ -1763,6 +1786,32 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                 explode_archive=explode_archive,
                 explode_archive_atomic=explode_archive_atomic,
             )
+
+    def deploy_by_checksum(
+        self,
+        sha1=None,
+        sha256=None,
+        checksum=None,
+        parameters={},
+    ):
+        """
+        Deploy an artifact to the specified destination by checking if the
+        artifact content already exists in Artifactory.
+
+        :param pathobj: ArtifactoryPath object
+        :param sha1: sha1Value
+        :param sha256: sha256Value
+        :param checksum: sha1Value or sha256Value
+        """
+        return self._accessor.deploy(
+            self,
+            fobj=None,
+            sha1=sha1,
+            sha256=sha256,
+            checksum=checksum,
+            by_checksum=True,
+            parameters=parameters,
+        )
 
     def deploy_deb(
         self, file_name, distribution, component, architecture, parameters={}
