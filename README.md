@@ -442,7 +442,15 @@ artifacts = aql.aql("items.find", {"repo": "myrepo"})
 artifacts = aql.aql("items.find()", ".include", ["name", "repo"])
 
 #  support complex query
-# items.find({"$and": [{"repo": {"$eq": "repo"}}, {"$or": [{"path": {"$match": "*path1"}}, {"path": {"$match": "*path2"}}]}]})
+# Example 1
+# items.find(
+#     {
+#         "$and": [
+#             {"repo": {"$eq": "repo"}},
+#             {"$or": [{"path": {"$match": "*path1"}}, {"path": {"$match": "*path2"}}]},
+#         ]
+#     }
+# )
 args = [
     "items.find",
     {
@@ -459,8 +467,33 @@ args = [
 ]
 
 # artifacts_list contains raw data (list of dict)
-# Send query:
-# items.find({"$and": [{"repo": {"$eq": "repo"}}, {"$or": [{"path": {"$match": "*path1"}}, {"path": {"$match": "*path2"}}]}]})
+# Send query
+artifacts_list = aql.aql(*args)
+
+# Example 2
+# The query will find all items in repo docker-prod that are of type file and were created after timecode. The
+# query will only display the fields "repo", "path" and "name" and will sort the result ascendingly by those fields.
+# items.find(
+#     {
+#         "$or": [{"repo": "docker-prod"}],
+#         "type": "file",
+#         "created": {"$gt": "2019-07-10T19:20:30.45+01:00"},
+#     }
+# ).include("repo", "path", "name",).sort({"$asc": ["repo", "path", "name"]})
+aqlargs = [
+    "items.find",
+    {
+        "$and": [
+            {"repo": "docker-prod"},
+            {"type": "file"},
+            {"created": {"$gt": "2019-07-10T19:20:30.45+01:00"}},
+        ]
+    },
+    ".include",
+    ["repo", "path", "name"],
+    ".sort",
+    {"$asc": ["repo", "path", "name"]},
+]
 artifacts_list = aql.aql(*args)
 
 # You can convert to pathlib object:
