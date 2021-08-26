@@ -5,9 +5,11 @@ import tempfile
 import unittest
 
 import dateutil
+import responses
 from mock import MagicMock as MM
 
 import artifactory
+from artifactory import ArtifactoryPath
 from artifactory import quote_url
 
 
@@ -387,48 +389,43 @@ class ArtifactoryAccessorTest(unittest.TestCase):
     cls = artifactory._ArtifactoryAccessor
 
     def setUp(self):
-        self.file_stat = """
-            {
-                "repo" : "ext-release-local",
-                "path" : "/org/company/tool/1.0/tool-1.0.tar.gz",
-                "created" : "2014-02-24T21:20:59.999+04:00",
-                "createdBy" : "someuser",
-                "lastModified" : "2014-02-24T21:20:36.000+04:00",
-                "modifiedBy" : "anotheruser",
-                "lastUpdated" : "2014-02-24T21:20:36.000+04:00",
-                "downloadUri" : "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz",
-                "mimeType" : "application/octet-stream",
-                "size" : "26776462",
-                "checksums" : {
-                    "sha1" : "fc6c9e8ba6eaca4fa97868ac900570282133c095",
-                    "sha256" : "fc6c9e8ba6eaca4fa97868ac900570282133c095fc6c9e8ba6eaca4fa97868ac900570282133c095",
-                    "md5" : "2af7d54a09e9c36d704cb3a2de28aff3"
-                },
-                "originalChecksums" : {
-                    "sha1" : "fc6c9e8ba6eaca4fa97868ac900570282133c095",
-                    "sha256" : "fc6c9e8ba6eaca4fa97868ac900570282133c095fc6c9e8ba6eaca4fa97868ac900570282133c095",
-                    "md5" : "2af7d54a09e9c36d704cb3a2de28aff3"
-                },
-                "uri" : "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
-            }
-        """
-        self.dir_stat = """
-            {
-                "repo" : "libs-release-local",
-                "path" : "/",
-                "created" : "2014-02-18T15:35:29.361+04:00",
-                "lastModified" : "2014-02-18T15:35:29.361+04:00",
-                "lastUpdated" : "2014-02-18T15:35:29.361+04:00",
-                "children" : [ {
-                    "uri" : "/.index",
-                    "folder" : true
-                }, {
-                    "uri" : "/com",
-                    "folder" : true
-                } ],
-                "uri" : "http://artifactory.local/artifactory/api/storage/libs-release-local"
-            }
-        """
+        self.file_stat = {
+            "repo": "ext-release-local",
+            "path": "/org/company/tool/1.0/tool-1.0.tar.gz",
+            "created": "2014-02-24T21:20:59.999+04:00",
+            "createdBy": "someuser",
+            "lastModified": "2014-02-24T21:20:36.000+04:00",
+            "modifiedBy": "anotheruser",
+            "lastUpdated": "2014-02-24T21:20:36.000+04:00",
+            "downloadUri": "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz",
+            "mimeType": "application/octet-stream",
+            "size": "26776462",
+            "checksums": {
+                "sha1": "fc6c9e8ba6eaca4fa97868ac900570282133c095",
+                "sha256": "fc6c9e8ba6eaca4fa97868ac900570282133c095fc6c9e8ba6eaca4fa97868ac900570282133c095",
+                "md5": "2af7d54a09e9c36d704cb3a2de28aff3",
+            },
+            "originalChecksums": {
+                "sha1": "fc6c9e8ba6eaca4fa97868ac900570282133c095",
+                "sha256": "fc6c9e8ba6eaca4fa97868ac900570282133c095fc6c9e8ba6eaca4fa97868ac900570282133c095",
+                "md5": "2af7d54a09e9c36d704cb3a2de28aff3",
+            },
+            "uri": "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz",
+        }
+
+        self.dir_stat = {
+            "repo": "libs-release-local",
+            "path": "/",
+            "created": "2014-02-18T15:35:29.361+04:00",
+            "lastModified": "2014-02-18T15:35:29.361+04:00",
+            "lastUpdated": "2014-02-18T15:35:29.361+04:00",
+            "children": [
+                {"uri": "/.index", "folder": True},
+                {"uri": "/com", "folder": True},
+            ],
+            "uri": "http://artifactory.local/artifactory/api/storage/libs-release-local",
+        }
+
         self.property_data = """{
           "properties" : {
             "test" : [ "test_property" ],
@@ -438,133 +435,185 @@ class ArtifactoryAccessorTest(unittest.TestCase):
           "uri" : "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
         }"""
 
+    @responses.activate
     def test_stat(self):
+        """
+        Test file stat. Check that stat(ArtifactoryPath) can take argument
+        :return:
+        """
         a = self.cls()
-        P = artifactory.ArtifactoryPath
 
         # Regular File
-        p = P(
-            "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        path = ArtifactoryPath(
+            "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
         )
 
-        a.rest_get = MM(return_value=(self.file_stat, 200))
+        constructed_url = (
+            "http://artifactory.local/artifactory"
+            "/api/storage"
+            "/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        )
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=200,
+            json=self.file_stat,
+        )
 
-        s = a.stat(p)
+        stats = a.stat(path)
         self.assertEqual(
-            s.ctime, dateutil.parser.parse("2014-02-24T21:20:59.999+04:00")
+            stats.ctime, dateutil.parser.parse("2014-02-24T21:20:59.999+04:00")
         )
         self.assertEqual(
-            s.mtime, dateutil.parser.parse("2014-02-24T21:20:36.000+04:00")
+            stats.mtime, dateutil.parser.parse("2014-02-24T21:20:36.000+04:00")
         )
-        self.assertEqual(s.created_by, "someuser")
-        self.assertEqual(s.modified_by, "anotheruser")
-        self.assertEqual(s.mime_type, "application/octet-stream")
-        self.assertEqual(s.size, 26776462)
-        self.assertEqual(s.sha1, "fc6c9e8ba6eaca4fa97868ac900570282133c095")
+        self.assertEqual(stats.created_by, "someuser")
+        self.assertEqual(stats.modified_by, "anotheruser")
+        self.assertEqual(stats.mime_type, "application/octet-stream")
+        self.assertEqual(stats.size, 26776462)
+        self.assertEqual(stats.sha1, "fc6c9e8ba6eaca4fa97868ac900570282133c095")
         self.assertEqual(
-            s.sha256,
+            stats.sha256,
             "fc6c9e8ba6eaca4fa97868ac900570282133c095fc6c9e8ba6eaca4fa97868ac900570282133c095",
         )
-        self.assertEqual(s.md5, "2af7d54a09e9c36d704cb3a2de28aff3")
-        self.assertEqual(s.is_dir, False)
+        self.assertEqual(stats.md5, "2af7d54a09e9c36d704cb3a2de28aff3")
+        self.assertEqual(stats.is_dir, False)
 
         # Directory
-        p = P("http://artifactory.local/artifactory/api/storage/libs-release-local")
+        path = ArtifactoryPath(
+            "http://artifactory.local/artifactory/libs-release-local"
+        )
 
-        a.rest_get = MM(return_value=(self.dir_stat, 200))
+        constructed_url = (
+            "http://artifactory.local/artifactory" "/api/storage" "/libs-release-local"
+        )
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=200,
+            json=self.dir_stat,
+        )
 
-        s = a.stat(p)
+        stats = a.stat(path)
         self.assertEqual(
-            s.ctime, dateutil.parser.parse("2014-02-18T15:35:29.361+04:00")
+            stats.ctime, dateutil.parser.parse("2014-02-18T15:35:29.361+04:00")
         )
         self.assertEqual(
-            s.mtime, dateutil.parser.parse("2014-02-18T15:35:29.361+04:00")
+            stats.mtime, dateutil.parser.parse("2014-02-18T15:35:29.361+04:00")
         )
-        self.assertEqual(s.created_by, None)
-        self.assertEqual(s.modified_by, None)
-        self.assertEqual(s.mime_type, None)
-        self.assertEqual(s.size, 0)
-        self.assertEqual(s.sha1, None)
-        self.assertEqual(s.sha256, None)
-        self.assertEqual(s.md5, None)
-        self.assertEqual(s.is_dir, True)
+        self.assertEqual(stats.created_by, None)
+        self.assertEqual(stats.modified_by, None)
+        self.assertEqual(stats.mime_type, None)
+        self.assertEqual(stats.size, 0)
+        self.assertEqual(stats.sha1, None)
+        self.assertEqual(stats.sha256, None)
+        self.assertEqual(stats.md5, None)
+        self.assertEqual(stats.is_dir, True)
 
+    @responses.activate
     def test_stat_no_sha256(self):
-        a = self.cls()
-        P = artifactory.ArtifactoryPath
-
-        # Regular File
-        p = P(
-            "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
-        )
-        file_stat = """
-            {
-                "repo" : "ext-release-local",
-                "path" : "/org/company/tool/1.0/tool-1.0.tar.gz",
-                "created" : "2014-02-24T21:20:59.999+04:00",
-                "createdBy" : "someuser",
-                "lastModified" : "2014-02-24T21:20:36.000+04:00",
-                "modifiedBy" : "anotheruser",
-                "lastUpdated" : "2014-02-24T21:20:36.000+04:00",
-                "downloadUri" : "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz",
-                "mimeType" : "application/octet-stream",
-                "size" : "26776462",
-                "checksums" : {
-                    "sha1" : "fc6c9e8ba6eaca4fa97868ac900570282133c095",
-                    "md5" : "2af7d54a09e9c36d704cb3a2de28aff3"
-                },
-                "originalChecksums" : {
-                    "sha1" : "fc6c9e8ba6eaca4fa97868ac900570282133c095",
-                    "md5" : "2af7d54a09e9c36d704cb3a2de28aff3"
-                },
-                "uri" : "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
-            }
+        """
+        Test file stats. No sha256 checksum is available.
+        Check that stat() works on instance itself
+        :return:
         """
 
-        a.rest_get = MM(return_value=(file_stat, 200))
+        # Regular File
+        path = ArtifactoryPath(
+            "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        )
+        constructed_url = (
+            "http://artifactory.local/artifactory"
+            "/api/storage"
+            "/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        )
+        file_stat = {
+            "repo": "ext-release-local",
+            "path": "/org/company/tool/1.0/tool-1.0.tar.gz",
+            "created": "2014-02-24T21:20:59.999+04:00",
+            "createdBy": "someuser",
+            "lastModified": "2014-02-24T21:20:36.000+04:00",
+            "modifiedBy": "anotheruser",
+            "lastUpdated": "2014-02-24T21:20:36.000+04:00",
+            "downloadUri": "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz",
+            "mimeType": "application/octet-stream",
+            "size": "26776462",
+            "checksums": {
+                "sha1": "fc6c9e8ba6eaca4fa97868ac900570282133c095",
+                "md5": "2af7d54a09e9c36d704cb3a2de28aff3",
+            },
+            "originalChecksums": {
+                "sha1": "fc6c9e8ba6eaca4fa97868ac900570282133c095",
+                "md5": "2af7d54a09e9c36d704cb3a2de28aff3",
+            },
+            "uri": constructed_url,
+        }
 
-        s = a.stat(p)
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=200,
+            json=file_stat,
+        )
+
+        stats = path.stat()
         self.assertEqual(
-            s.ctime, dateutil.parser.parse("2014-02-24T21:20:59.999+04:00")
+            stats.ctime, dateutil.parser.parse("2014-02-24T21:20:59.999+04:00")
         )
         self.assertEqual(
-            s.mtime, dateutil.parser.parse("2014-02-24T21:20:36.000+04:00")
+            stats.mtime, dateutil.parser.parse("2014-02-24T21:20:36.000+04:00")
         )
-        self.assertEqual(s.created_by, "someuser")
-        self.assertEqual(s.modified_by, "anotheruser")
-        self.assertEqual(s.mime_type, "application/octet-stream")
-        self.assertEqual(s.size, 26776462)
-        self.assertEqual(s.sha1, "fc6c9e8ba6eaca4fa97868ac900570282133c095")
-        self.assertEqual(s.sha256, None)
+        self.assertEqual(stats.created_by, "someuser")
+        self.assertEqual(stats.modified_by, "anotheruser")
+        self.assertEqual(stats.mime_type, "application/octet-stream")
+        self.assertEqual(stats.size, 26776462)
+        self.assertEqual(stats.sha1, "fc6c9e8ba6eaca4fa97868ac900570282133c095")
+        self.assertEqual(stats.sha256, None)
 
+    @responses.activate
     def test_listdir(self):
         a = self.cls()
-        P = artifactory.ArtifactoryPath
 
         # Directory
-        p = P("http://artifactory.local/artifactory/api/storage/libs-release-local")
+        path = ArtifactoryPath(
+            "http://artifactory.local/artifactory/libs-release-local"
+        )
 
-        a.rest_get = MM(return_value=(self.dir_stat, 200))
-
-        children = a.listdir(p)
+        constructed_url = (
+            "http://artifactory.local/artifactory/api/storage/libs-release-local"
+        )
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=200,
+            json=self.dir_stat,
+        )
+        children = a.listdir(path)
 
         self.assertEqual(children, [".index", "com"])
 
         # Regular File
-        p = P(
-            "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        path = ArtifactoryPath(
+            "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        )
+        constructed_url = (
+            "http://artifactory.local/artifactory/api/storage/libs-release-local"
+        )
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=200,
+            json=self.file_stat,
         )
 
-        a.rest_get = MM(return_value=(self.file_stat, 200))
-
-        self.assertRaises(OSError, a.listdir, p)
+        self.assertRaises(OSError, a.listdir, path)
 
     def test_mkdir(self):
         pass
 
     def test_deploy(self):
         a = self.cls()
-        P = artifactory.ArtifactoryPath
+        P = ArtifactoryPath
 
         p = P("http://b/artifactory/c/d")
 
@@ -582,65 +631,53 @@ class ArtifactoryAccessorTest(unittest.TestCase):
             url, f, headers={}, session=p.session, verify=True, cert=None, timeout=None
         )
 
+    @responses.activate
     def test_get_properties(self):
-        a = self.cls()
-        P = artifactory.ArtifactoryPath
         properties = {
             "test": ["test_property"],
             "removethis": ["removethis_property"],
             "time": ["2018-01-16 12:17:44.135143"],
         }
 
-        # Regular File
-        p = P(
-            "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
-        )
+        path = self._mock_properties_response()
 
-        p._accessor.rest_get = MM(return_value=(self.property_data, 200))
+        self.assertEqual(path.properties, properties)
 
-        self.assertEqual(p.properties, properties)
-
+    @responses.activate
     def test_set_properties(self):
-        a = self.cls()
-        P = artifactory.ArtifactoryPath
+        """
+        Test set properties on ArtifactoryPath.
+        Reference properties (see _set_properties) use additional property 'removethis' that isn't used in this test,
+        thus, get, then delete, then put requests are called
+        :return: None
+        """
         properties = {
             "test": ["test_property"],
             "time": ["2018-01-16 12:17:44.135143"],
             "addthis": ["addthis"],
         }
 
-        # Regular File
-        p = P(
-            "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
-        )
-
-        p._accessor.rest_get = MM(return_value=(self.property_data, 200))
-        p._accessor.rest_del = MM(return_value=("", 204))
-        p._accessor.rest_put = MM(return_value=("", 204))
-        p.properties = properties
+        path = self._mock_properties_response()
+        path.properties = properties
 
         # Must delete only removed property
-        p._accessor.rest_del.assert_called_once()
-        calls = p._accessor.rest_del.mock_calls
-
-        kwargs = calls[0][2]  # '', args, kwargs, _
-        properties_del = kwargs["params"]["properties"]
-        self.assertEqual(properties_del, "removethis")
+        # rest delete is a second call, use index 1
+        self.assertEqual(responses.calls[1].request.params["properties"], "removethis")
 
         # Must put all property
-        p._accessor.rest_put.assert_called_once()
-        calls = p._accessor.rest_put.mock_calls
-
-        kwargs = calls[0][2]  # '', args, kwargs, _
-        properties_put = kwargs["params"]["properties"]
         self.assertEqual(
-            properties_put,
+            responses.calls[2].request.params["properties"],
             "addthis=addthis;test=test_property;time=2018-01-16 12:17:44.135143",
         )
 
+    @responses.activate
     def test_set_properties_without_remove(self):
-        a = self.cls()
-        P = artifactory.ArtifactoryPath
+        """
+        Test set properties on ArtifactoryPath.
+        Reference properties (see _set_properties) haven't properties that aren't used in this test,
+        thus, only get and put requests are called
+        :return: None
+        """
         properties = {
             "test": ["test_property"],
             "time": ["2018-01-16 12:17:44.135143"],
@@ -648,24 +685,60 @@ class ArtifactoryAccessorTest(unittest.TestCase):
             "removethis": ["removethis_property"],
         }
 
-        # Regular File
-        p = P(
-            "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        path = self._mock_properties_response()
+        path.properties = properties
+        self.assertEqual(
+            responses.calls[1].request.params["properties"],
+            "addthis=addthis;removethis=removethis_property;test=test_property;time=2018-01-16 12:17:44.135143",
         )
 
-        p._accessor.rest_get = MM(return_value=(self.property_data, 200))
-        p._accessor.rest_del = MM(return_value=("", 204))
-        p._accessor.rest_put = MM(return_value=("", 204))
-        p.properties = properties
-
-        # Must delete only removed property
-        p._accessor.rest_del.assert_not_called()
+    def _mock_properties_response(self):
+        """
+        Function to mock responses on HTTP requests
+        :return: ArtifactoryPath instance object
+        """
+        # Regular File
+        path = ArtifactoryPath(
+            "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        )
+        constructed_url = (
+            "http://artifactory.local/artifactory"
+            "/api/storage/"
+            "ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        )
+        reference_props = {
+            "test": ["test_property"],
+            "removethis": ["removethis_property"],
+            "time": ["2018-01-16 12:17:44.135143"],
+        }
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=204,
+            json={
+                "properties": reference_props,
+                "uri": constructed_url,
+            },
+        )
+        responses.add(
+            responses.DELETE,
+            constructed_url,
+            status=204,
+            body="",
+        )
+        responses.add(
+            responses.PUT,
+            constructed_url,
+            status=204,
+            body="",
+        )
+        return path
 
 
 class ArtifactoryPathTest(unittest.TestCase):
     """Test the filesystem-accessing fuctionality"""
 
-    cls = artifactory.ArtifactoryPath
+    cls = ArtifactoryPath
 
     def test_basic(self):
         P = self.cls
@@ -728,7 +801,6 @@ class ArtifactoryPathTest(unittest.TestCase):
 
 
 class ArtifactorySaaSPathTest(unittest.TestCase):
-
     cls = artifactory.ArtifactorySaaSPath
 
     def test_basic(self):
@@ -799,7 +871,7 @@ class TestArtifactoryConfig(unittest.TestCase):
 
 class TestArtifactoryAql(unittest.TestCase):
     def setUp(self):
-        self.aql = artifactory.ArtifactoryPath("http://b/artifactory")
+        self.aql = ArtifactoryPath("http://b/artifactory")
 
     def test_create_aql_text_simple(self):
         args = ["items.find", {"repo": "myrepo"}]
