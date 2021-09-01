@@ -1,11 +1,24 @@
-# Python interface library for Jfrog Artifactory #
+# Python interface library for JFrog Artifactory ![](https://img.shields.io/badge/status-supported-green.svg)
 
 
-[![docs](https://img.shields.io/readthedocs/pip.svg)](https://devopshq.github.io/artifactory/)[![dohq-artifactory build Status](https://travis-ci.org/devopshq/artifactory.svg?branch=master)](https://travis-ci.org/devopshq/artifactory) [![dohq-artifactory code quality](https://api.codacy.com/project/badge/Grade/ce32469db9d948bcb56d50532e0c0005)](https://www.codacy.com/app/tim55667757/artifactory/dashboard) [![dohq-artifactory on PyPI](https://img.shields.io/pypi/v/dohq-artifactory.svg)](https://pypi.python.org/pypi/dohq-artifactory) [![dohq-artifactory license](https://img.shields.io/pypi/l/dohq-artifactory.svg)](https://github.com/devopshq/artifactory/blob/master/LICENSE)
+[![docs](https://img.shields.io/readthedocs/pip.svg)][1]
+[![dohq-artifactory build Status](https://app.travis-ci.com/devopshq/artifactory.svg?branch=master)][2] 
+[![dohq-artifactory on PyPI](https://img.shields.io/pypi/v/dohq-artifactory.svg)][3] 
+[![dohq-artifactory license](https://img.shields.io/pypi/l/dohq-artifactory.svg)][4]
 
-This module is intended to serve as a logical descendant of [pathlib](https://docs.python.org/3/library/pathlib.html), a Python 3 module for object-oriented path manipulations. As such, it implements everything as closely as possible to the origin with few exceptions, such as stat().
+`dohq-artifactory` is a live python package for [JFrog Artifactory][5]. This module is intended to serve as a logical 
+descendant of [pathlib][6], and it implements everything as closely as 
+possible to the origin with few exceptions. Current module was forked from outdated 
+[parallels/artifactory][7] and supports all functionality from the original 
+package.
 
-![](https://img.shields.io/badge/status-supported-green.svg)`dohq-artifactory` is a live python package for Jfrog Artifactory. It was forked from outdated [parallels/artifactory](https://github.com/parallels/artifactory) and supports all functionality from the original package.
+[1]: https://devopshq.github.io/artifactory/
+[2]: https://app.travis-ci.com/devopshq/artifactory
+[3]: https://pypi.python.org/pypi/dohq-artifactory
+[4]: https://github.com/devopshq/artifactory/blob/master/LICENSE
+[5]: https://www.jfrog.com/confluence/display/JFROG/JFrog+Artifactory
+[6]: https://docs.python.org/3/library/pathlib.html
+[7]: https://github.com/parallels/artifactory
 
 # Tables of Contents
 
