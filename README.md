@@ -127,17 +127,17 @@ path.touch()
 ```
 
 ## Artifactory SaaS
-If you use Artifactory SaaS solution - use `ArtifactorySaaSPath` class
+If you use Artifactory SaaS solution - use `ArtifactorySaaSPath` class.  
+SaaS supports all methods and authentication types as `ArtifactoryPath`. We have to use other class, because as a SaaS 
+service, the URL is different from an on-prem installation and the REST API endpoints.
 ```python
 from artifactory import ArtifactorySaaSPath
 
-# API_KEY
 path = ArtifactorySaaSPath(
     "https://myartifactorysaas.jfrog.io/myartifactorysaas/folder/path.xml",
     apikey="MY_API_KEY",
 )
 ```
-We have to use other class, because as a SaaS service, the URL is different from an on-prem installation and the REST API endpoints.
 
 
 ## Walking Directory Tree ##
@@ -235,7 +235,7 @@ with path.archive(archive_type="zip", check_sum=False) as archive:
         out.write(archive.read())
 
 # download folder archive in chunks
-path.archive().writeto(output="my.zip", chunk_size=100 * 1024)
+path.archive().writeto(out="my.zip", chunk_size=100 * 1024)
 ```
 
 ## Uploading Artifacts ##

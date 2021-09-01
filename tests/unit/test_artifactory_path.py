@@ -383,11 +383,7 @@ class PureArtifactoryPathTest(unittest.TestCase):
         )
 
 
-class ArtifactoryAccessorTest(unittest.TestCase):
-    """Test the real artifactory integration"""
-
-    cls = artifactory._ArtifactoryAccessor
-
+class ClassSetup(unittest.TestCase):
     def setUp(self):
         self.file_stat = {
             "repo": "ext-release-local",
@@ -434,6 +430,12 @@ class ArtifactoryAccessorTest(unittest.TestCase):
           },
           "uri" : "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
         }"""
+
+
+class ArtifactoryAccessorTest(ClassSetup):
+    """Test the real artifactory integration"""
+
+    cls = artifactory._ArtifactoryAccessor
 
     @responses.activate
     def test_stat(self):
@@ -735,8 +737,8 @@ class ArtifactoryAccessorTest(unittest.TestCase):
         return path
 
 
-class ArtifactoryPathTest(unittest.TestCase):
-    """Test the filesystem-accessing fuctionality"""
+class ArtifactoryPathTest(ClassSetup):
+    """Test the filesystem-accessing functionality"""
 
     cls = ArtifactoryPath
 
@@ -798,6 +800,54 @@ class ArtifactoryPathTest(unittest.TestCase):
             for reponame in reponames:
                 c = P("http://b/" + arti).joinpath(reponame)
                 self.assertEqual(c.root, "/reponame/")
+
+    @responses.activate
+    def test_archive(self):
+        """
+        Test that archive() works as expected
+        :return:
+        """
+        archive_obj = self._create_archive_obj()
+        self.assertEqual(archive_obj.name, "folder")
+        reference_params = {"archiveType": "zip", "includeChecksumFiles": True}
+        self.assertDictEqual(archive_obj.session.params, reference_params)
+
+    @responses.activate
+    def test_archive_download(self):
+        """
+        Test that archive object downloads
+        :return:
+        """
+        archive_obj = self._create_archive_obj()
+        constructed_url = "http://b/artifactory/api/archive/download/reponame/folder"
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=200,
+            json=self.dir_stat,
+        )
+        archive_obj.writeto("test.zip")
+        reference_params = {"archiveType": "zip", "includeChecksumFiles": "True"}
+        # check that params were really added to the request
+        self.assertDictEqual(responses.calls[1].request.params, reference_params)
+
+    def _create_archive_obj(self):
+        """
+        Create archive object for tests.
+        During archive creation we call stats() to check if it is_dir(), thus, mock response
+        :return:
+        """
+        ArtifactoryPath = self.cls
+        folder = ArtifactoryPath("http://b/artifactory/reponame/folder")
+        constructed_url = "http://b/artifactory/api/storage/reponame/folder"
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=200,
+            json=self.dir_stat,
+        )
+        archive_obj = folder.archive(check_sum=True)
+        return archive_obj
 
 
 class ArtifactorySaaSPathTest(unittest.TestCase):
