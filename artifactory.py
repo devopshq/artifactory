@@ -737,14 +737,16 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         return res.text, res.status_code
 
     @staticmethod
-    def rest_get_stream(url, session=None, verify=True, cert=None, timeout=None):
+    def rest_get_stream(
+        url, params=None, session=None, verify=True, cert=None, timeout=None
+    ):
         """
         Perform a chunked GET request to url with requests.session
         This is specifically to download files.
         """
         url = quote_url(url)
         response = session.get(
-            url, stream=True, verify=verify, cert=cert, timeout=timeout
+            url, params=params, stream=True, verify=verify, cert=cert, timeout=timeout
         )
         response.raise_for_status()
         return response
@@ -968,8 +970,15 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         :return: request response
         """
         url = str(pathobj)
+        if hasattr(pathobj.session, "params"):
+            # usually added by archive() function
+            params = pathobj.session.params
+        else:
+            params = None
+
         response = self.rest_get_stream(
             url,
+            params=params,
             session=pathobj.session,
             verify=pathobj.verify,
             cert=pathobj.cert,
@@ -1408,18 +1417,15 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             raise NotImplementedError(archive_type + " is not support by current API")
 
         archive_url = (
-            self.drive
-            + "/api/archive/download/"
-            + self.repo
-            + self.path_in_repo
-            + "?archiveType="
-            + archive_type
+            self.drive + "/api/archive/download/" + self.repo + self.path_in_repo
         )
+        archive_obj = self.joinpath(archive_url)
+        archive_obj.session.params = {"archiveType": archive_type}
 
         if check_sum:
-            archive_url += "&includeChecksumFiles=true"
+            archive_obj.session.params["includeChecksumFiles"] = True
 
-        return self.joinpath(archive_url)
+        return archive_obj
 
     def relative_to(self, *other):
         """
