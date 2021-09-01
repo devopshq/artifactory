@@ -11,6 +11,7 @@ from mock import MagicMock as MM
 import artifactory
 from artifactory import ArtifactoryPath
 from artifactory import quote_url
+from dohq_artifactory import ArtifactoryException
 
 
 class UtilTest(unittest.TestCase):
@@ -694,7 +695,8 @@ class ArtifactoryAccessorTest(ClassSetup):
             "addthis=addthis;removethis=removethis_property;test=test_property;time=2018-01-16 12:17:44.135143",
         )
 
-    def _mock_properties_response(self):
+    @staticmethod
+    def _mock_properties_response():
         """
         Function to mock responses on HTTP requests
         :return: ArtifactoryPath instance object
@@ -735,6 +737,90 @@ class ArtifactoryAccessorTest(ClassSetup):
             body="",
         )
         return path
+
+    @responses.activate
+    def test_unlink(self):
+        """
+        Test that folder/file unlink works
+        """
+        path = ArtifactoryPath(
+            "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        )
+        constructed_url = (
+            "http://artifactory.local/artifactory"
+            "/api/storage"
+            "/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        )
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=200,
+            json=self.file_stat,
+        )
+
+        responses.add(
+            responses.DELETE,
+            str(path),
+            status=200,
+        )
+
+        path.unlink()
+
+    @responses.activate
+    def test_unlink_raises_not_found(self):
+        """
+        Test that folder/file unlink raises OSError if file does not exist
+        """
+        path = ArtifactoryPath(
+            "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        )
+        constructed_url = (
+            "http://artifactory.local/artifactory"
+            "/api/storage"
+            "/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        )
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=404,
+            body="Unable to find item",
+        )
+        with self.assertRaises(OSError) as context:
+            path.unlink()
+
+        self.assertTrue("No such file or directory" in context.exception.strerror)
+
+    @responses.activate
+    def test_unlink_raises_on_404(self):
+        """
+        Test that folder/file unlink raises exception if we checked that file
+        exsists and we still get 404. This is a result of permission issue
+        """
+        path = ArtifactoryPath(
+            "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        )
+        constructed_url = (
+            "http://artifactory.local/artifactory"
+            "/api/storage"
+            "/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        )
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=200,
+            json=self.file_stat,
+        )
+
+        responses.add(
+            responses.DELETE,
+            str(path),
+            status=404,
+        )
+
+        with self.assertRaises(ArtifactoryException) as context:
+            path.unlink()
+
+        self.assertTrue("insufficient Artifactory privileges" in str(context.exception))
 
 
 class ArtifactoryPathTest(ClassSetup):
