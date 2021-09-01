@@ -317,7 +317,7 @@ def encode_matrix_parameters(parameters):
 
     for param in iter(sorted(parameters)):
         if isinstance(parameters[param], (list, tuple)):
-            value = (";%s=" % (param)).join(parameters[param])
+            value = f";{param}=".join(parameters[param])
         else:
             value = parameters[param]
 
@@ -382,24 +382,19 @@ def quote_url(url):
     See https://en.wikipedia.org/wiki/Percent-encoding#Reserved_characters
     Function will percent-encode the URL
 
-    Note: if anybody for some reason (actually this should not be allowed) will require = or ; sign in artifact name,
-    then have to change this function
     :param url: (str) URL that should be quoted
     :return: (str) quoted URL
     """
     parsed_url = urllib3.util.parse_url(url)
     if parsed_url.port:
         quoted_path = requests.utils.quote(
-            url.rpartition(f"{parsed_url.host}:{parsed_url.port}")[2],
-            safe="/;=",  # ; and = signs are used in Artifactory Matrix Parameters
+            url.rpartition(f"{parsed_url.host}:{parsed_url.port}")[2]
         )
         quoted_url = (
             f"{parsed_url.scheme}://{parsed_url.host}:{parsed_url.port}{quoted_path}"
         )
     else:
-        quoted_path = requests.utils.quote(
-            url.rpartition(parsed_url.host)[2], safe="/;="
-        )
+        quoted_path = requests.utils.quote(url.rpartition(parsed_url.host)[2])
         quoted_url = f"{parsed_url.scheme}://{parsed_url.host}{quoted_path}"
 
     return quoted_url
@@ -738,12 +733,18 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         verify=True,
         cert=None,
         timeout=None,
+        matrix_parameters=None,
     ):
         """
         Perform a chunked PUT request to url with requests.session
         This is specifically to upload files.
         """
         url = quote_url(url)
+
+        if matrix_parameters is not None:
+            # added later, otherwise ; and = are converted
+            url += matrix_parameters
+
         res = session.put(
             url, headers=headers, data=stream, verify=verify, cert=cert, timeout=timeout
         )
@@ -1020,9 +1021,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         url = str(pathobj)
 
-        if parameters:
-            url += ";%s" % encode_matrix_parameters(parameters)
-
+        matrix_parameters = (
+            f";{encode_matrix_parameters(parameters)}" if parameters else None
+        )
         headers = {}
 
         if md5:
@@ -1044,6 +1045,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             verify=pathobj.verify,
             cert=pathobj.cert,
             timeout=pathobj.timeout,
+            matrix_parameters=matrix_parameters,
         )
 
         if code not in (200, 201):
