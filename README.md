@@ -395,7 +395,8 @@ if path.exists():
 ```
 
 ## Artifact properties ##
-You can get and set (or remove) properties from artifact:
+You can get and set (or remove) properties from artifact.
+Following example shows how to manage properties and property sets
 ```python
 from artifactory import ArtifactoryPath
 
@@ -407,9 +408,17 @@ path = ArtifactoryPath(
 properties = path.properties
 print(properties)
 
-# Update one properties or add if does not exist
+# Update a property or add if does not exist
 properties["qa"] = "tested"
 path.properties = properties
+
+# add/replace set of properties
+new_props = {
+    "test": ["test_property"],
+    "time": ["2018-01-16 12:17:44.135143"],
+    "addthis": ["addthis"],
+}
+path.properties = new_props
 
 # Remove properties
 properties.pop("release")
