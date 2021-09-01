@@ -127,17 +127,17 @@ path.touch()
 ```
 
 ## Artifactory SaaS
-If you use Artifactory SaaS solution - use `ArtifactorySaaSPath` class
+If you use Artifactory SaaS solution - use `ArtifactorySaaSPath` class.  
+SaaS supports all methods and authentication types as `ArtifactoryPath`. We have to use other class, because as a SaaS 
+service, the URL is different from an on-prem installation and the REST API endpoints.
 ```python
 from artifactory import ArtifactorySaaSPath
 
-# API_KEY
 path = ArtifactorySaaSPath(
     "https://myartifactorysaas.jfrog.io/myartifactorysaas/folder/path.xml",
     apikey="MY_API_KEY",
 )
 ```
-We have to use other class, because as a SaaS service, the URL is different from an on-prem installation and the REST API endpoints.
 
 
 ## Walking Directory Tree ##
