@@ -915,8 +915,6 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             if err.response.status_code == 404:
                 # since we performed existence check we can say it is permissions issue
                 # see https://github.com/devopshq/artifactory/issues/36
-                errors = json.loads(err.response.text)["errors"][0]
-                message = errors["message"]
                 docs_url = (
                     "https://www.jfrog.com/confluence/display/JFROG/General+Security+Settings"
                     "#GeneralSecuritySettings-HideExistenceofUnauthorizedResources"
@@ -925,9 +923,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                     "Error 404. \nThis might be a result of insufficient Artifactory privileges to "
                     "delete artifacts. \nPlease check that your account have enough permissions and try again.\n"
                     f"See more: {docs_url} \n"
-                ) + message
-                err.args = (message,)
-                raise
+                )
+                raise ArtifactoryException(message) from err
 
     def touch(self, pathobj):
         """
