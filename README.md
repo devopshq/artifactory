@@ -294,12 +294,25 @@ path.deploy_file(
 )
 ```
 
-Deploy a debian package ```myapp-1.0.deb```
+Deploy a debian package ```myapp-1.0.deb``` to an ```existent``` folder
 
 ```python
 from artifactory import ArtifactoryPath
 
-path = ArtifactoryPath("http://my-artifactory/artifactory/ubuntu-local/pool")
+path = ArtifactoryPath("http://my-artifactory/artifactory/ubuntu-local/pool/")
+path.deploy_deb(
+    "./myapp-1.0.deb", distribution="trusty", component="main", architecture="amd64"
+)
+```
+
+Deploy a debian package ```myapp-1.0.deb``` to a ```non-existent``` folder
+
+```python
+from artifactory import ArtifactoryPath
+
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/ubuntu-local/pool/myapp-1.0.deb"
+)
 path.deploy_deb(
     "./myapp-1.0.deb", distribution="trusty", component="main", architecture="amd64"
 )
@@ -337,14 +350,14 @@ is placed in the destination repo.
 
 source.copy(dest)
 for p in dest:
-    print (p)
+    print(p)
 # http://example.com/artifactory/published/production/foo-0.0.1.gz
 # http://example.com/artifactory/published/production/foo-0.0.1.pom
 
 for p in ArtifactoryPath(
     "http://example.com/artifactory/published/product/product/1.0.0.tar"
 ):
-    print p
+    print(p)
 # http://example.com/artifactory/published/product/product/1.0.0/product-1.0.0.tar.gz
 # http://example.com/artifactory/published/product/product/1.0.0/product-1.0.0.tar.pom
 
@@ -355,7 +368,7 @@ directly inside our dest as we intended.
 
 source.copy(dest, suppress_layouts=True)
 for p in dest:
-    print (p)
+    print(p)
 """
 http://example.com/artifactory/published/production/foo-0.0.1.gz
 http://example.com/artifactory/published/production/foo-0.0.1.pom
