@@ -1,11 +1,24 @@
-# Python interface library for Jfrog Artifactory #
+# Python interface library for JFrog Artifactory ![](https://img.shields.io/badge/status-supported-green.svg)
 
 
-[![docs](https://img.shields.io/readthedocs/pip.svg)](https://devopshq.github.io/artifactory/)[![dohq-artifactory build Status](https://travis-ci.com/devopshq/artifactory.svg?branch=master)](https://travis-ci.com/devopshq/artifactory) [![dohq-artifactory code quality](https://api.codacy.com/project/badge/Grade/ce32469db9d948bcb56d50532e0c0005)](https://www.codacy.com/app/tim55667757/artifactory/dashboard) [![dohq-artifactory on PyPI](https://img.shields.io/pypi/v/dohq-artifactory.svg)](https://pypi.python.org/pypi/dohq-artifactory) [![dohq-artifactory license](https://img.shields.io/pypi/l/dohq-artifactory.svg)](https://github.com/devopshq/artifactory/blob/master/LICENSE)
+[![docs](https://img.shields.io/readthedocs/pip.svg)][1]
+[![dohq-artifactory build Status](https://app.travis-ci.com/devopshq/artifactory.svg?branch=master)][2] 
+[![dohq-artifactory on PyPI](https://img.shields.io/pypi/v/dohq-artifactory.svg)][3] 
+[![dohq-artifactory license](https://img.shields.io/pypi/l/dohq-artifactory.svg)][4]
 
-This module is intended to serve as a logical descendant of [pathlib](https://docs.python.org/3/library/pathlib.html), a Python 3 module for object-oriented path manipulations. As such, it implements everything as closely as possible to the origin with few exceptions, such as stat().
+`dohq-artifactory` is a live python package for [JFrog Artifactory][5]. This module is intended to serve as a logical 
+descendant of [pathlib][6], and it implements everything as closely as 
+possible to the origin with few exceptions. Current module was forked from outdated 
+[parallels/artifactory][7] and supports all functionality from the original 
+package.
 
-![](https://img.shields.io/badge/status-supported-green.svg)`dohq-artifactory` is a live python package for Jfrog Artifactory. It was forked from outdated [parallels/artifactory](https://github.com/parallels/artifactory) and supports all functionality from the original package.
+[1]: https://devopshq.github.io/artifactory/
+[2]: https://app.travis-ci.com/devopshq/artifactory
+[3]: https://pypi.python.org/pypi/dohq-artifactory
+[4]: https://github.com/devopshq/artifactory/blob/master/LICENSE
+[5]: https://www.jfrog.com/confluence/display/JFROG/JFrog+Artifactory
+[6]: https://docs.python.org/3/library/pathlib.html
+[7]: https://github.com/parallels/artifactory
 
 # Tables of Contents
 
@@ -127,17 +140,17 @@ path.touch()
 ```
 
 ## Artifactory SaaS
-If you use Artifactory SaaS solution - use `ArtifactorySaaSPath` class
+If you use Artifactory SaaS solution - use `ArtifactorySaaSPath` class.  
+SaaS supports all methods and authentication types as `ArtifactoryPath`. We have to use other class, because as a SaaS 
+service, the URL is different from an on-prem installation and the REST API endpoints.
 ```python
 from artifactory import ArtifactorySaaSPath
 
-# API_KEY
 path = ArtifactorySaaSPath(
     "https://myartifactorysaas.jfrog.io/myartifactorysaas/folder/path.xml",
     apikey="MY_API_KEY",
 )
 ```
-We have to use other class, because as a SaaS service, the URL is different from an on-prem installation and the REST API endpoints.
 
 
 ## Walking Directory Tree ##
@@ -235,7 +248,7 @@ with path.archive(archive_type="zip", check_sum=False) as archive:
         out.write(archive.read())
 
 # download folder archive in chunks
-path.archive().writeto(output="my.zip", chunk_size=100 * 1024)
+path.archive().writeto(out="my.zip", chunk_size=100 * 1024)
 ```
 
 ## Uploading Artifacts ##
@@ -395,7 +408,8 @@ if path.exists():
 ```
 
 ## Artifact properties ##
-You can get and set (or remove) properties from artifact:
+You can get and set (or remove) properties from artifact.
+Following example shows how to manage properties and property sets
 ```python
 from artifactory import ArtifactoryPath
 
@@ -407,9 +421,17 @@ path = ArtifactoryPath(
 properties = path.properties
 print(properties)
 
-# Update one properties or add if does not exist
+# Update a property or add if does not exist
 properties["qa"] = "tested"
 path.properties = properties
+
+# add/replace set of properties
+new_props = {
+    "test": ["test_property"],
+    "time": ["2018-01-16 12:17:44.135143"],
+    "addthis": ["addthis"],
+}
+path.properties = new_props
 
 # Remove properties
 properties.pop("release")
@@ -455,7 +477,15 @@ artifacts = aql.aql("items.find", {"repo": "myrepo"})
 artifacts = aql.aql("items.find()", ".include", ["name", "repo"])
 
 #  support complex query
-# items.find({"$and": [{"repo": {"$eq": "repo"}}, {"$or": [{"path": {"$match": "*path1"}}, {"path": {"$match": "*path2"}}]}]})
+# Example 1
+# items.find(
+#     {
+#         "$and": [
+#             {"repo": {"$eq": "repo"}},
+#             {"$or": [{"path": {"$match": "*path1"}}, {"path": {"$match": "*path2"}}]},
+#         ]
+#     }
+# )
 args = [
     "items.find",
     {
@@ -472,8 +502,33 @@ args = [
 ]
 
 # artifacts_list contains raw data (list of dict)
-# Send query:
-# items.find({"$and": [{"repo": {"$eq": "repo"}}, {"$or": [{"path": {"$match": "*path1"}}, {"path": {"$match": "*path2"}}]}]})
+# Send query
+artifacts_list = aql.aql(*args)
+
+# Example 2
+# The query will find all items in repo docker-prod that are of type file and were created after timecode. The
+# query will only display the fields "repo", "path" and "name" and will sort the result ascendingly by those fields.
+# items.find(
+#     {
+#         "$or": [{"repo": "docker-prod"}],
+#         "type": "file",
+#         "created": {"$gt": "2019-07-10T19:20:30.45+01:00"},
+#     }
+# ).include("repo", "path", "name",).sort({"$asc": ["repo", "path", "name"]})
+aqlargs = [
+    "items.find",
+    {
+        "$and": [
+            {"repo": "docker-prod"},
+            {"type": "file"},
+            {"created": {"$gt": "2019-07-10T19:20:30.45+01:00"}},
+        ]
+    },
+    ".include",
+    ["repo", "path", "name"],
+    ".sort",
+    {"$asc": ["repo", "path", "name"]},
+]
 artifacts_list = aql.aql(*args)
 
 # You can convert to pathlib object:
