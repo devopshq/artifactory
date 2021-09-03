@@ -305,9 +305,10 @@ the new location without requiring content transfer.
 
 ```python
 from artifactory import ArtifactoryPath
+
 path = ArtifactoryPath("http://my-artifactory/artifactory/my_repo/foo")
-sha1="1be5d2dbe52ddee96ef2d17d354e2be0a155a951"
-sha256="00bbf80ccca376893d60183e1a714e707fd929aea3e458f9ffda60f7ae75cc51"
+sha1 = "1be5d2dbe52ddee96ef2d17d354e2be0a155a951"
+sha256 = "00bbf80ccca376893d60183e1a714e707fd929aea3e458f9ffda60f7ae75cc51"
 
 # Each of the following 4 methods works fine if the artifact content already
 # exists in Artifactory.
