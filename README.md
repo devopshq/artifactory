@@ -253,7 +253,8 @@ path.archive().writeto(out="my.zip", chunk_size=100 * 1024)
 
 ## Uploading Artifacts ##
 
-Deploy a regular file ```myapp-1.0.tar.gz```
+Deploy a regular file ```myapp-1.0.tar.gz```. This method by default will calculate all available checksums and attach
+them to the file
 
 ```python
 from artifactory import ArtifactoryPath
@@ -266,7 +267,8 @@ path.mkdir()
 path.deploy_file("./myapp-1.0.tar.gz")
 ```
 
-Deploy artifacts from archive: this will automatically extract the contents of the archive on the server preserving the archive's paths
+Deploy artifacts from archive: this will automatically extract the contents of the archive on the server preserving 
+the archive's paths
 
 ```python
 from artifactory import ArtifactoryPath
@@ -279,7 +281,9 @@ path.mkdir()
 path.deploy_file("./myapp-1.0.tar.gz", explode_archive=True)
 ```
 
-Atomically deploy artifacts from archive: this will automatically extract the contents of the archive on the server preserving the archive's paths. This is primarily useful when you want Artifactory to see all the artifacts at once, e.g., for indexing purposes.
+Atomically deploy artifacts from archive: this will automatically extract the contents of the archive on the server 
+preserving the archive's paths. This is primarily useful when you want Artifactory to see all the artifacts at once, 
+e.g., for indexing purposes.
 
 ```python
 from artifactory import ArtifactoryPath
@@ -315,6 +319,14 @@ path = ArtifactoryPath(
 )
 path.deploy_deb(
     "./myapp-1.0.deb", distribution="trusty", component="main", architecture="amd64"
+)
+
+# if you want to set multiple values you can use list to set them
+path.deploy_deb(
+    "./myapp-1.0.deb",
+    distribution=["dist1", "dist2"],
+    component="main",
+    architecture=["amd64", "i386"],
 )
 ```
 
