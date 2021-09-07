@@ -317,7 +317,7 @@ def encode_matrix_parameters(parameters):
 
     for param in iter(sorted(parameters)):
         if isinstance(parameters[param], (list, tuple)):
-            value = (";%s=" % (param)).join(parameters[param])
+            value = f";{param}=".join(parameters[param])
         else:
             value = parameters[param]
 
@@ -377,6 +377,14 @@ class nullcontext:
 
 
 def quote_url(url):
+    """
+    Quote URL to allow URL fragment identifier as artifact folder or file names.
+    See https://en.wikipedia.org/wiki/Percent-encoding#Reserved_characters
+    Function will percent-encode the URL
+
+    :param url: (str) URL that should be quoted
+    :return: (str) quoted URL
+    """
     parsed_url = urllib3.util.parse_url(url)
     if parsed_url.port:
         quoted_path = requests.utils.quote(
@@ -387,7 +395,7 @@ def quote_url(url):
         )
     else:
         quoted_path = requests.utils.quote(url.rpartition(parsed_url.host)[2])
-        quoted_url = "{}://{}{}".format(parsed_url.scheme, parsed_url.host, quoted_path)
+        quoted_url = f"{parsed_url.scheme}://{parsed_url.host}{quoted_path}"
 
     return quoted_url
 
@@ -725,12 +733,18 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         verify=True,
         cert=None,
         timeout=None,
+        matrix_parameters=None,
     ):
         """
         Perform a chunked PUT request to url with requests.session
         This is specifically to upload files.
         """
         url = quote_url(url)
+
+        if matrix_parameters is not None:
+            # added later, otherwise ; and = are converted
+            url += matrix_parameters
+
         res = session.put(
             url, headers=headers, data=stream, verify=verify, cert=cert, timeout=timeout
         )
@@ -774,7 +788,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         code = response.status_code
         text = response.text
         if code == 404 and ("Unable to find item" in text or "Not Found" in text):
-            raise OSError(2, "No such file or directory: '%s'" % url)
+            raise OSError(2, f"No such file or directory: {url}")
 
         response.raise_for_status()
 
@@ -893,19 +907,38 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         Removes a file or folder
         """
 
+        if not pathobj.exists():
+            raise OSError(2, f"No such file or directory: {pathobj}")
+
         url = "/".join(
             [
                 pathobj.drive.rstrip("/"),
                 str(pathobj.relative_to(pathobj.drive)).strip("/"),
             ]
         )
-        self.rest_del(
-            url,
-            session=pathobj.session,
-            verify=pathobj.verify,
-            cert=pathobj.cert,
-            timeout=pathobj.timeout,
-        )
+
+        try:
+            self.rest_del(
+                url,
+                session=pathobj.session,
+                verify=pathobj.verify,
+                cert=pathobj.cert,
+                timeout=pathobj.timeout,
+            )
+        except requests.exceptions.HTTPError as err:
+            if err.response.status_code == 404:
+                # since we performed existence check we can say it is permissions issue
+                # see https://github.com/devopshq/artifactory/issues/36
+                docs_url = (
+                    "https://www.jfrog.com/confluence/display/JFROG/General+Security+Settings"
+                    "#GeneralSecuritySettings-HideExistenceofUnauthorizedResources"
+                )
+                message = (
+                    "Error 404. \nThis might be a result of insufficient Artifactory privileges to "
+                    "delete artifacts. \nPlease check that your account have enough permissions and try again.\n"
+                    f"See more: {docs_url} \n"
+                )
+                raise ArtifactoryException(message) from err
 
     def touch(self, pathobj):
         """
@@ -1007,9 +1040,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         url = str(pathobj)
 
-        if parameters:
-            url += ";%s" % encode_matrix_parameters(parameters)
-
+        matrix_parameters = (
+            f";{encode_matrix_parameters(parameters)}" if parameters else None
+        )
         headers = {}
 
         if md5:
@@ -1031,6 +1064,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             verify=pathobj.verify,
             cert=pathobj.cert,
             timeout=pathobj.timeout,
+            matrix_parameters=matrix_parameters,
         )
 
         if code not in (200, 201):
@@ -1716,8 +1750,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         target = self
 
-        if self.is_dir():
-            target = self / pathlib.Path(file_name).name
+        if target.is_dir():
+            target = target / pathlib.Path(file_name).name
 
         with open(file_name, "rb") as fobj:
             target.deploy(

@@ -1,16 +1,16 @@
 #!/usr/bin/env python
-import io
 import os
+import pathlib
 import tempfile
 import unittest
 
 import dateutil
 import responses
-from mock import MagicMock as MM
 
 import artifactory
 from artifactory import ArtifactoryPath
 from artifactory import quote_url
+from dohq_artifactory import ArtifactoryException
 
 
 class UtilTest(unittest.TestCase):
@@ -40,6 +40,13 @@ class UtilTest(unittest.TestCase):
         params = {"baz": ["ba\\r", "qu|ux"], "foo": "a,s=df"}
         s = artifactory.encode_properties(params)
         self.assertEqual(s, r"baz=ba\r,qu\|ux;foo=a\,s\=df")
+
+    def test_checksum(self):
+        """
+        All checksum functions are validated in ArtifactoryPathTest.test_deploy_file
+        no need to validate any more
+        :return: None
+        """
 
 
 class ArtifactoryFlavorTest(unittest.TestCase):
@@ -613,26 +620,6 @@ class ArtifactoryAccessorTest(ClassSetup):
     def test_mkdir(self):
         pass
 
-    def test_deploy(self):
-        a = self.cls()
-        P = ArtifactoryPath
-
-        p = P("http://b/artifactory/c/d")
-
-        params = {"foo": "bar", "baz": "quux"}
-
-        a.rest_put_stream = MM(return_value=("OK", 200))
-
-        f = io.StringIO()
-
-        a.deploy(p, f, parameters=params)
-
-        url = "http://b/artifactory/c/d;baz=quux;foo=bar"
-
-        a.rest_put_stream.assert_called_with(
-            url, f, headers={}, session=p.session, verify=True, cert=None, timeout=None
-        )
-
     @responses.activate
     def test_get_properties(self):
         properties = {
@@ -694,7 +681,8 @@ class ArtifactoryAccessorTest(ClassSetup):
             "addthis=addthis;removethis=removethis_property;test=test_property;time=2018-01-16 12:17:44.135143",
         )
 
-    def _mock_properties_response(self):
+    @staticmethod
+    def _mock_properties_response():
         """
         Function to mock responses on HTTP requests
         :return: ArtifactoryPath instance object
@@ -736,6 +724,90 @@ class ArtifactoryAccessorTest(ClassSetup):
         )
         return path
 
+    @responses.activate
+    def test_unlink(self):
+        """
+        Test that folder/file unlink works
+        """
+        path = ArtifactoryPath(
+            "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        )
+        constructed_url = (
+            "http://artifactory.local/artifactory"
+            "/api/storage"
+            "/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        )
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=200,
+            json=self.file_stat,
+        )
+
+        responses.add(
+            responses.DELETE,
+            str(path),
+            status=200,
+        )
+
+        path.unlink()
+
+    @responses.activate
+    def test_unlink_raises_not_found(self):
+        """
+        Test that folder/file unlink raises OSError if file does not exist
+        """
+        path = ArtifactoryPath(
+            "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        )
+        constructed_url = (
+            "http://artifactory.local/artifactory"
+            "/api/storage"
+            "/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        )
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=404,
+            body="Unable to find item",
+        )
+        with self.assertRaises(OSError) as context:
+            path.unlink()
+
+        self.assertTrue("No such file or directory" in context.exception.strerror)
+
+    @responses.activate
+    def test_unlink_raises_on_404(self):
+        """
+        Test that folder/file unlink raises exception if we checked that file
+        exsists and we still get 404. This is a result of permission issue
+        """
+        path = ArtifactoryPath(
+            "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        )
+        constructed_url = (
+            "http://artifactory.local/artifactory"
+            "/api/storage"
+            "/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        )
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=200,
+            json=self.file_stat,
+        )
+
+        responses.add(
+            responses.DELETE,
+            str(path),
+            status=404,
+        )
+
+        with self.assertRaises(ArtifactoryException) as context:
+            path.unlink()
+
+        self.assertTrue("insufficient Artifactory privileges" in str(context.exception))
+
 
 class ArtifactoryPathTest(ClassSetup):
     """Test the filesystem-accessing functionality"""
@@ -750,6 +822,125 @@ class ArtifactoryPathTest(ClassSetup):
         P = self.cls
         a = P("http://a/artifactory/", auth=("foo", "bar"))
         self.assertEqual(a.auth, ("foo", "bar"))
+
+    @responses.activate
+    def test_deploy_file(self):
+        """
+        Test that file uploads to the path
+        :return:
+        """
+        P = self.cls
+        path = P(
+            "http://artifactory.local/artifactory/libs-release-local",
+            auth=("foo", "bar"),
+        )
+
+        constructed_url = (
+            "http://artifactory.local/artifactory" "/api/storage" "/libs-release-local"
+        )
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=200,
+            json=self.dir_stat,
+        )
+
+        matrix_parameters = "deb.architecture=amd64;deb.component=contrib;deb.distribution=dist1;deb.distribution=dist2"
+
+        # file is required to calculate checksums
+        with tempfile.NamedTemporaryFile(mode="w") as file:
+            test_file = pathlib.Path(file.name)
+            file.write("I am a test file")
+
+            constructed_url = f"{path}{test_file.name};{matrix_parameters}"
+            responses.add(
+                responses.PUT, constructed_url, status=200, match_querystring=True
+            )
+
+            path.deploy_file(
+                test_file,
+                explode_archive=True,
+                explode_archive_atomic=True,
+                parameters={
+                    "deb.architecture": "amd64",
+                    "deb.component": "contrib",
+                    "deb.distribution": ["dist1", "dist2"],
+                },
+            )
+
+        request_url = responses.calls[1].request.url
+        self.assertEqual(request_url, constructed_url)
+
+        # verify that all headers are present and checksums are calculated properly
+        headers = responses.calls[1].request.headers
+        self.assertIn("X-Checksum-Md5", headers)
+        self.assertEqual(headers["X-Checksum-Md5"], "d41d8cd98f00b204e9800998ecf8427e")
+
+        self.assertIn("X-Checksum-Sha1", headers)
+        self.assertEqual(
+            headers["X-Checksum-Sha1"], "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        )
+
+        self.assertIn("X-Checksum-Sha256", headers)
+        self.assertEqual(
+            headers["X-Checksum-Sha256"],
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        )
+
+        self.assertIn("X-Explode-Archive", headers)
+        self.assertEqual(headers["X-Explode-Archive"], "true")
+
+        self.assertIn("X-Explode-Archive-Atomic", headers)
+        self.assertEqual(headers["X-Explode-Archive-Atomic"], "true")
+
+    @responses.activate
+    def test_deploy_deb(self):
+        """
+        Test that debian package is deployed
+        :return:
+        """
+        P = self.cls
+        path = P(
+            "http://artifactory.local/artifactory/libs-release-local",
+            auth=("foo", "bar"),
+        )
+
+        constructed_url = (
+            "http://artifactory.local/artifactory" "/api/storage" "/libs-release-local"
+        )
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=200,
+            json=self.dir_stat,
+        )
+
+        matrix_parameters = (
+            "deb.architecture=amd64;deb.component=contrib;"
+            "deb.distribution=dist1;deb.distribution=dist2;"
+            "z.additional=param"
+        )
+
+        # file is required to calculate checksums
+        with tempfile.NamedTemporaryFile(mode="w") as file:
+            test_file = pathlib.Path(file.name)
+            file.write("I am a test file")
+
+            constructed_url = f"{path}{test_file.name};{matrix_parameters}"
+            responses.add(
+                responses.PUT, constructed_url, status=200, match_querystring=True
+            )
+
+            path.deploy_deb(
+                test_file,
+                distribution=["dist1", "dist2"],
+                component="contrib",
+                architecture="amd64",
+                parameters={"z.additional": "param"},
+            )
+
+        request_url = responses.calls[1].request.url
+        self.assertEqual(request_url, constructed_url)
 
     def test_auth_inheritance(self):
         P = self.cls
