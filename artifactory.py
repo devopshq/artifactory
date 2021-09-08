@@ -1031,7 +1031,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         explode_archive=None,
         explode_archive_atomic=None,
         checksum=None,
-        by_checksum=None,
+        by_checksum=False,
     ):
         """
         Uploads a given file-like object
@@ -1048,7 +1048,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         :param explode_archive(bool): True: archive will be exploded upon deployment
         :param explode_archive_atomic(bool): True: archive will be exploded in an atomic operation upon deployment
         :param checksum: sha1Value or sha256Value
-        :param by_checksum(bool): True: deploy artifact by checksum
+        :param by_checksum(bool): if True, deploy artifact by checksum, default False
         """
 
         if fobj and by_checksum:

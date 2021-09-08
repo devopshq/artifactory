@@ -310,6 +310,11 @@ path = ArtifactoryPath("http://my-artifactory/artifactory/my_repo/foo")
 sha1 = "1be5d2dbe52ddee96ef2d17d354e2be0a155a951"
 sha256 = "00bbf80ccca376893d60183e1a714e707fd929aea3e458f9ffda60f7ae75cc51"
 
+# If you don't know sha value, you can calculate it via
+# sha1 = artifactory.sha1sum("local_path_of_your_file")
+# or
+# sha256 = artifactory.sha256sum("local_path_of_your_file")
+
 # Each of the following 4 methods works fine if the artifact content already
 # exists in Artifactory.
 path.deploy_by_checksum(sha1=sha1)
