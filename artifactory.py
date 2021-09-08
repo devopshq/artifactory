@@ -64,6 +64,11 @@ except ImportError:
 default_config_path = "~/.artifactory_python.cfg"
 global_config = None
 
+# set logger to be configurable from external
+logger = logging.getLogger(__name__)
+# Set default logging handler to avoid "No handler found" warnings.
+logger.addHandler(logging.NullHandler())
+
 
 def read_config(config_path=default_config_path):
     """
@@ -265,7 +270,7 @@ def log_download_progress(bytes_now, total_size):
     else:
         msg = "Downloaded {}MB".format(int(bytes_now / 1024 / 1024))
 
-    logging.debug(msg)
+    logger.debug(msg)
 
 
 class HTTPResponseWrapper(object):
@@ -385,6 +390,7 @@ def quote_url(url):
     :param url: (str) URL that should be quoted
     :return: (str) quoted URL
     """
+    logger.debug(f"Raw URL passed for encoding: {url}")
     parsed_url = urllib3.util.parse_url(url)
     if parsed_url.port:
         quoted_path = requests.utils.quote(
@@ -1309,10 +1315,10 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         auth_type = kwargs.get("auth_type")
 
         if apikey:
-            logging.debug("Use XJFrogApiAuth apikey")
+            logger.debug("Use XJFrogApiAuth apikey")
             obj.auth = XJFrogArtApiAuth(apikey=apikey)
         elif token:
-            logging.debug("Use XJFrogArtBearerAuth token")
+            logger.debug("Use XJFrogArtBearerAuth token")
             obj.auth = XJFrogArtBearerAuth(token=token)
         else:
             auth = kwargs.get("auth")
@@ -1912,6 +1918,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         aql_query_url = "{}/api/search/aql".format(self.drive.rstrip("/"))
         aql_query_text = self.create_aql_text(*args)
+        logger.debug(f"AQL query request text: {aql_query_text}")
         r = self.session.post(aql_query_url, data=aql_query_text)
         r.raise_for_status()
         content = r.json()
@@ -1920,7 +1927,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
     @staticmethod
     def create_aql_text(*args):
         """
-        Create AQL querty from string or list or dict arguments
+        Create AQL query from string or list or dict arguments
         """
         aql_query_text = ""
         for arg in args:
@@ -1929,6 +1936,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             elif isinstance(arg, list):
                 arg = "({})".format(json.dumps(arg)).replace("[", "").replace("]", "")
             aql_query_text += arg
+
         return aql_query_text
 
     def from_aql(self, result):
