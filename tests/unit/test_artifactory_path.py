@@ -11,6 +11,9 @@ import artifactory
 from artifactory import ArtifactoryPath
 from artifactory import quote_url
 from dohq_artifactory import ArtifactoryException
+from dohq_artifactory.admin import Group
+from dohq_artifactory.admin import Project
+from dohq_artifactory.admin import User
 
 
 class UtilTest(unittest.TestCase):
@@ -1156,6 +1159,230 @@ class TestArtifactoryAql(unittest.TestCase):
         assert artifact.drive == "http://b/artifactory"
         assert artifact.name == "name.nupkg"
         assert artifact.root == "/reponame/"
+
+
+class TestArtifactoryPathGetAll(unittest.TestCase):
+    # TODO: test repositories and permissions
+    def setUp(self):
+        self.arti = ArtifactoryPath("http://b.com/artifactory")
+        self.users_request_url = f"{self.arti.drive}/api/security/users"
+        self.users = [
+            {
+                "name": "user_1",
+                "uri": "http://b.com/artifactory/api/security/users/user_1",
+                "realm": "internal",
+            },
+            {
+                "name": "user_2",
+                "uri": "http://b.com/artifactory/api/security/users/user_2",
+                "realm": "internal",
+            },
+        ]
+        self.user_1 = {"name": "user_1", "email": "user1@example.com"}
+        self.user_2 = {"name": "user_2", "email": "user2@example.com"}
+
+        self.groups_request_url = f"{self.arti.drive}/api/security/groups"
+        self.groups = [
+            {
+                "name": "group_1",
+                "uri": "http://b.com/artifactory/api/security/groups/group_1",
+            },
+            {
+                "name": "group_2",
+                "uri": "http://b.com/artifactory/api/security/groups/group_2",
+            },
+        ]
+        self.group_1 = {
+            "name": "group_1",
+            "realm": "internal",
+        }
+        self.group_2 = {
+            "name": "group_2",
+            "realm": "internal",
+        }
+
+        self.projects_request_url = (
+            f"{self.arti.drive.rstrip('/artifactory')}/access/api/v1/projects"
+        )
+        self.projects = [
+            {
+                "project_key": "project_key_1",
+                "description": "description_1",
+            },
+            {
+                "project_key": "project_key_2",
+                "description": "description_2",
+            },
+        ]
+        self.project_1 = {
+            "project_key": "project_key_1",
+            "description": "description_1",
+            "admin_privileges": {},
+        }
+        self.project_2 = {
+            "project_key": "project_key_2",
+            "description": "description_2",
+            "admin_privileges": {},
+        }
+
+    def test_get_users(self):
+        with responses.RequestsMock() as rsps:
+            rsps.add(responses.GET, self.users_request_url, json=self.users, status=200)
+            rsps.add(
+                responses.GET,
+                f"{self.users_request_url}/user_1",
+                json=self.user_1,
+                status=200,
+            )
+            rsps.add(
+                responses.GET,
+                f"{self.users_request_url}/user_2",
+                json=self.user_2,
+                status=200,
+            )
+
+            results = self.arti.get_users(lazy=False)
+
+            for user in results:
+                self.assertIsInstance(user, User)
+            self.assertEqual(results[0].name, "user_1")
+            self.assertEqual(results[0].email, "user1@example.com")
+            self.assertEqual(results[1].name, "user_2")
+            self.assertEqual(results[1].email, "user2@example.com")
+
+            self.assertEqual(len(rsps.calls), 3)
+            self.assertEqual(rsps.calls[0].request.url, self.users_request_url)
+            self.assertEqual(
+                rsps.calls[1].request.url, f"{self.users_request_url}/user_1"
+            )
+            self.assertEqual(
+                rsps.calls[2].request.url, f"{self.users_request_url}/user_2"
+            )
+
+    def test_get_users_lazy(self):
+        with responses.RequestsMock() as rsps:
+            rsps.add(responses.GET, self.users_request_url, json=self.users, status=200)
+
+            results = self.arti.get_users(lazy=True)
+
+            for user in results:
+                self.assertIsInstance(user, User)
+            self.assertEqual(results[0].name, "user_1")
+            self.assertIsNone(results[0].email)
+            self.assertEqual(results[1].name, "user_2")
+            self.assertIsNone(results[1].email)
+
+            self.assertEqual(len(rsps.calls), 1)
+            self.assertEqual(rsps.calls[0].request.url, self.users_request_url)
+
+    def test_get_groups(self):
+        with responses.RequestsMock() as rsps:
+            rsps.add(
+                responses.GET, self.groups_request_url, json=self.groups, status=200
+            )
+            rsps.add(
+                responses.GET,
+                f"{self.groups_request_url}/group_1",
+                json=self.group_1,
+                status=200,
+            )
+            rsps.add(
+                responses.GET,
+                f"{self.groups_request_url}/group_2",
+                json=self.group_2,
+                status=200,
+            )
+
+            results = self.arti.get_groups(lazy=False)
+
+            for group in results:
+                self.assertIsInstance(group, Group)
+            self.assertEqual(results[0].name, "group_1")
+            self.assertEqual(results[0].realm, "internal")
+            self.assertEqual(results[1].name, "group_2")
+            self.assertEqual(results[1].realm, "internal")
+
+            self.assertEqual(len(rsps.calls), 3)
+            self.assertEqual(rsps.calls[0].request.url, self.groups_request_url)
+            self.assertEqual(
+                rsps.calls[1].request.url, f"{self.groups_request_url}/group_1"
+            )
+            self.assertEqual(
+                rsps.calls[2].request.url, f"{self.groups_request_url}/group_2"
+            )
+
+    def test_get_groups_lazy(self):
+        with responses.RequestsMock() as rsps:
+            rsps.add(
+                responses.GET, self.groups_request_url, json=self.groups, status=200
+            )
+
+            results = self.arti.get_groups(lazy=True)
+
+            for group in results:
+                self.assertIsInstance(group, Group)
+            self.assertEqual(results[0].name, "group_1")
+            self.assertEqual(results[0].realm, "artifactory")
+            self.assertEqual(results[1].name, "group_2")
+            self.assertEqual(results[1].realm, "artifactory")
+
+            self.assertEqual(len(rsps.calls), 1)
+            self.assertEqual(rsps.calls[0].request.url, self.groups_request_url)
+
+    def test_get_projects(self):
+        with responses.RequestsMock() as rsps:
+            rsps.add(
+                responses.GET, self.projects_request_url, json=self.projects, status=200
+            )
+
+            rsps.add(
+                responses.GET,
+                f"{self.projects_request_url}/project_key_1",
+                json=self.project_1,
+                status=200,
+            )
+            rsps.add(
+                responses.GET,
+                f"{self.projects_request_url}/project_key_2",
+                json=self.project_2,
+                status=200,
+            )
+
+            results = self.arti.get_projects(lazy=False)
+
+            for project in results:
+                self.assertIsInstance(project, Project)
+            self.assertEqual(results[0].project_key, "project_key_1")
+            self.assertEqual(results[0].description, "description_1")
+            self.assertEqual(results[1].project_key, "project_key_2")
+            self.assertEqual(results[1].description, "description_2")
+
+            self.assertEqual(len(rsps.calls), 3)
+            self.assertEqual(rsps.calls[0].request.url, self.projects_request_url)
+            self.assertEqual(
+                rsps.calls[1].request.url, f"{self.projects_request_url}/project_key_1"
+            )
+            self.assertEqual(
+                rsps.calls[2].request.url, f"{self.projects_request_url}/project_key_2"
+            )
+
+    def test_get_projects_lazy(self):
+        with responses.RequestsMock() as rsps:
+            rsps.add(
+                responses.GET, self.projects_request_url, json=self.projects, status=200
+            )
+
+            results = self.arti.get_projects(lazy=True)
+
+            for project in results:
+                self.assertIsInstance(project, Project)
+            self.assertEqual(results[0].project_key, "project_key_1")
+            self.assertEqual(results[0].description, "")
+            self.assertEqual(results[1].project_key, "project_key_2")
+            self.assertEqual(results[1].description, "")
+
+            self.assertEqual(len(rsps.calls), 1)
+            self.assertEqual(rsps.calls[0].request.url, self.projects_request_url)
 
 
 if __name__ == "__main__":

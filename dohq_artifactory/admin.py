@@ -427,7 +427,7 @@ class User(AdminObject):
 
 
 class Group(AdminObject):
-    _uri = "groups"
+    _uri = "security/groups"
     _uri_deletion = "security/groups"
 
     def __init__(self, artifactory, name):

@@ -2087,7 +2087,10 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         :param cls: Create objects of this class
         "return: A list of found objects
         """
-        request_url = self.drive + url
+        if cls is Project:
+            request_url = self.drive.rstrip("/artifactory") + url
+        else:
+            request_url = self.drive + url
         r = self.session.get(request_url, auth=self.auth)
         r.raise_for_status()
         response = r.json()
@@ -2138,6 +2141,16 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         return self._get_all(
             url="/api/security/permissions", key="name", cls=PermissionTarget, lazy=lazy
+        )
+
+    def get_projects(self, lazy=False):
+        """
+        Get all projects
+
+        :param lazy: `True` if we don't need anything except object's name
+        """
+        return self._get_all(
+            url="/access/api/v1/projects", key="project_key", cls=Project, lazy=lazy
         )
 
 
