@@ -456,12 +456,7 @@ class ClassSetup(unittest.TestCase):
         }"""
 
         self.deploy_by_checksum_error = {
-            "errors": [
-                {
-                    "status": 400,
-                    "message": "Checksum values not provided"
-                }
-            ]
+            "errors": [{"status": 400, "message": "Checksum values not provided"}]
         }
 
 
@@ -929,7 +924,7 @@ class ArtifactoryPathTest(ClassSetup):
                 responses.PUT,
                 self.artifact_url,
                 json=self.file_stat_without_modification_date,
-                status=200
+                status=200,
             )
             self.path.deploy_by_checksum(sha1=self.sha1)
 
@@ -951,7 +946,7 @@ class ArtifactoryPathTest(ClassSetup):
                 responses.PUT,
                 self.artifact_url,
                 json=self.file_stat_without_modification_date,
-                status=200
+                status=200,
             )
             self.path.deploy_by_checksum(sha256=self.sha256)
 
@@ -973,7 +968,7 @@ class ArtifactoryPathTest(ClassSetup):
                 responses.PUT,
                 self.artifact_url,
                 json=self.file_stat_without_modification_date,
-                status=200
+                status=200,
             )
             self.path.deploy_by_checksum(checksum=self.sha1)
 
@@ -990,7 +985,7 @@ class ArtifactoryPathTest(ClassSetup):
                 responses.PUT,
                 self.artifact_url,
                 json=self.file_stat_without_modification_date,
-                status=200
+                status=200,
             )
             self.path.deploy_by_checksum(checksum=self.sha256)
 
@@ -1012,12 +1007,14 @@ class ArtifactoryPathTest(ClassSetup):
                 responses.PUT,
                 self.artifact_url,
                 json=self.deploy_by_checksum_error,
-                status=400
+                status=400,
             )
             with self.assertRaises(RuntimeError) as context:
                 self.path.deploy_by_checksum(sha1=f"{self.sha1}invalid")
 
-            self.assertEqual(str(context.exception), json.dumps(self.deploy_by_checksum_error))
+            self.assertEqual(
+                str(context.exception), json.dumps(self.deploy_by_checksum_error)
+            )
 
             self.assertEqual(len(rsps.calls), 1)
             self.assertEqual(rsps.calls[0].request.url, self.artifact_url)
