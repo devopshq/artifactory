@@ -1099,24 +1099,35 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if code not in (200, 201):
             raise RuntimeError(text)
 
-    def copy(self, src, dst, suppress_layouts=False):
+    def copy(self, src, dst, suppress_layouts=False, fail_fast=False, dry_run=False):
         """
         Copy artifact from src to dst
+        Args:
+            src: from
+            dst: to
+            suppress_layouts: suppress cross-layout module path translation during copy
+            fail_fast: parameter will fail and abort the operation upon receiving an error.
+            dry_run: If true, distribution is only simulated.
+
+        Returns:
+            if dry_run==True (dict) response.json() else None
         """
         url = "/".join(
             [
                 src.drive.rstrip("/"),
                 "api/copy",
-                str(src.relative_to(src.drive)).rstrip("/"),
+                str(src.relative_to(src.drive)).strip("/"),
             ]
         )
 
         params = {
             "to": str(dst.relative_to(dst.drive)).rstrip("/"),
             "suppressLayouts": int(suppress_layouts),
+            "failFast": int(fail_fast),
+            "dry": int(dry_run),
         }
 
-        self.rest_post(
+        response = self.rest_post(
             url,
             params=params,
             session=src.session,
@@ -1124,10 +1135,22 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=src.cert,
             timeout=src.timeout,
         )
+        if dry_run:
+            logger.debug(response.text)
+            return response.json()
 
-    def move(self, src, dst, suppress_layouts=False):
+    def move(self, src, dst, suppress_layouts=False, fail_fast=False, dry_run=False):
         """
         Move artifact from src to dst
+        Args:
+            src: from
+            dst: to
+            suppress_layouts: suppress cross-layout module path translation during copy
+            fail_fast: parameter will fail and abort the operation upon receiving an error.
+            dry_run: If true, distribution is only simulated.
+
+        Returns:
+            if dry_run==True (dict) response.json() else None
         """
         url = "/".join(
             [
@@ -1140,9 +1163,11 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         params = {
             "to": str(dst.relative_to(dst.drive)).rstrip("/"),
             "suppressLayouts": int(suppress_layouts),
+            "failFast": int(fail_fast),
+            "dry": int(dry_run),
         }
 
-        self.rest_post(
+        response = self.rest_post(
             url,
             params=params,
             session=src.session,
@@ -1150,6 +1175,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=src.cert,
             timeout=src.timeout,
         )
+        if dry_run:
+            logger.debug(response.text)
+            return response.json()
 
     def get_properties(self, pathobj):
         """
@@ -1841,7 +1869,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         self.deploy_file(file_name, parameters=params)
 
-    def copy(self, dst, suppress_layouts=False):
+    def copy(self, dst, suppress_layouts=False, fail_fast=False, dry_run=False):
         """
         Copy artifact from this path to destination.
         If files are on the same instance of artifactory, lightweight (local)
@@ -1852,6 +1880,9 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         repository layouts. The default behaviour is to copy to the repository
         root, but remap the [org], [module], [baseVer], etc. structure to the
         target repository.
+
+        fail_fast: parameter will fail and abort the operation upon receiving an error.
+        dry_run: If true, distribution is only simulated.
 
         For example, if we have a builds repository using the default maven2
         repository where we publish our builds. We also have a published
@@ -1887,27 +1918,56 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         http://example.com/artifactory/published/production/foo-0.0.1.pom
         http://example.com/artifactory/published/production/product-1.0.0.tar.gz
         http://example.com/artifactory/published/production/product-1.0.0.tar.pom
+
+        Returns:
+            if dry_run==True (dict) response.json() else None
         """
         if self.drive.rstrip("/") == dst.drive.rstrip("/"):
-            self._accessor.copy(self, dst, suppress_layouts=suppress_layouts)
+            output = self._accessor.copy(
+                self,
+                dst,
+                suppress_layouts=suppress_layouts,
+                fail_fast=fail_fast,
+                dry_run=dry_run,
+            )
+            return output
         else:
+            if dry_run:
+                logger.debug(
+                    "Artifactory drive is different. Will do a standard upload"
+                )
+                return
+
             with self.open() as fobj:
                 dst.deploy(fobj)
 
-    def move(self, dst, suppress_layouts=False):
+    def move(self, dst, suppress_layouts=False, fail_fast=False, dry_run=False):
         """
-        Move artifact from this path to destinaiton.
+        Move artifact from this path to destination.
 
         The suppress_layouts parameter, when set to True, will allow artifacts
         from one path to be moved directly into another path without enforcing
         repository layouts. The default behaviour is to move the repository
         root, but remap the [org], [module], [baseVer], etc. structure to the
         target repository.
+
+        fail_fast: parameter will fail and abort the operation upon receiving an error.
+        dry_run: If true, distribution is only simulated.
+
+        Returns:
+            if dry_run==True (dict) response.json() else None
         """
         if self.drive.rstrip("/") != dst.drive.rstrip("/"):
             raise NotImplementedError("Moving between instances is not implemented yet")
 
-        self._accessor.move(self, dst)
+        output = self._accessor.move(
+            self,
+            dst,
+            suppress_layouts=suppress_layouts,
+            fail_fast=fail_fast,
+            dry_run=dry_run,
+        )
+        return output
 
     @property
     def properties(self):

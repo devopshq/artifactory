@@ -418,6 +418,9 @@ http://example.com/artifactory/published/production/foo-0.0.1.pom
 http://example.com/artifactory/published/production/product-1.0.0.tar.gz
 http://example.com/artifactory/published/production/product-1.0.0.tar.pom
 """
+
+# you can use dry run just to check if command will succeed without real change, adds debug message
+source.copy(dest, dry_run=True)
 ```
 
 ## Move Artifacts
@@ -436,6 +439,9 @@ source = ArtifactoryPath("http://example.com/artifactory/builds/product/product/
 dest = ArtifactoryPath("http://example.com/artifactory/published/production/")
 
 source.move(dest)
+
+# you can use dry run just to check if command will succeed without real change, adds debug message
+source.move(dest, dry_run=True)
 ```
 
 ## Remove Artifacts
