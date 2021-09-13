@@ -427,7 +427,7 @@ class User(AdminObject):
 
 
 class Group(AdminObject):
-    _uri = "groups"
+    _uri = "security/groups"
     _uri_deletion = "security/groups"
 
     def __init__(self, artifactory, name):
@@ -707,6 +707,7 @@ class RepositoryLocal(Repository):
         packageType=Repository.GENERIC,
         dockerApiVersion=Repository.V1,
         repoLayoutRef="maven-2-default",
+        max_unique_tags=0,
     ):
         super(RepositoryLocal, self).__init__(artifactory)
         self.name = name
@@ -715,6 +716,7 @@ class RepositoryLocal(Repository):
         self.repoLayoutRef = repoLayoutRef
         self.archiveBrowsingEnabled = True
         self.dockerApiVersion = dockerApiVersion
+        self.max_unique_tags = max_unique_tags
 
     def _create_json(self):
         """
@@ -741,6 +743,12 @@ class RepositoryLocal(Repository):
             "archiveBrowsingEnabled": self.archiveBrowsingEnabled,
             "yumRootDepth": 0,
         }
+        """
+        Docker V2 API specific fields
+        """
+        if self.dockerApiVersion == Repository.V2:
+            data_json["maxUniqueTags"] = self.max_unique_tags
+
         return data_json
 
     def _read_response(self, response):

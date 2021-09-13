@@ -317,7 +317,7 @@ def encode_matrix_parameters(parameters):
 
     for param in iter(sorted(parameters)):
         if isinstance(parameters[param], (list, tuple)):
-            value = (";%s=" % (param)).join(parameters[param])
+            value = f";{param}=".join(parameters[param])
         else:
             value = parameters[param]
 
@@ -377,6 +377,14 @@ class nullcontext:
 
 
 def quote_url(url):
+    """
+    Quote URL to allow URL fragment identifier as artifact folder or file names.
+    See https://en.wikipedia.org/wiki/Percent-encoding#Reserved_characters
+    Function will percent-encode the URL
+
+    :param url: (str) URL that should be quoted
+    :return: (str) quoted URL
+    """
     parsed_url = urllib3.util.parse_url(url)
     if parsed_url.port:
         quoted_path = requests.utils.quote(
@@ -387,7 +395,7 @@ def quote_url(url):
         )
     else:
         quoted_path = requests.utils.quote(url.rpartition(parsed_url.host)[2])
-        quoted_url = "{}://{}{}".format(parsed_url.scheme, parsed_url.host, quoted_path)
+        quoted_url = f"{parsed_url.scheme}://{parsed_url.host}{quoted_path}"
 
     return quoted_url
 
@@ -627,9 +635,17 @@ class _ArtifactoryAccessor(pathlib._Accessor):
     ):
         """
         Perform a GET request to url with requests.session
+        :param url:
+        :param params:
+        :param headers:
+        :param session:
+        :param verify:
+        :param cert:
+        :param timeout:
+        :return: response object
         """
         url = quote_url(url)
-        res = session.get(
+        response = session.get(
             url,
             params=params,
             headers=headers,
@@ -637,7 +653,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=cert,
             timeout=timeout,
         )
-        return res.text, res.status_code
+        return response
 
     @staticmethod
     def rest_put(
@@ -693,12 +709,20 @@ class _ArtifactoryAccessor(pathlib._Accessor):
     def rest_del(url, params=None, session=None, verify=True, cert=None, timeout=None):
         """
         Perform a DELETE request to url with requests.session
+        :param url: url
+        :param params: request parameters
+        :param session:
+        :param verify:
+        :param cert:
+        :param timeout:
+        :return: request response object
         """
         url = quote_url(url)
-        res = session.delete(
+        response = session.delete(
             url, params=params, verify=verify, cert=cert, timeout=timeout
         )
-        return res.text, res.status_code
+        response.raise_for_status()
+        return response
 
     @staticmethod
     def rest_put_stream(
@@ -709,26 +733,34 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         verify=True,
         cert=None,
         timeout=None,
+        matrix_parameters=None,
     ):
         """
         Perform a chunked PUT request to url with requests.session
         This is specifically to upload files.
         """
         url = quote_url(url)
+
+        if matrix_parameters is not None:
+            # added later, otherwise ; and = are converted
+            url += matrix_parameters
+
         res = session.put(
             url, headers=headers, data=stream, verify=verify, cert=cert, timeout=timeout
         )
         return res.text, res.status_code
 
     @staticmethod
-    def rest_get_stream(url, session=None, verify=True, cert=None, timeout=None):
+    def rest_get_stream(
+        url, params=None, session=None, verify=True, cert=None, timeout=None
+    ):
         """
         Perform a chunked GET request to url with requests.session
         This is specifically to download files.
         """
         url = quote_url(url)
         response = session.get(
-            url, stream=True, verify=verify, cert=cert, timeout=timeout
+            url, params=params, stream=True, verify=verify, cert=cert, timeout=timeout
         )
         response.raise_for_status()
         return response
@@ -746,17 +778,19 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             ]
         )
 
-        text, code = self.rest_get(
+        response = self.rest_get(
             url,
             session=pathobj.session,
             verify=pathobj.verify,
             cert=pathobj.cert,
             timeout=pathobj.timeout,
         )
+        code = response.status_code
+        text = response.text
         if code == 404 and ("Unable to find item" in text or "Not Found" in text):
-            raise OSError(2, "No such file or directory: '%s'" % url)
-        if code != 200:
-            raise RuntimeError(text)
+            raise OSError(2, f"No such file or directory: {url}")
+
+        response.raise_for_status()
 
         return json.loads(text)
 
@@ -864,21 +898,17 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         url = str(pathobj) + "/"
 
-        text, code = self.rest_del(
+        self.rest_del(
             url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert
         )
 
-        if code not in (200, 202, 204):
-            raise RuntimeError("Failed to delete directory: '%s'" % text)
-
     def unlink(self, pathobj):
         """
-        Removes a file
+        Removes a file or folder
         """
 
-        # TODO: Why do we forbid remove folder?
-        # if stat.is_dir:
-        #     raise IsADirectoryError(1, "Operation not permitted: {!r}".format(pathobj))
+        if not pathobj.exists():
+            raise OSError(2, f"No such file or directory: {pathobj}")
 
         url = "/".join(
             [
@@ -886,16 +916,29 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                 str(pathobj.relative_to(pathobj.drive)).strip("/"),
             ]
         )
-        text, code = self.rest_del(
-            url,
-            session=pathobj.session,
-            verify=pathobj.verify,
-            cert=pathobj.cert,
-            timeout=pathobj.timeout,
-        )
 
-        if code not in (200, 202, 204):
-            raise FileNotFoundError("Failed to delete file: {} {!r}".format(code, text))
+        try:
+            self.rest_del(
+                url,
+                session=pathobj.session,
+                verify=pathobj.verify,
+                cert=pathobj.cert,
+                timeout=pathobj.timeout,
+            )
+        except requests.exceptions.HTTPError as err:
+            if err.response.status_code == 404:
+                # since we performed existence check we can say it is permissions issue
+                # see https://github.com/devopshq/artifactory/issues/36
+                docs_url = (
+                    "https://www.jfrog.com/confluence/display/JFROG/General+Security+Settings"
+                    "#GeneralSecuritySettings-HideExistenceofUnauthorizedResources"
+                )
+                message = (
+                    "Error 404. \nThis might be a result of insufficient Artifactory privileges to "
+                    "delete artifacts. \nPlease check that your account have enough permissions and try again.\n"
+                    f"See more: {docs_url} \n"
+                )
+                raise ArtifactoryException(message) from err
 
     def touch(self, pathobj):
         """
@@ -960,8 +1003,15 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         :return: request response
         """
         url = str(pathobj)
+        if hasattr(pathobj.session, "params"):
+            # usually added by archive() function
+            params = pathobj.session.params
+        else:
+            params = None
+
         response = self.rest_get_stream(
             url,
+            params=params,
             session=pathobj.session,
             verify=pathobj.verify,
             cert=pathobj.cert,
@@ -990,9 +1040,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         url = str(pathobj)
 
-        if parameters:
-            url += ";%s" % encode_matrix_parameters(parameters)
-
+        matrix_parameters = (
+            f";{encode_matrix_parameters(parameters)}" if parameters else None
+        )
         headers = {}
 
         if md5:
@@ -1014,6 +1064,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             verify=pathobj.verify,
             cert=pathobj.cert,
             timeout=pathobj.timeout,
+            matrix_parameters=matrix_parameters,
         )
 
         if code not in (200, 201):
@@ -1085,7 +1136,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         params = "properties"
 
-        text, code = self.rest_get(
+        response = self.rest_get(
             url,
             params=params,
             session=pathobj.session,
@@ -1093,13 +1144,14 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=pathobj.cert,
             timeout=pathobj.timeout,
         )
-
+        code = response.status_code
+        text = response.text
         if code == 404 and ("Unable to find item" in text or "Not Found" in text):
             raise OSError(2, "No such file or directory: '%s'" % url)
         if code == 404 and "No properties could be found" in text:
             return {}
-        if code != 200:
-            raise RuntimeError(text)
+
+        response.raise_for_status()
 
         return json.loads(text)["properties"]
 
@@ -1154,7 +1206,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if not recursive:
             params["recursive"] = "0"
 
-        text, code = self.rest_del(
+        self.rest_del(
             url,
             params=params,
             session=pathobj.session,
@@ -1162,11 +1214,6 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=pathobj.cert,
             timeout=pathobj.timeout,
         )
-
-        if code == 404 and ("Unable to find item" in text or "Not Found" in text):
-            raise OSError(2, "No such file or directory: '%s'" % url)
-        if code != 204:
-            raise RuntimeError(text)
 
     def scandir(self, pathobj):
         return _ScandirIter((pathobj.joinpath(x) for x in self.listdir(pathobj)))
@@ -1404,18 +1451,15 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             raise NotImplementedError(archive_type + " is not support by current API")
 
         archive_url = (
-            self.drive
-            + "/api/archive/download/"
-            + self.repo
-            + self.path_in_repo
-            + "?archiveType="
-            + archive_type
+            self.drive + "/api/archive/download/" + self.repo + self.path_in_repo
         )
+        archive_obj = self.joinpath(archive_url)
+        archive_obj.session.params = {"archiveType": archive_type}
 
         if check_sum:
-            archive_url += "&includeChecksumFiles=true"
+            archive_obj.session.params["includeChecksumFiles"] = True
 
-        return self.joinpath(archive_url)
+        return archive_obj
 
     def relative_to(self, *other):
         """
@@ -1706,8 +1750,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         target = self
 
-        if self.is_dir():
-            target = self / pathlib.Path(file_name).name
+        if target.is_dir():
+            target = target / pathlib.Path(file_name).name
 
         with open(file_name, "rb") as fobj:
             target.deploy(
@@ -2043,7 +2087,10 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         :param cls: Create objects of this class
         "return: A list of found objects
         """
-        request_url = self.drive + url
+        if cls is Project:
+            request_url = self.drive.rstrip("/artifactory") + url
+        else:
+            request_url = self.drive + url
         r = self.session.get(request_url, auth=self.auth)
         r.raise_for_status()
         response = r.json()
@@ -2094,6 +2141,16 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         return self._get_all(
             url="/api/security/permissions", key="name", cls=PermissionTarget, lazy=lazy
+        )
+
+    def get_projects(self, lazy=False):
+        """
+        Get all projects
+
+        :param lazy: `True` if we don't need anything except object's name
+        """
+        return self._get_all(
+            url="/access/api/v1/projects", key="project_key", cls=Project, lazy=lazy
         )
 
 
