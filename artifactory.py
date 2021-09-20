@@ -824,9 +824,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             modified_by=jsn.get("modifiedBy"),
             mime_type=jsn.get("mimeType"),
             size=int(jsn.get("size", "0")),
-            sha1=checksums.get("sha1"),
-            sha256=checksums.get("sha256"),
-            md5=checksums.get("md5"),
+            sha1=checksums.get("sha1", None),
+            sha256=checksums.get("sha256", None),
+            md5=checksums.get("md5", None),
             is_dir=is_dir,
             children=children,
         )
@@ -1047,9 +1047,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
         :param pathobj: ArtifactoryPath object
         :param fobj: file object to be deployed
-        :param md5:
-        :param sha1:
-        :param sha256:
+        :param md5: (str) MD5 checksum value
+        :param sha1: (str) SHA1 checksum value
+        :param sha256: (str) SHA256 checksum value
         :param parameters: Artifact properties
         :param explode_archive(bool): True: archive will be exploded upon deployment
         :param explode_archive_atomic(bool): True: archive will be exploded in an atomic operation upon deployment
@@ -1891,8 +1891,14 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         if self.drive.rstrip("/") == dst.drive.rstrip("/"):
             self._accessor.copy(self, dst, suppress_layouts=suppress_layouts)
         else:
+            stat = self.stat()
+            if stat.is_dir:
+                raise ArtifactoryException(
+                    "Only files could be copied across different instances"
+                )
+
             with self.open() as fobj:
-                dst.deploy(fobj)
+                dst.deploy(fobj, md5=stat.md5, sha1=stat.sha1, sha256=stat.sha256)
 
     def move(self, dst, suppress_layouts=False):
         """
