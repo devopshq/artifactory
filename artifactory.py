@@ -51,6 +51,7 @@ from dohq_artifactory.admin import User
 from dohq_artifactory.auth import XJFrogArtApiAuth
 from dohq_artifactory.auth import XJFrogArtBearerAuth
 from dohq_artifactory.exception import ArtifactoryException
+from dohq_artifactory.exception import raise_http_errors
 
 try:
     import requests.packages.urllib3 as urllib3
@@ -91,7 +92,7 @@ def read_config(config_path=default_config_path):
     config_path = os.path.expanduser(config_path)
     if not os.path.isfile(config_path):
         raise OSError(
-            errno.ENOENT, "Artifactory configuration file not found: '%s'" % config_path
+            errno.ENOENT, f"Artifactory configuration file not found: '{config_path}'"
         )
 
     p = configparser.ConfigParser()
@@ -675,7 +676,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         Perform a PUT request to url with requests.session
         """
         url = quote_url(url)
-        res = session.put(
+        response = session.put(
             url,
             params=params,
             headers=headers,
@@ -683,7 +684,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=cert,
             timeout=timeout,
         )
-        return res.text, res.status_code
+        return response
 
     @staticmethod
     def rest_post(
@@ -707,7 +708,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=cert,
             timeout=timeout,
         )
-        response.raise_for_status()
+        raise_http_errors(response)
 
         return response
 
@@ -727,7 +728,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         response = session.delete(
             url, params=params, verify=verify, cert=cert, timeout=timeout
         )
-        response.raise_for_status()
+        raise_http_errors(response)
         return response
 
     @staticmethod
@@ -751,10 +752,11 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             # added later, otherwise ; and = are converted
             url += matrix_parameters
 
-        res = session.put(
+        response = session.put(
             url, headers=headers, data=stream, verify=verify, cert=cert, timeout=timeout
         )
-        return res.text, res.status_code
+        raise_http_errors(response)
+        return response
 
     @staticmethod
     def rest_get_stream(
@@ -768,7 +770,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         response = session.get(
             url, params=params, stream=True, verify=verify, cert=cert, timeout=timeout
         )
-        response.raise_for_status()
+        raise_http_errors(response)
         return response
 
     def get_stat_json(self, pathobj):
@@ -796,9 +798,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if code == 404 and ("Unable to find item" in text or "Not Found" in text):
             raise OSError(2, f"No such file or directory: {url}")
 
-        response.raise_for_status()
+        raise_http_errors(response)
 
-        return json.loads(text)
+        return response.json()
 
     def stat(self, pathobj):
         """
@@ -866,7 +868,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         stat = self.stat(pathobj)
 
         if not stat.is_dir:
-            raise OSError(20, "Not a directory: %s" % str(pathobj))
+            raise OSError(20, f"Not a directory: {pathobj}")
 
         return stat.children
 
@@ -876,13 +878,13 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         Note that this operation is not recursive
         """
         if not pathobj.drive or not pathobj.root:
-            raise RuntimeError("Full path required: '%s'" % str(pathobj))
+            raise ArtifactoryException(f"Full path required: '{pathobj}'")
 
         if pathobj.exists():
-            raise OSError(17, "File exists: '%s'" % str(pathobj))
+            raise OSError(17, f"File exists: '{pathobj}'")
 
         url = str(pathobj) + "/"
-        text, code = self.rest_put(
+        response = self.rest_put(
             url,
             session=pathobj.session,
             verify=pathobj.verify,
@@ -890,8 +892,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             timeout=pathobj.timeout,
         )
 
-        if code != 201:
-            raise RuntimeError("%s %d" % (text, code))
+        raise_http_errors(response)
 
     def rmdir(self, pathobj):
         """
@@ -900,7 +901,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         stat = self.stat(pathobj)
 
         if not stat.is_dir:
-            raise OSError(20, "Not a directory: '%s'" % str(pathobj))
+            raise OSError(20, f"Not a directory: '{pathobj}'")
 
         url = str(pathobj) + "/"
 
@@ -931,8 +932,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                 cert=pathobj.cert,
                 timeout=pathobj.timeout,
             )
-        except requests.exceptions.HTTPError as err:
-            if err.response.status_code == 404:
+        except ArtifactoryException as err:
+            if err.__cause__.response.status_code == 404:
                 # since we performed existence check we can say it is permissions issue
                 # see https://github.com/devopshq/artifactory/issues/36
                 docs_url = (
@@ -951,13 +952,13 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         Create an empty file
         """
         if not pathobj.drive or not pathobj.root:
-            raise RuntimeError("Full path required")
+            raise ArtifactoryException("Full path required")
 
         if pathobj.exists():
             return
 
         url = str(pathobj)
-        text, code = self.rest_put(
+        response = self.rest_put(
             url,
             session=pathobj.session,
             verify=pathobj.verify,
@@ -965,8 +966,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             timeout=pathobj.timeout,
         )
 
-        if code != 201:
-            raise RuntimeError("%s %d" % (text, code))
+        raise_http_errors(response)
 
     def owner(self, pathobj):
         """
@@ -1051,14 +1051,14 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         :param sha1:
         :param sha256:
         :param parameters: Artifact properties
-        :param explode_archive(bool): True: archive will be exploded upon deployment
-        :param explode_archive_atomic(bool): True: archive will be exploded in an atomic operation upon deployment
+        :param explode_archive: (bool) if True, archive will be exploded upon deployment
+        :param explode_archive_atomic: (bool) if True, archive will be exploded in an atomic operation upon deployment
         :param checksum: sha1Value or sha256Value
-        :param by_checksum(bool): if True, deploy artifact by checksum, default False
+        :param by_checksum: (bool) if True, deploy artifact by checksum, default False
         """
 
         if fobj and by_checksum:
-            raise RuntimeError("Either fobj or by_checksum, but not both")
+            raise ArtifactoryException("Either fobj or by_checksum, but not both")
 
         if isinstance(fobj, urllib3.response.HTTPResponse):
             fobj = HTTPResponseWrapper(fobj)
@@ -1085,7 +1085,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             if checksum:
                 headers["X-Checksum"] = checksum
 
-        text, code = self.rest_put_stream(
+        self.rest_put_stream(
             url,
             fobj,
             headers=headers,
@@ -1095,9 +1095,6 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             timeout=pathobj.timeout,
             matrix_parameters=matrix_parameters,
         )
-
-        if code not in (200, 201):
-            raise RuntimeError(text)
 
     def copy(self, src, dst, suppress_layouts=False, fail_fast=False, dry_run=False):
         """
@@ -1204,13 +1201,13 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         code = response.status_code
         text = response.text
         if code == 404 and ("Unable to find item" in text or "Not Found" in text):
-            raise OSError(2, "No such file or directory: '%s'" % url)
+            raise OSError(2, f"No such file or directory: '{url}'")
         if code == 404 and "No properties could be found" in text:
             return {}
 
-        response.raise_for_status()
+        raise_http_errors(response)
 
-        return json.loads(text)["properties"]
+        return response.json()["properties"]
 
     def set_properties(self, pathobj, props, recursive):
         """
@@ -1229,7 +1226,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if not recursive:
             params["recursive"] = "0"
 
-        text, code = self.rest_put(
+        response = self.rest_put(
             url,
             params=params,
             session=pathobj.session,
@@ -1238,10 +1235,12 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             timeout=pathobj.timeout,
         )
 
+        code = response.status_code
+        text = response.text
         if code == 404 and ("Unable to find item" in text or "Not Found" in text):
-            raise OSError(2, "No such file or directory: '%s'" % url)
-        if code != 204:
-            raise RuntimeError(text)
+            raise OSError(2, f"No such file or directory: '{url}'")
+
+        raise_http_errors(response)
 
     def del_properties(self, pathobj, props, recursive):
         """
@@ -1502,7 +1501,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         :return: raw object for download
         """
         if self.is_file():
-            raise OSError("Only folders could be archived")
+            raise ArtifactoryException("Only folders could be archived")
 
         if archive_type not in ["zip", "tar", "tar.gz", "tgz"]:
             raise NotImplementedError(archive_type + " is not support by current API")
@@ -2028,9 +2027,9 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         aql_query_url = "{}/api/search/aql".format(self.drive.rstrip("/"))
         aql_query_text = self.create_aql_text(*args)
         logger.debug(f"AQL query request text: {aql_query_text}")
-        r = self.session.post(aql_query_url, data=aql_query_text)
-        r.raise_for_status()
-        content = r.json()
+        response = self.session.post(aql_query_url, data=aql_query_text)
+        raise_http_errors(response)
+        content = response.json()
         return content["results"]
 
     @staticmethod
@@ -2056,10 +2055,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         result_type = result.get("type")
         if result_type not in ("file", "folder"):
-            raise RuntimeError(
-                "Path object with type '{}' doesn't support. File or folder only".format(
-                    result_type
-                )
+            raise ArtifactoryException(
+                f"Path object with type '{result_type}' doesn't support. File or folder only"
             )
 
         result_path = "{}/{repo}/{path}/{name}".format(self.drive.rstrip("/"), **result)
@@ -2082,7 +2079,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         :param target_repo: target repository
         :param docker_repo: Docker repository to promote
         :param tag: Docker tag to promote
-        :param copy (bool): whether to move the image or copy it
+        :param copy: (bool) whether to move the image or copy it
         :return:
         """
         promote_url = "{}/api/docker/{}/v2/promote".format(
@@ -2094,18 +2091,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             "tag": tag,
             "copy": copy,
         }
-        r = self.session.post(promote_url, json=promote_data)
-        if (
-            r.status_code == 400
-            and "Unsupported docker" in r.text
-            or r.status_code == 403
-            and "No permission" in r.text
-            or r.status_code == 404
-            and "Unable to find" in r.text
-        ):
-            raise ArtifactoryException(r.text)
-        else:
-            r.raise_for_status()
+        response = self.session.post(promote_url, json=promote_data)
+        raise_http_errors(response)
 
     @property
     def repo(self):
@@ -2208,11 +2195,11 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             request_url = self.drive.rstrip("/artifactory") + url
         else:
             request_url = self.drive + url
-        r = self.session.get(request_url, auth=self.auth)
-        r.raise_for_status()
-        response = r.json()
+        response = self.session.get(request_url, auth=self.auth)
+        raise_http_errors(response)
+        response_json = response.json()
         results = []
-        for i in response:
+        for i in response_json:
             if cls is Repository:
                 item = Repository.create_by_type(i["type"], self, i[key])
             else:

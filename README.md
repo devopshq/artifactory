@@ -43,6 +43,7 @@ package.
   * [Promote Docker image](#promote-docker-image)
   * [Builds](#builds)
   * [Logging](#logging)
+  * [Exception handling](#exception-handling)
 - [Admin area](#admin-area)
   * [User](#user)
     + [API Keys](#api-keys)
@@ -671,6 +672,27 @@ logging.getLogger('artifactory').setLevel(logging.DEBUG)
 path = ArtifactoryPath(
     "http://my-artifactory/artifactory/myrepo/restricted-path", apikey="MY_API_KEY"
 )
+~~~
+
+## Exception handling
+Exceptions in this library are represented by `dohq_artifactory.exception.ArtifactoryException` or by `OSError`
+If exception was caused by HTTPError you can always drill down the root cause by using following example:
+~~~python
+from artifactory import ArtifactoryPath
+from dohq_artifactory.exception import ArtifactoryException
+
+path = ArtifactoryPath(
+    "http://my_arti:8080/artifactory/installer/",
+    auth=("wrong_user", "wrong_pass")
+)
+
+try:
+    path.stat()
+except ArtifactoryException as exc:
+    print(exc)  # clean artifactory error message
+    # >>> Bad credentials
+    print(exc.__cause__)  # HTTP error that triggered exception, you can use this object for more info
+    # >>> 401 Client Error: Unauthorized for url: http://my_arti:8080/artifactory/installer/
 ~~~
 
 # Admin area
