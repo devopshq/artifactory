@@ -501,7 +501,7 @@ class Group(AdminObject):
         )
         data_json = self._create_json()
         data_json.update(self.additional_params)
-        request_url = f"{self.base_url}/{self.prefix_uri}/{self._uri}"
+        request_url = f"{self.base_url}/{self.prefix_uri}/{self._uri}/{getattr(self, self.resource_name)}"
         r = self._session.post(
             request_url,
             json=data_json,
