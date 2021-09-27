@@ -29,7 +29,6 @@ import fnmatch
 import hashlib
 import io
 import json
-import logging
 import os
 import pathlib
 import re
@@ -51,6 +50,7 @@ from dohq_artifactory.admin import User
 from dohq_artifactory.auth import XJFrogArtApiAuth
 from dohq_artifactory.auth import XJFrogArtBearerAuth
 from dohq_artifactory.exception import ArtifactoryException
+from dohq_artifactory.logger import logger
 
 try:
     import requests.packages.urllib3 as urllib3
@@ -63,11 +63,6 @@ except ImportError:
 
 default_config_path = "~/.artifactory_python.cfg"
 global_config = None
-
-# set logger to be configurable from external
-logger = logging.getLogger(__name__)
-# Set default logging handler to avoid "No handler found" warnings.
-logger.addHandler(logging.NullHandler())
 
 
 def read_config(config_path=default_config_path):
