@@ -1368,28 +1368,37 @@ path.touch()
 
 ## Global Configuration File ##
 
-Artifactory Python module also can specify all connection-related settings in a central file, ```~/.artifactory_python.cfg``` that is read upon the creation of first ```ArtifactoryPath``` object and is stored globally. For instance, you can specify per-instance settings of authentication tokens, so that you won't need to explicitly pass ```auth``` parameter to ```ArtifactoryPath```.
+Artifactory Python module also can specify all connection-related settings in a central file, 
+```~/.artifactory_python.cfg``` that is read upon the creation of first ```ArtifactoryPath``` object and is stored 
+globally. For instance, you can specify per-instance settings of authentication tokens, so that you won't need to 
+explicitly pass ```auth``` parameter to ```ArtifactoryPath```.
 
 Example:
 
 ```ini
+[DEFAULT]
+username = nameforallinstances
+
 [http://artifactory-instance.com/artifactory]
-username = deployer
 password = ilikerandompasswords
 verify = false
 
 [another-artifactory-instance.com/artifactory]
-username = foo
 password = @dmin
 cert = ~/mycert
 ```
 
-Whether or not you specify ```http://``` or ```https://```, the prefix is not essential. The module will first try to locate the best match and then try to match URLs without prefixes. So in the config, if you specify ```https://my-instance.local``` and call ```ArtifactoryPath``` with ```http://my-instance.local```, it will still do the right thing.
+Whether or not you specify ```http://``` or ```https://```, the prefix is not essential. The module will first try to 
+locate the best match and then try to match URLs without prefixes. So in the config, if you specify 
+```https://my-instance.local``` and call ```ArtifactoryPath``` with ```http://my-instance.local```, it will still do 
+the right thing.
 
 
 # Contribute
 [About contributing and testing](docs/CONTRIBUTE.md)
 
 # Advertising
-- [artifactory-du](https://github.com/devopshq/artifactory-du) - estimate file space usage. Summarize disk usage in JFrog Artifactory of the set of FILEs, recursively for directories.
-- [artifactory-cleanup-rules](https://github.com/devopshq/artifactory-du/issues/2) - python-script for Artifactory intelligence cleanup rules with config.
+- [artifactory-du](https://github.com/devopshq/artifactory-du) - estimate file space usage. Summarize disk usage in 
+  JFrog Artifactory of the set of FILEs, recursively for directories.
+- [artifactory-cleanup-rules](https://github.com/devopshq/artifactory-du/issues/2) - python-script for Artifactory 
+  intelligence cleanup rules with config.

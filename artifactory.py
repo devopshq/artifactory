@@ -70,7 +70,7 @@ def read_config(config_path=default_config_path):
     Read configuration file and produce a dictionary of the following structure:
 
       {'<instance1>': {'username': '<user>', 'password': '<pass>',
-                       'verify': <True/False>, 'cert': '<path-to-cert>'}
+                       'verify': <True/False/path-to-CA_BUNDLE>, 'cert': '<path-to-cert>'}
        '<instance2>': {...},
        ...}
 
@@ -86,7 +86,7 @@ def read_config(config_path=default_config_path):
     config_path = os.path.expanduser(config_path)
     if not os.path.isfile(config_path):
         raise OSError(
-            errno.ENOENT, "Artifactory configuration file not found: '%s'" % config_path
+            errno.ENOENT, f"Artifactory configuration file not found: '{config_path}'"
         )
 
     p = configparser.ConfigParser()
@@ -95,16 +95,22 @@ def read_config(config_path=default_config_path):
     result = {}
 
     for section in p.sections():
-        username = (
-            p.get(section, "username") if p.has_option(section, "username") else None
-        )
-        password = (
-            p.get(section, "password") if p.has_option(section, "password") else None
-        )
-        verify = (
-            p.getboolean(section, "verify") if p.has_option(section, "verify") else True
-        )
-        cert = p.get(section, "cert") if p.has_option(section, "cert") else None
+        username = p.get(section, "username", fallback=None)
+        password = p.get(section, "password", fallback=None)
+
+        try:
+            verify = p.getboolean(section, "verify", fallback=True)
+        except ValueError:
+            # the path to a CA_BUNDLE file or directory with certificates of trusted CAs
+            # see https://github.com/devopshq/artifactory/issues/281
+            verify = p.get(section, "verify", fallback=True)
+            # path may contain '~', and we'd better expand it properly
+            verify = os.path.expanduser(verify)
+
+        cert = p.get(section, "cert", fallback=None)
+        if cert:
+            # certificate path may contain '~', and we'd better expand it properly
+            cert = os.path.expanduser(cert)
 
         result[section] = {
             "username": username,
@@ -112,9 +118,7 @@ def read_config(config_path=default_config_path):
             "verify": verify,
             "cert": cert,
         }
-        # certificate path may contain '~', and we'd better expand it properly
-        if result[section]["cert"]:
-            result[section]["cert"] = os.path.expanduser(result[section]["cert"])
+
     return result
 
 
