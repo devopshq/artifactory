@@ -5,7 +5,7 @@ import requests
 import responses
 
 from dohq_artifactory.exception import ArtifactoryException
-from dohq_artifactory.exception import raise_http_errors
+from dohq_artifactory.exception import raise_for_status
 
 
 class UtilTest(unittest.TestCase):
@@ -17,7 +17,7 @@ class UtilTest(unittest.TestCase):
             resp = requests.get("http://b.com/artifactory/")
 
             with self.assertRaises(ArtifactoryException) as cm:
-                raise_http_errors(resp)
+                raise_for_status(resp)
             self.assertEqual(
                 f"403 Client Error: Forbidden for url: {url}", str(cm.exception)
             )
@@ -34,7 +34,7 @@ class UtilTest(unittest.TestCase):
             resp = requests.get("http://b.com/artifactory/")
 
             with self.assertRaises(ArtifactoryException) as cm:
-                raise_http_errors(resp)
+                raise_for_status(resp)
             self.assertEqual("Bad credentials", str(cm.exception))
 
 

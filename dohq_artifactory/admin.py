@@ -10,7 +10,7 @@ import jwt
 from dateutil.parser import isoparse
 
 from dohq_artifactory.exception import ArtifactoryException
-from dohq_artifactory.exception import raise_http_errors
+from dohq_artifactory.exception import raise_for_status
 
 
 def rest_delay():
@@ -108,7 +108,7 @@ class AdminObject(object):
             headers={"Content-Type": "application/json"},
             auth=self._auth,
         )
-        raise_http_errors(r)
+        raise_for_status(r)
         rest_delay()
         self.read()
 
@@ -141,7 +141,7 @@ class AdminObject(object):
             logging.debug(
                 f"{self.__class__.__name__} [{getattr(self, self.resource_name)}] exist"
             )
-            raise_http_errors(r)
+            raise_for_status(r)
             response = r.json()
             self.raw = response
             self._read_response(response)
@@ -190,7 +190,7 @@ class AdminObject(object):
             request_url,
             auth=self._auth,
         )
-        raise_http_errors(r)
+        raise_for_status(r)
         rest_delay()
 
 
@@ -291,7 +291,7 @@ class User(AdminObject):
             request_url,
             auth=(self.name, self.password),
         )
-        raise_http_errors(r)
+        raise_for_status(r)
         return r.text
 
     @property
@@ -1353,7 +1353,7 @@ class Project(AdminObject):
             headers={"Content-Type": "application/json"},
             auth=self._auth,
         )
-        raise_http_errors(r)
+        raise_for_status(r)
         rest_delay()
         self.read()
 
@@ -1374,7 +1374,7 @@ class Project(AdminObject):
             headers={"Content-Type": "application/json"},
             auth=self._auth,
         )
-        raise_http_errors(r)
+        raise_for_status(r)
         rest_delay()
         self.read()
 

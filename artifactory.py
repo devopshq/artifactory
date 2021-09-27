@@ -51,7 +51,7 @@ from dohq_artifactory.admin import User
 from dohq_artifactory.auth import XJFrogArtApiAuth
 from dohq_artifactory.auth import XJFrogArtBearerAuth
 from dohq_artifactory.exception import ArtifactoryException
-from dohq_artifactory.exception import raise_http_errors
+from dohq_artifactory.exception import raise_for_status
 
 try:
     import requests.packages.urllib3 as urllib3
@@ -708,7 +708,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=cert,
             timeout=timeout,
         )
-        raise_http_errors(response)
+        raise_for_status(response)
 
         return response
 
@@ -728,7 +728,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         response = session.delete(
             url, params=params, verify=verify, cert=cert, timeout=timeout
         )
-        raise_http_errors(response)
+        raise_for_status(response)
         return response
 
     @staticmethod
@@ -755,7 +755,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         response = session.put(
             url, headers=headers, data=stream, verify=verify, cert=cert, timeout=timeout
         )
-        raise_http_errors(response)
+        raise_for_status(response)
         return response
 
     @staticmethod
@@ -770,7 +770,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         response = session.get(
             url, params=params, stream=True, verify=verify, cert=cert, timeout=timeout
         )
-        raise_http_errors(response)
+        raise_for_status(response)
         return response
 
     def get_stat_json(self, pathobj):
@@ -798,7 +798,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if code == 404 and ("Unable to find item" in text or "Not Found" in text):
             raise OSError(2, f"No such file or directory: {url}")
 
-        raise_http_errors(response)
+        raise_for_status(response)
 
         return response.json()
 
@@ -892,7 +892,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             timeout=pathobj.timeout,
         )
 
-        raise_http_errors(response)
+        raise_for_status(response)
 
     def rmdir(self, pathobj):
         """
@@ -966,7 +966,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             timeout=pathobj.timeout,
         )
 
-        raise_http_errors(response)
+        raise_for_status(response)
 
     def owner(self, pathobj):
         """
@@ -1205,7 +1205,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if code == 404 and "No properties could be found" in text:
             return {}
 
-        raise_http_errors(response)
+        raise_for_status(response)
 
         return response.json()["properties"]
 
@@ -1240,7 +1240,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if code == 404 and ("Unable to find item" in text or "Not Found" in text):
             raise OSError(2, f"No such file or directory: '{url}'")
 
-        raise_http_errors(response)
+        raise_for_status(response)
 
     def del_properties(self, pathobj, props, recursive):
         """
@@ -2028,7 +2028,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         aql_query_text = self.create_aql_text(*args)
         logger.debug(f"AQL query request text: {aql_query_text}")
         response = self.session.post(aql_query_url, data=aql_query_text)
-        raise_http_errors(response)
+        raise_for_status(response)
         content = response.json()
         return content["results"]
 
@@ -2092,7 +2092,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             "copy": copy,
         }
         response = self.session.post(promote_url, json=promote_data)
-        raise_http_errors(response)
+        raise_for_status(response)
 
     @property
     def repo(self):
@@ -2196,7 +2196,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         else:
             request_url = self.drive + url
         response = self.session.get(request_url, auth=self.auth)
-        raise_http_errors(response)
+        raise_for_status(response)
         response_json = response.json()
         results = []
         for i in response_json:
