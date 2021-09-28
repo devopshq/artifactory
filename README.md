@@ -42,6 +42,7 @@ package.
   * [FileStat](#filestat)
   * [Promote Docker image](#promote-docker-image)
   * [Builds](#builds)
+  * [Logging](#logging)
 - [Admin area](#admin-area)
   * [User](#user)
     + [API Keys](#api-keys)
@@ -85,7 +86,6 @@ pip install dohq-artifactory==0.5.dev243
 ```
 
 # Usage
-
 ## Authentication ##
 
 `dohq-artifactory` supports these ways of authentication:
@@ -298,6 +298,37 @@ path.deploy_file(
 )
 ```
 
+[Deploy artifact by checksum](https://www.jfrog.com/confluence/display/RTF6X/Artifactory+REST+API#ArtifactoryRESTAPI-DeployArtifactbyChecksum): deploy an artifact to the specified destination by checking if the artifact
+content already exists in Artifactory. If Artifactory already contains a user
+readable artifact with the same checksum the artifact content is copied over to
+the new location without requiring content transfer.
+
+```python
+from artifactory import ArtifactoryPath
+
+path = ArtifactoryPath("http://my-artifactory/artifactory/my_repo/foo")
+sha1 = "1be5d2dbe52ddee96ef2d17d354e2be0a155a951"
+sha256 = "00bbf80ccca376893d60183e1a714e707fd929aea3e458f9ffda60f7ae75cc51"
+
+# If you don't know sha value, you can calculate it via
+# sha1 = artifactory.sha1sum("local_path_of_your_file")
+# or
+# sha256 = artifactory.sha256sum("local_path_of_your_file")
+
+# Each of the following 4 methods works fine if the artifact content already
+# exists in Artifactory.
+path.deploy_by_checksum(sha1=sha1)
+
+# deploy by sha1 via checksum parameter
+path.deploy_by_checksum(checksum=sha1)
+
+# deploy by sha256 via sha256 parameter
+path.deploy_by_checksum(sha256=sha256)
+
+# deploy by sha256 via checksum parameter
+path.deploy_by_checksum(checksum=sha256)
+```
+
 Deploy a debian package ```myapp-1.0.deb``` to an ```existent``` folder
 
 ```python
@@ -474,19 +505,19 @@ You can use [Artifactory Query Language](https://www.jfrog.com/confluence/displa
 ```python
 from artifactory import ArtifactoryPath
 
-aql = ArtifactoryPath(
+arti_path = ArtifactoryPath(
     "http://my-artifactory/artifactory"
 )  # path to artifactory, NO repo
 
 # dict support
 # Send query:
 # items.find({"repo": "myrepo"})
-artifacts = aql.aql("items.find", {"repo": "myrepo"})
+artifacts = arti_path.aql("items.find", {"repo": "myrepo"})
 
 # list support.
 # Send query:
 # items.find().include("name", "repo")
-artifacts = aql.aql("items.find()", ".include", ["name", "repo"])
+artifacts = arti_path.aql("items.find()", ".include", ["name", "repo"])
 
 #  support complex query
 # Example 1
@@ -498,7 +529,7 @@ artifacts = aql.aql("items.find()", ".include", ["name", "repo"])
 #         ]
 #     }
 # )
-args = [
+aqlargs = [
     "items.find",
     {
         "$and": [
@@ -515,7 +546,7 @@ args = [
 
 # artifacts_list contains raw data (list of dict)
 # Send query
-artifacts_list = aql.aql(*args)
+artifacts_list = arti_path.aql(*aqlargs)
 
 # Example 2
 # The query will find all items in repo docker-prod that are of type file and were created after timecode. The
@@ -541,11 +572,11 @@ aqlargs = [
     ".sort",
     {"$asc": ["repo", "path", "name"]},
 ]
-artifacts_list = aql.aql(*args)
+artifacts_list = arti_path.aql(*aqlargs)
 
 # You can convert to pathlib object:
-artifact_pathlib = map(aql.from_aql, artifacts_list)
-artifact_pathlib_list = list(map(aql.from_aql, artifacts_list))
+artifact_pathlib = map(arti_path.from_aql, artifacts_list)
+artifact_pathlib_list = list(map(arti_path.from_aql, artifacts_list))
 ```
 
 
@@ -618,6 +649,22 @@ build_number1.promote(ci_user="admin", properties={
      "components": ["c1","c3","c14"],
      "release-name": ["fb3-ga"]
  })
+~~~
+
+## Logging 
+The library can be configured to emit logging that will give you better insight into what it's doing.
+Just configure `logging` module in your python script. Simplest example to add debug messages to a console:
+~~~python
+import logging
+from artifactory import ArtifactoryPath
+
+logging.basicConfig()
+# set level only for artifactory module, if omitted, then global log level is used, eg from basicConfig
+logging.getLogger('artifactory').setLevel(logging.DEBUG)
+
+path = ArtifactoryPath(
+    "http://my-artifactory/artifactory/myrepo/restricted-path", apikey="MY_API_KEY"
+)
 ~~~
 
 # Admin area
@@ -1321,28 +1368,37 @@ path.touch()
 
 ## Global Configuration File ##
 
-Artifactory Python module also can specify all connection-related settings in a central file, ```~/.artifactory_python.cfg``` that is read upon the creation of first ```ArtifactoryPath``` object and is stored globally. For instance, you can specify per-instance settings of authentication tokens, so that you won't need to explicitly pass ```auth``` parameter to ```ArtifactoryPath```.
+Artifactory Python module also can specify all connection-related settings in a central file, 
+```~/.artifactory_python.cfg``` that is read upon the creation of first ```ArtifactoryPath``` object and is stored 
+globally. For instance, you can specify per-instance settings of authentication tokens, so that you won't need to 
+explicitly pass ```auth``` parameter to ```ArtifactoryPath```.
 
 Example:
 
 ```ini
+[DEFAULT]
+username = nameforallinstances
+
 [http://artifactory-instance.com/artifactory]
-username = deployer
 password = ilikerandompasswords
 verify = false
 
 [another-artifactory-instance.com/artifactory]
-username = foo
 password = @dmin
 cert = ~/mycert
 ```
 
-Whether or not you specify ```http://``` or ```https://```, the prefix is not essential. The module will first try to locate the best match and then try to match URLs without prefixes. So in the config, if you specify ```https://my-instance.local``` and call ```ArtifactoryPath``` with ```http://my-instance.local```, it will still do the right thing.
+Whether or not you specify ```http://``` or ```https://```, the prefix is not essential. The module will first try to 
+locate the best match and then try to match URLs without prefixes. So in the config, if you specify 
+```https://my-instance.local``` and call ```ArtifactoryPath``` with ```http://my-instance.local```, it will still do 
+the right thing.
 
 
 # Contribute
 [About contributing and testing](docs/CONTRIBUTE.md)
 
 # Advertising
-- [artifactory-du](https://github.com/devopshq/artifactory-du) - estimate file space usage. Summarize disk usage in JFrog Artifactory of the set of FILEs, recursively for directories.
-- [artifactory-cleanup-rules](https://github.com/devopshq/artifactory-du/issues/2) - python-script for Artifactory intelligence cleanup rules with config.
+- [artifactory-du](https://github.com/devopshq/artifactory-du) - estimate file space usage. Summarize disk usage in 
+  JFrog Artifactory of the set of FILEs, recursively for directories.
+- [artifactory-cleanup-rules](https://github.com/devopshq/artifactory-du/issues/2) - python-script for Artifactory 
+  intelligence cleanup rules with config.

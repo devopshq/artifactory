@@ -29,7 +29,6 @@ import fnmatch
 import hashlib
 import io
 import json
-import logging
 import os
 import pathlib
 import re
@@ -51,6 +50,7 @@ from dohq_artifactory.admin import User
 from dohq_artifactory.auth import XJFrogArtApiAuth
 from dohq_artifactory.auth import XJFrogArtBearerAuth
 from dohq_artifactory.exception import ArtifactoryException
+from dohq_artifactory.logger import logger
 
 try:
     import requests.packages.urllib3 as urllib3
@@ -70,7 +70,7 @@ def read_config(config_path=default_config_path):
     Read configuration file and produce a dictionary of the following structure:
 
       {'<instance1>': {'username': '<user>', 'password': '<pass>',
-                       'verify': <True/False>, 'cert': '<path-to-cert>'}
+                       'verify': <True/False/path-to-CA_BUNDLE>, 'cert': '<path-to-cert>'}
        '<instance2>': {...},
        ...}
 
@@ -86,7 +86,7 @@ def read_config(config_path=default_config_path):
     config_path = os.path.expanduser(config_path)
     if not os.path.isfile(config_path):
         raise OSError(
-            errno.ENOENT, "Artifactory configuration file not found: '%s'" % config_path
+            errno.ENOENT, f"Artifactory configuration file not found: '{config_path}'"
         )
 
     p = configparser.ConfigParser()
@@ -95,16 +95,22 @@ def read_config(config_path=default_config_path):
     result = {}
 
     for section in p.sections():
-        username = (
-            p.get(section, "username") if p.has_option(section, "username") else None
-        )
-        password = (
-            p.get(section, "password") if p.has_option(section, "password") else None
-        )
-        verify = (
-            p.getboolean(section, "verify") if p.has_option(section, "verify") else True
-        )
-        cert = p.get(section, "cert") if p.has_option(section, "cert") else None
+        username = p.get(section, "username", fallback=None)
+        password = p.get(section, "password", fallback=None)
+
+        try:
+            verify = p.getboolean(section, "verify", fallback=True)
+        except ValueError:
+            # the path to a CA_BUNDLE file or directory with certificates of trusted CAs
+            # see https://github.com/devopshq/artifactory/issues/281
+            verify = p.get(section, "verify", fallback=True)
+            # path may contain '~', and we'd better expand it properly
+            verify = os.path.expanduser(verify)
+
+        cert = p.get(section, "cert", fallback=None)
+        if cert:
+            # certificate path may contain '~', and we'd better expand it properly
+            cert = os.path.expanduser(cert)
 
         result[section] = {
             "username": username,
@@ -112,9 +118,7 @@ def read_config(config_path=default_config_path):
             "verify": verify,
             "cert": cert,
         }
-        # certificate path may contain '~', and we'd better expand it properly
-        if result[section]["cert"]:
-            result[section]["cert"] = os.path.expanduser(result[section]["cert"])
+
     return result
 
 
@@ -265,7 +269,7 @@ def log_download_progress(bytes_now, total_size):
     else:
         msg = "Downloaded {}MB".format(int(bytes_now / 1024 / 1024))
 
-    logging.debug(msg)
+    logger.debug(msg)
 
 
 class HTTPResponseWrapper(object):
@@ -385,6 +389,7 @@ def quote_url(url):
     :param url: (str) URL that should be quoted
     :return: (str) quoted URL
     """
+    logger.debug(f"Raw URL passed for encoding: {url}")
     parsed_url = urllib3.util.parse_url(url)
     if parsed_url.port:
         quoted_path = requests.utils.quote(
@@ -818,9 +823,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             modified_by=jsn.get("modifiedBy"),
             mime_type=jsn.get("mimeType"),
             size=int(jsn.get("size", "0")),
-            sha1=checksums.get("sha1"),
-            sha256=checksums.get("sha256"),
-            md5=checksums.get("md5"),
+            sha1=checksums.get("sha1", None),
+            sha256=checksums.get("sha256", None),
+            md5=checksums.get("md5", None),
             is_dir=is_dir,
             children=children,
         )
@@ -1030,11 +1035,30 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         parameters=None,
         explode_archive=None,
         explode_archive_atomic=None,
+        checksum=None,
+        by_checksum=False,
     ):
         """
         Uploads a given file-like object
         HTTP chunked encoding will be attempted
+
+        If by_checksum is True, fobj should be None
+
+        :param pathobj: ArtifactoryPath object
+        :param fobj: file object to be deployed
+        :param md5: (str) MD5 checksum value
+        :param sha1: (str) SHA1 checksum value
+        :param sha256: (str) SHA256 checksum value
+        :param parameters: Artifact properties
+        :param explode_archive(bool): True: archive will be exploded upon deployment
+        :param explode_archive_atomic(bool): True: archive will be exploded in an atomic operation upon deployment
+        :param checksum: sha1Value or sha256Value
+        :param by_checksum(bool): if True, deploy artifact by checksum, default False
         """
+
+        if fobj and by_checksum:
+            raise RuntimeError("Either fobj or by_checksum, but not both")
+
         if isinstance(fobj, urllib3.response.HTTPResponse):
             fobj = HTTPResponseWrapper(fobj)
 
@@ -1055,6 +1079,10 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             headers["X-Explode-Archive"] = "true"
         if explode_archive_atomic:
             headers["X-Explode-Archive-Atomic"] = "true"
+        if by_checksum:
+            headers["X-Checksum-Deploy"] = "true"
+            if checksum:
+                headers["X-Checksum"] = checksum
 
         text, code = self.rest_put_stream(
             url,
@@ -1309,10 +1337,10 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         auth_type = kwargs.get("auth_type")
 
         if apikey:
-            logging.debug("Use XJFrogApiAuth apikey")
+            logger.debug("Use XJFrogApiAuth apikey")
             obj.auth = XJFrogArtApiAuth(apikey=apikey)
         elif token:
-            logging.debug("Use XJFrogArtBearerAuth token")
+            logger.debug("Use XJFrogArtBearerAuth token")
             obj.auth = XJFrogArtBearerAuth(token=token)
         else:
             auth = kwargs.get("auth")
@@ -1764,6 +1792,32 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                 explode_archive_atomic=explode_archive_atomic,
             )
 
+    def deploy_by_checksum(
+        self,
+        sha1=None,
+        sha256=None,
+        checksum=None,
+        parameters={},
+    ):
+        """
+        Deploy an artifact to the specified destination by checking if the
+        artifact content already exists in Artifactory.
+
+        :param pathobj: ArtifactoryPath object
+        :param sha1: sha1Value
+        :param sha256: sha256Value
+        :param checksum: sha1Value or sha256Value
+        """
+        return self._accessor.deploy(
+            self,
+            fobj=None,
+            sha1=sha1,
+            sha256=sha256,
+            checksum=checksum,
+            by_checksum=True,
+            parameters=parameters,
+        )
+
     def deploy_deb(
         self, file_name, distribution, component, architecture, parameters={}
     ):
@@ -1836,8 +1890,14 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         if self.drive.rstrip("/") == dst.drive.rstrip("/"):
             self._accessor.copy(self, dst, suppress_layouts=suppress_layouts)
         else:
+            stat = self.stat()
+            if stat.is_dir:
+                raise ArtifactoryException(
+                    "Only files could be copied across different instances"
+                )
+
             with self.open() as fobj:
-                dst.deploy(fobj)
+                dst.deploy(fobj, md5=stat.md5, sha1=stat.sha1, sha256=stat.sha256)
 
     def move(self, dst, suppress_layouts=False):
         """
@@ -1912,6 +1972,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         aql_query_url = "{}/api/search/aql".format(self.drive.rstrip("/"))
         aql_query_text = self.create_aql_text(*args)
+        logger.debug(f"AQL query request text: {aql_query_text}")
         r = self.session.post(aql_query_url, data=aql_query_text)
         r.raise_for_status()
         content = r.json()
@@ -1920,7 +1981,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
     @staticmethod
     def create_aql_text(*args):
         """
-        Create AQL querty from string or list or dict arguments
+        Create AQL query from string or list or dict arguments
         """
         aql_query_text = ""
         for arg in args:
@@ -1929,6 +1990,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             elif isinstance(arg, list):
                 arg = "({})".format(json.dumps(arg)).replace("[", "").replace("]", "")
             aql_query_text += arg
+
         return aql_query_text
 
     def from_aql(self, result):
