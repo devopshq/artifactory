@@ -42,7 +42,6 @@ package.
   * [FileStat](#filestat)
   * [Promote Docker image](#promote-docker-image)
   * [Builds](#builds)
-  * [Logging](#logging)
   * [Exception handling](#exception-handling)
 - [Admin area](#admin-area)
   * [User](#user)
@@ -65,7 +64,7 @@ package.
   * [Session](#session)
   * [SSL Cert Verification Options](#ssl-cert-verification-options)
   * [Timeout on requests](#timeout-on-requests)
-  * [Troubleshooting](#troubleshooting)
+  * [Logging](#logging)
   * [Global Configuration File](#global-configuration-file)
 - [Contribute](#contribute)
 - [Advertising](#advertising)
@@ -656,22 +655,6 @@ build_number1.promote(ci_user="admin", properties={
      "components": ["c1","c3","c14"],
      "release-name": ["fb3-ga"]
  })
-~~~
-
-## Logging 
-The library can be configured to emit logging that will give you better insight into what it's doing.
-Just configure `logging` module in your python script. Simplest example to add debug messages to a console:
-~~~python
-import logging
-from artifactory import ArtifactoryPath
-
-logging.basicConfig()
-# set level only for artifactory module, if omitted, then global log level is used, eg from basicConfig
-logging.getLogger('artifactory').setLevel(logging.DEBUG)
-
-path = ArtifactoryPath(
-    "http://my-artifactory/artifactory/myrepo/restricted-path", apikey="MY_API_KEY"
-)
 ~~~
 
 ## Exception handling
@@ -1374,24 +1357,22 @@ path = ArtifactoryPath(
 )
 ```
 
-## Troubleshooting ##
-Use [logging](https://docs.python.org/3/library/logging.html) for debug:
-```python
-def init_logging():
-    logger_format_string = "%(thread)5s %(module)-20s %(levelname)-8s %(message)s"
-    logging.basicConfig(
-        level=logging.DEBUG, format=logger_format_string, stream=sys.stdout
-    )
+## Logging ##
+The library can be configured to emit logging that will give you better insight into what it's doing.
+Just configure [logging](https://docs.python.org/3/library/logging.html) module in your python script. 
+Simplest example to add debug messages to a console:
+~~~python
+import logging
+from artifactory import ArtifactoryPath
 
+logging.basicConfig()
+# set level only for artifactory module, if omitted, then global log level is used, eg from basicConfig
+logging.getLogger('artifactory').setLevel(logging.DEBUG)
 
-init_logging()
 path = ArtifactoryPath(
-    "http://my-artifactory/artifactory/myrepo/restricted-path",
-    auth=("USERNAME", "PASSWORD or API_KEY"),
+    "http://my-artifactory/artifactory/myrepo/restricted-path", apikey="MY_API_KEY"
 )
-
-path.touch()
-```
+~~~
 
 
 ## Global Configuration File ##
