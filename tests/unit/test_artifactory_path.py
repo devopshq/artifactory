@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import json
 import os
 import pathlib
 import tempfile
@@ -1009,12 +1008,10 @@ class ArtifactoryPathTest(ClassSetup):
                 json=self.deploy_by_checksum_error,
                 status=400,
             )
-            with self.assertRaises(RuntimeError) as context:
+            with self.assertRaises(ArtifactoryException) as context:
                 self.path.deploy_by_checksum(sha1=f"{self.sha1}invalid")
 
-            self.assertEqual(
-                str(context.exception), json.dumps(self.deploy_by_checksum_error)
-            )
+            self.assertEqual(str(context.exception), "Checksum values not provided")
 
             self.assertEqual(len(rsps.calls), 1)
             self.assertEqual(rsps.calls[0].request.url, self.artifact_url)

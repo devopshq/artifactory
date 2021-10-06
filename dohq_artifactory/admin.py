@@ -6,25 +6,15 @@ import sys
 import time
 
 import jwt
-import requests
 from dateutil.parser import isoparse
 
 from dohq_artifactory.exception import ArtifactoryException
+from dohq_artifactory.exception import raise_for_status
 from dohq_artifactory.logger import logger
 
 
 def rest_delay():
     time.sleep(0.5)
-
-
-def raise_errors(r):
-    try:
-        r.raise_for_status()
-    except requests.HTTPError as e:
-        if e.response.status_code >= 400:
-            raise ArtifactoryException(e.response.text)
-        else:
-            raise e
 
 
 def _old_function_for_secret(pw_len=16):
@@ -118,7 +108,7 @@ class AdminObject(object):
             headers={"Content-Type": "application/json"},
             auth=self._auth,
         )
-        raise_errors(r)
+        raise_for_status(r)
         rest_delay()
         self.read()
 
@@ -151,7 +141,7 @@ class AdminObject(object):
             logger.debug(
                 f"{self.__class__.__name__} [{getattr(self, self.resource_name)}] exist"
             )
-            raise_errors(r)
+            raise_for_status(r)
             response = r.json()
             self.raw = response
             self._read_response(response)
@@ -200,7 +190,7 @@ class AdminObject(object):
             request_url,
             auth=self._auth,
         )
-        raise_errors(r)
+        raise_for_status(r)
         rest_delay()
 
 
@@ -301,7 +291,7 @@ class User(AdminObject):
             request_url,
             auth=(self.name, self.password),
         )
-        raise_errors(r)
+        raise_for_status(r)
         return r.text
 
     @property
@@ -1363,7 +1353,7 @@ class Project(AdminObject):
             headers={"Content-Type": "application/json"},
             auth=self._auth,
         )
-        raise_errors(r)
+        raise_for_status(r)
         rest_delay()
         self.read()
 
@@ -1384,7 +1374,7 @@ class Project(AdminObject):
             headers={"Content-Type": "application/json"},
             auth=self._auth,
         )
-        raise_errors(r)
+        raise_for_status(r)
         rest_delay()
         self.read()
 
