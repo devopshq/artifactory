@@ -4,7 +4,7 @@ import re
 import string
 import sys
 import time
-from warnings import warn
+import warnings
 
 import jwt
 from dateutil.parser import isoparse
@@ -55,6 +55,10 @@ if sys.version_info < (3, 6):
     generate_password = _old_function_for_secret
 else:
     generate_password = _new_function_with_secret_module
+
+
+def deprecation(message):
+    warnings.warn(message, DeprecationWarning, stacklevel=2)
 
 
 class AdminObject(object):
@@ -262,11 +266,7 @@ class User(AdminObject):
         Method for backwards compatibility, see property encrypted_password
         :return:
         """
-        # todo remove around April 2022
-        warn(
-            "encryptedPassword is deprecated, use encrypted_password",
-            DeprecationWarning,
-        )
+        deprecation("encryptedPassword is deprecated, use encrypted_password")
         return self.encrypted_password
 
     @property
@@ -306,8 +306,7 @@ class User(AdminObject):
         Method for backwards compatibility, see property last_logged_in
         :return:
         """
-        # todo remove around April 2022
-        warn("lastLoggedIn is deprecated, use last_logged_in", DeprecationWarning)
+        deprecation("lastLoggedIn is deprecated, use last_logged_in")
         return self.last_logged_in
 
     @property
@@ -695,30 +694,23 @@ class Repository(GenericRepository):
 
     @property
     def packageType(self):
-        # todo remove around April 2022
-        warn("packageType is deprecated, use package_type", DeprecationWarning)
+        deprecation("packageType is deprecated, use package_type")
         return self.package_type
 
     @property
     def repoLayoutRef(self):
-        # todo remove around April 2022
-        warn("repoLayoutRef is deprecated, use repo_layout_ref", DeprecationWarning)
+        deprecation("repoLayoutRef is deprecated, use repo_layout_ref")
         return self.repo_layout_ref
 
     @property
     def dockerApiVersion(self):
-        # todo remove around April 2022
-        warn(
-            "dockerApiVersion is deprecated, use docker_api_version", DeprecationWarning
-        )
+        deprecation("dockerApiVersion is deprecated, use docker_api_version")
         return self.docker_api_version
 
     @property
     def archiveBrowsingEnabled(self):
-        # todo remove around April 2022
-        warn(
-            "archiveBrowsingEnabled is deprecated, use archive_browsing_enabled",
-            DeprecationWarning,
+        deprecation(
+            "archiveBrowsingEnabled is deprecated, use archive_browsing_enabled"
         )
         return self.archive_browsing_enabled
 
@@ -739,21 +731,17 @@ class RepositoryLocal(Repository):
         repo_layout_ref="maven-2-default",
         max_unique_tags=0,
         *,
-        packageType=None,  # todo remove around April 2022
-        dockerApiVersion=None,  # todo remove around April 2022
-        repoLayoutRef=None,  # todo remove around April 2022
+        packageType=None,
+        dockerApiVersion=None,
+        repoLayoutRef=None,
     ):
         super(RepositoryLocal, self).__init__(artifactory)
         self.name = name
         self.description = ""
-        self.package_type = packageType or package_type  # todo remove around April 2022
-        self.repo_layout_ref = (
-            repoLayoutRef or repo_layout_ref
-        )  # todo remove around April 2022
+        self.package_type = packageType or package_type
+        self.repo_layout_ref = repoLayoutRef or repo_layout_ref
         self.archive_browsing_enabled = True
-        self.docker_api_version = (
-            dockerApiVersion or docker_api_version
-        )  # todo remove around April 2022
+        self.docker_api_version = dockerApiVersion or docker_api_version
         self.max_unique_tags = max_unique_tags
 
         if any([packageType, dockerApiVersion, repoLayoutRef]):
@@ -761,7 +749,7 @@ class RepositoryLocal(Repository):
                 "packageType, dockerApiVersion, repoLayoutRef are deprecated, "
                 "use package_type, docker_api_version, repo_layout_ref"
             )
-            warn(msg, DeprecationWarning)
+            deprecation(msg)
 
     def _create_json(self):
         """
@@ -847,23 +835,22 @@ class RepositoryVirtual(GenericRepository):
         repositories=None,
         package_type=Repository.GENERIC,
         *,
-        packageType=None,  # todo remove around April 2022
+        packageType=None,
     ):
         super(RepositoryVirtual, self).__init__(artifactory)
         self.name = name
         self.description = ""
         self.notes = ""
-        self.package_type = packageType or package_type  # todo remove around April 2022
+        self.package_type = packageType or package_type
         self.repositories = repositories or []
 
         if packageType:
             msg = "packageType is deprecated, use package_type"
-            warn(msg, DeprecationWarning)
+            deprecation(msg)
 
     @property
     def packageType(self):
-        # todo remove around April 2022
-        warn("packageType is deprecated, use package_type", DeprecationWarning)
+        deprecation("packageType is deprecated, use package_type")
         return self.package_type
 
     def _create_json(self):
@@ -942,21 +929,17 @@ class RepositoryRemote(Repository):
         docker_api_version=Repository.V1,
         repo_layout_ref="maven-2-default",
         *,
-        packageType=None,  # todo remove around April 2022
-        dockerApiVersion=None,  # todo remove around April 2022
-        repoLayoutRef=None,  # todo remove around April 2022
+        packageType=None,
+        dockerApiVersion=None,
+        repoLayoutRef=None,
     ):
         super(RepositoryRemote, self).__init__(artifactory)
         self.name = name
         self.description = ""
-        self.package_type = packageType or package_type  # todo remove around April 2022
-        self.repo_layout_ref = (
-            repoLayoutRef or repo_layout_ref
-        )  # todo remove around April 2022
+        self.package_type = packageType or package_type
+        self.repo_layout_ref = repoLayoutRef or repo_layout_ref
         self.archive_browsing_enabled = True
-        self.docker_api_version = (
-            dockerApiVersion or docker_api_version
-        )  # todo remove around April 2022
+        self.docker_api_version = dockerApiVersion or docker_api_version
         self.url = url
 
         if any([packageType, dockerApiVersion, repoLayoutRef]):
@@ -964,7 +947,7 @@ class RepositoryRemote(Repository):
                 "packageType, dockerApiVersion, repoLayoutRef are deprecated, "
                 "use package_type, docker_api_version, repo_layout_ref"
             )
-            warn(msg, DeprecationWarning)
+            deprecation(msg)
 
     def _create_json(self):
         """
