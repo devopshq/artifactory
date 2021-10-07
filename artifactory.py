@@ -1347,8 +1347,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         # https://github.com/python/cpython/blob/ce121fd8755d4db9511ce4aab39d0577165e118e/Lib/pathlib.py#L952
         _accessor = _artifactory_accessor
     else:
-        # Pathlib limits what members can be present in 'Path' class,
-        # so authentication information has to be added via __slots__
+        # in 3.9 and below Pathlib limits what members can be present in 'Path' class
         __slots__ = ("auth", "verify", "cert", "session", "timeout")
 
     def __new__(cls, *args, **kwargs):
