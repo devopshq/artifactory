@@ -1346,6 +1346,11 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
     # so authentication information has to be added via __slots__
     __slots__ = ("auth", "verify", "cert", "session", "timeout")
 
+    if sys.version_info.major == 3 and sys.version_info.minor >= 10:
+        # see changes in pathlib.Path, slots are no more applied
+        # https://github.com/python/cpython/blob/ce121fd8755d4db9511ce4aab39d0577165e118e/Lib/pathlib.py#L952
+        _accessor = _artifactory_accessor
+
     def __new__(cls, *args, **kwargs):
         """
         pathlib.Path overrides __new__ in order to create objects
