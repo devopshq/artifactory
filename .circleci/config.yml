@@ -1,0 +1,76 @@
+version: 2.1
+
+orbs:
+  python: circleci/python@1.4.0
+
+executors:
+  python-docker:
+    parameters:
+      version:
+        description: "Version tag (major.minor)"
+        default: "3.7"
+        type: string
+    docker:
+      - image: python:<<parameters.version>>-slim
+
+workflows:
+  build-test-deploy:
+    jobs:
+      - test:
+          matrix:
+            parameters:
+              version:
+                - "3.6"
+                - "3.7"
+                - "3.8"
+      - build:
+          requires:
+            - test
+      - deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only: master
+
+jobs:
+  test:
+    parameters:
+      version:
+        description: "Version tag (major.minor)"
+        type: string
+    executor:
+        name: python-docker
+        version: <<parameters.version>>
+    steps:
+      - checkout
+      - python/install-packages:
+          pip-dependency-file: requirements-dev.txt
+      - python/test:
+          args: '-munit --junitxml=junit.xml'
+          test-tool: pytest
+      - store_test_results:
+          path: junit.xml
+  build:
+    executor: python-docker
+    steps:
+      - checkout
+      - python/dist
+      - store_artifacts:
+          path: dist
+      - save_cache:
+          key: build-{{ .Revision }}
+          paths:
+            - dist
+  deploy:
+    executor: python-docker
+    steps:
+      - restore_cache:
+          keys:
+            - build-{{ .Revision }}
+      - run:
+          name: Install twine
+          command: pip install twine
+      - run:
+          name: Deploy with twine
+          command: twine upload dist/*
