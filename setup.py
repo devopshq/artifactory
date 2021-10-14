@@ -8,36 +8,36 @@ except ImportError:
     from distutils.core import setup
 import os
 
-
 __version__ = "0.7"
 devStatus = "4 - Beta"  # default build status, see: https://pypi.python.org/pypi?%3Aaction=list_classifiers
+build_prefix = 'dev'
 
-if "TRAVIS_BUILD_NUMBER" in os.environ and "TRAVIS_BRANCH" in os.environ:
-    print("This is TRAVIS-CI build")
-    print("TRAVIS_BUILD_NUMBER = {}".format(os.environ["TRAVIS_BUILD_NUMBER"]))
-    print("TRAVIS_BRANCH = {}".format(os.environ["TRAVIS_BRANCH"]))
 
-    __version__ += ".{}{}".format(
-        ""
-        if "release" in os.environ["TRAVIS_BRANCH"]
-        or os.environ["TRAVIS_BRANCH"] == "master"
-        else "dev",
-        os.environ["TRAVIS_BUILD_NUMBER"],
-    )
-
-    if (
-        "release" in os.environ["TRAVIS_BRANCH"]
-        or os.environ["TRAVIS_BRANCH"] == "master"
-    ):
-        devStatus = "5 - Production/Stable"
-
+def get_branch():
+    if 'CIRCLE_BRANCH' in os.environ:
+        build_branch = os.getenv('CIRCLE_BRANCH')
+        build_number = os.getenv('CIRCLE_BUILD_NUM')
+        ci_builder = 'Circle CI'
     else:
-        devStatus = devStatus
+        build_branch = os.getenv('TRAVIS_BRANCH')
+        build_number = os.getenv('TRAVIS_BUILD_NUMBER')
+        ci_builder = 'Travis CI'
 
+    print('This is {} build'.format(ci_builder))
+    print('Branch: {}'.format(build_branch))
+    print('Build number: {}'.format(build_number))
+    return build_branch, build_number, ci_builder
+
+
+if "TRAVIS_BRANCH" in os.environ or 'CIRCLE_BRANCH' in os.environ:
+    branch, build_id, builder = get_branch()
+    if 'release' in branch or branch == 'master':
+        build_prefix = ''
+        devStatus = "5 - Production/Stable"
+    __version__ += ".{}{}".format(build_prefix, build_id)
 else:
     print("This is local build")
     __version__ += ".dev0"  # set version as major.minor.localbuild if local build: python setup.py install
-
 
 setup(
     name="dohq-artifactory",

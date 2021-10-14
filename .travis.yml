@@ -1,9 +1,9 @@
 sudo: false
 language: python
 python:
-    - "3.6"
-    - "3.7"
-    - "3.8"
+  - "3.6"
+  - "3.7"
+  - "3.8"
 install: pip install tox-travis
 script: tox
 deploy:
@@ -16,5 +16,5 @@ deploy:
   on:
     python: '3.7'
     branch:
-    - master
-    - develop
+      - master
+      - develop
