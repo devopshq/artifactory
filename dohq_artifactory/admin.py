@@ -682,7 +682,7 @@ class Repository(GenericRepository):
     V2 = "V2"
 
     @staticmethod
-    def create_by_type(repo_type: str, artifactory, name, *, type=None):
+    def create_by_type(repo_type="LOCAL", artifactory=None, name=None, *, type=None):
         if type is not None:
             deprecation("'type' argument is deprecated, use 'repo_type'")
             repo_type = type
