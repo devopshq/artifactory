@@ -6,6 +6,8 @@ import unittest
 
 import dateutil
 import responses
+from responses.matchers import json_params_matcher
+from responses.matchers import query_param_matcher
 
 import artifactory
 from artifactory import ArtifactoryPath
@@ -667,17 +669,22 @@ class ArtifactoryAccessorTest(ClassSetup):
         }
 
         path = self._mock_properties_response()
-        path.properties = properties
 
-        # Must delete only removed property
-        # rest delete is a second call, use index 1
-        self.assertEqual(responses.calls[1].request.params["properties"], "removethis")
+        resp_props = properties.copy()
+        resp_props["removethis"] = None
+        self.assertNotEqual(
+            properties, resp_props
+        )  # ensure not update original properties
 
-        # Must put all property
-        self.assertEqual(
-            responses.calls[2].request.params["properties"],
-            "addthis=addthis;test=test_property;time=2018-01-16 12:17:44.135143",
+        responses.add(
+            responses.PATCH,
+            url="http://artifactory.local/artifactory/api/metadata/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz",
+            match=[
+                json_params_matcher({"props": resp_props}),
+                query_param_matcher({"recursive": "0"}),
+            ],
         )
+        path.properties = properties
 
     @responses.activate
     def test_set_properties_without_remove(self):
@@ -695,11 +702,16 @@ class ArtifactoryAccessorTest(ClassSetup):
         }
 
         path = self._mock_properties_response()
-        path.properties = properties
-        self.assertEqual(
-            responses.calls[1].request.params["properties"],
-            "addthis=addthis;removethis=removethis_property;test=test_property;time=2018-01-16 12:17:44.135143",
+        responses.add(
+            responses.PATCH,
+            url="http://artifactory.local/artifactory/api/metadata/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz",
+            match=[
+                json_params_matcher({"props": properties}),
+                query_param_matcher({"recursive": "0"}),
+            ],
         )
+
+        path.properties = properties
 
     @staticmethod
     def _mock_properties_response():
@@ -729,18 +741,6 @@ class ArtifactoryAccessorTest(ClassSetup):
                 "properties": reference_props,
                 "uri": constructed_url,
             },
-        )
-        responses.add(
-            responses.DELETE,
-            constructed_url,
-            status=204,
-            body="",
-        )
-        responses.add(
-            responses.PUT,
-            constructed_url,
-            status=204,
-            body="",
         )
         return path
 
