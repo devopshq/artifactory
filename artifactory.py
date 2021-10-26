@@ -29,7 +29,6 @@ import fnmatch
 import hashlib
 import io
 import json
-import logging
 import os
 import pathlib
 import re
@@ -51,6 +50,8 @@ from dohq_artifactory.admin import User
 from dohq_artifactory.auth import XJFrogArtApiAuth
 from dohq_artifactory.auth import XJFrogArtBearerAuth
 from dohq_artifactory.exception import ArtifactoryException
+from dohq_artifactory.exception import raise_for_status
+from dohq_artifactory.logger import logger
 
 try:
     import requests.packages.urllib3 as urllib3
@@ -70,7 +71,7 @@ def read_config(config_path=default_config_path):
     Read configuration file and produce a dictionary of the following structure:
 
       {'<instance1>': {'username': '<user>', 'password': '<pass>',
-                       'verify': <True/False>, 'cert': '<path-to-cert>'}
+                       'verify': <True/False/path-to-CA_BUNDLE>, 'cert': '<path-to-cert>'}
        '<instance2>': {...},
        ...}
 
@@ -86,7 +87,7 @@ def read_config(config_path=default_config_path):
     config_path = os.path.expanduser(config_path)
     if not os.path.isfile(config_path):
         raise OSError(
-            errno.ENOENT, "Artifactory configuration file not found: '%s'" % config_path
+            errno.ENOENT, f"Artifactory configuration file not found: '{config_path}'"
         )
 
     p = configparser.ConfigParser()
@@ -95,16 +96,22 @@ def read_config(config_path=default_config_path):
     result = {}
 
     for section in p.sections():
-        username = (
-            p.get(section, "username") if p.has_option(section, "username") else None
-        )
-        password = (
-            p.get(section, "password") if p.has_option(section, "password") else None
-        )
-        verify = (
-            p.getboolean(section, "verify") if p.has_option(section, "verify") else True
-        )
-        cert = p.get(section, "cert") if p.has_option(section, "cert") else None
+        username = p.get(section, "username", fallback=None)
+        password = p.get(section, "password", fallback=None)
+
+        try:
+            verify = p.getboolean(section, "verify", fallback=True)
+        except ValueError:
+            # the path to a CA_BUNDLE file or directory with certificates of trusted CAs
+            # see https://github.com/devopshq/artifactory/issues/281
+            verify = p.get(section, "verify", fallback=True)
+            # path may contain '~', and we'd better expand it properly
+            verify = os.path.expanduser(verify)
+
+        cert = p.get(section, "cert", fallback=None)
+        if cert:
+            # certificate path may contain '~', and we'd better expand it properly
+            cert = os.path.expanduser(cert)
 
         result[section] = {
             "username": username,
@@ -112,9 +119,7 @@ def read_config(config_path=default_config_path):
             "verify": verify,
             "cert": cert,
         }
-        # certificate path may contain '~', and we'd better expand it properly
-        if result[section]["cert"]:
-            result[section]["cert"] = os.path.expanduser(result[section]["cert"])
+
     return result
 
 
@@ -265,7 +270,7 @@ def log_download_progress(bytes_now, total_size):
     else:
         msg = "Downloaded {}MB".format(int(bytes_now / 1024 / 1024))
 
-    logging.debug(msg)
+    logger.debug(msg)
 
 
 class HTTPResponseWrapper(object):
@@ -385,6 +390,7 @@ def quote_url(url):
     :param url: (str) URL that should be quoted
     :return: (str) quoted URL
     """
+    logger.debug(f"Raw URL passed for encoding: {url}")
     parsed_url = urllib3.util.parse_url(url)
     if parsed_url.port:
         quoted_path = requests.utils.quote(
@@ -669,7 +675,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         Perform a PUT request to url with requests.session
         """
         url = quote_url(url)
-        res = session.put(
+        response = session.put(
             url,
             params=params,
             headers=headers,
@@ -677,7 +683,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=cert,
             timeout=timeout,
         )
-        return res.text, res.status_code
+        return response
 
     @staticmethod
     def rest_post(
@@ -701,7 +707,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=cert,
             timeout=timeout,
         )
-        response.raise_for_status()
+        raise_for_status(response)
 
         return response
 
@@ -721,7 +727,39 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         response = session.delete(
             url, params=params, verify=verify, cert=cert, timeout=timeout
         )
-        response.raise_for_status()
+        raise_for_status(response)
+        return response
+
+    @staticmethod
+    def rest_patch(
+        url,
+        json_data=None,
+        params=None,
+        session=None,
+        verify=True,
+        cert=None,
+        timeout=None,
+    ):
+        """
+        Perform a PATCH request to url with requests.session
+        :param url: url
+        :param json_data: (dict) JSON data to attach to patch request
+        :param params: request parameters
+        :param session:
+        :param verify:
+        :param cert:
+        :param timeout:
+        :return: request response object
+        """
+        url = quote_url(url)
+        response = session.patch(
+            url=url,
+            json=json_data,
+            params=params,
+            verify=verify,
+            cert=cert,
+            timeout=timeout,
+        )
         return response
 
     @staticmethod
@@ -745,10 +783,11 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             # added later, otherwise ; and = are converted
             url += matrix_parameters
 
-        res = session.put(
+        response = session.put(
             url, headers=headers, data=stream, verify=verify, cert=cert, timeout=timeout
         )
-        return res.text, res.status_code
+        raise_for_status(response)
+        return response
 
     @staticmethod
     def rest_get_stream(
@@ -762,7 +801,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         response = session.get(
             url, params=params, stream=True, verify=verify, cert=cert, timeout=timeout
         )
-        response.raise_for_status()
+        raise_for_status(response)
         return response
 
     def get_stat_json(self, pathobj):
@@ -790,9 +829,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if code == 404 and ("Unable to find item" in text or "Not Found" in text):
             raise OSError(2, f"No such file or directory: {url}")
 
-        response.raise_for_status()
+        raise_for_status(response)
 
-        return json.loads(text)
+        return response.json()
 
     def stat(self, pathobj):
         """
@@ -818,9 +857,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             modified_by=jsn.get("modifiedBy"),
             mime_type=jsn.get("mimeType"),
             size=int(jsn.get("size", "0")),
-            sha1=checksums.get("sha1"),
-            sha256=checksums.get("sha256"),
-            md5=checksums.get("md5"),
+            sha1=checksums.get("sha1", None),
+            sha256=checksums.get("sha256", None),
+            md5=checksums.get("md5", None),
             is_dir=is_dir,
             children=children,
         )
@@ -860,7 +899,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         stat = self.stat(pathobj)
 
         if not stat.is_dir:
-            raise OSError(20, "Not a directory: %s" % str(pathobj))
+            raise OSError(20, f"Not a directory: {pathobj}")
 
         return stat.children
 
@@ -870,13 +909,13 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         Note that this operation is not recursive
         """
         if not pathobj.drive or not pathobj.root:
-            raise RuntimeError("Full path required: '%s'" % str(pathobj))
+            raise ArtifactoryException(f"Full path required: '{pathobj}'")
 
         if pathobj.exists():
-            raise OSError(17, "File exists: '%s'" % str(pathobj))
+            raise OSError(17, f"File exists: '{pathobj}'")
 
         url = str(pathobj) + "/"
-        text, code = self.rest_put(
+        response = self.rest_put(
             url,
             session=pathobj.session,
             verify=pathobj.verify,
@@ -884,8 +923,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             timeout=pathobj.timeout,
         )
 
-        if code != 201:
-            raise RuntimeError("%s %d" % (text, code))
+        raise_for_status(response)
 
     def rmdir(self, pathobj):
         """
@@ -894,7 +932,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         stat = self.stat(pathobj)
 
         if not stat.is_dir:
-            raise OSError(20, "Not a directory: '%s'" % str(pathobj))
+            raise OSError(20, f"Not a directory: '{pathobj}'")
 
         url = str(pathobj) + "/"
 
@@ -925,8 +963,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
                 cert=pathobj.cert,
                 timeout=pathobj.timeout,
             )
-        except requests.exceptions.HTTPError as err:
-            if err.response.status_code == 404:
+        except ArtifactoryException as err:
+            if err.__cause__.response.status_code == 404:
                 # since we performed existence check we can say it is permissions issue
                 # see https://github.com/devopshq/artifactory/issues/36
                 docs_url = (
@@ -945,13 +983,13 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         Create an empty file
         """
         if not pathobj.drive or not pathobj.root:
-            raise RuntimeError("Full path required")
+            raise ArtifactoryException("Full path required")
 
         if pathobj.exists():
             return
 
         url = str(pathobj)
-        text, code = self.rest_put(
+        response = self.rest_put(
             url,
             session=pathobj.session,
             verify=pathobj.verify,
@@ -959,8 +997,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             timeout=pathobj.timeout,
         )
 
-        if code != 201:
-            raise RuntimeError("%s %d" % (text, code))
+        raise_for_status(response)
 
     def owner(self, pathobj):
         """
@@ -1030,11 +1067,30 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         parameters=None,
         explode_archive=None,
         explode_archive_atomic=None,
+        checksum=None,
+        by_checksum=False,
     ):
         """
         Uploads a given file-like object
         HTTP chunked encoding will be attempted
+
+        If by_checksum is True, fobj should be None
+
+        :param pathobj: ArtifactoryPath object
+        :param fobj: file object to be deployed
+        :param md5: (str) MD5 checksum value
+        :param sha1: (str) SHA1 checksum value
+        :param sha256: (str) SHA256 checksum value
+        :param parameters: Artifact properties
+        :param explode_archive: (bool) if True, archive will be exploded upon deployment
+        :param explode_archive_atomic: (bool) if True, archive will be exploded in an atomic operation upon deployment
+        :param checksum: sha1Value or sha256Value
+        :param by_checksum: (bool) if True, deploy artifact by checksum, default False
         """
+
+        if fobj and by_checksum:
+            raise ArtifactoryException("Either fobj or by_checksum, but not both")
+
         if isinstance(fobj, urllib3.response.HTTPResponse):
             fobj = HTTPResponseWrapper(fobj)
 
@@ -1055,8 +1111,12 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             headers["X-Explode-Archive"] = "true"
         if explode_archive_atomic:
             headers["X-Explode-Archive-Atomic"] = "true"
+        if by_checksum:
+            headers["X-Checksum-Deploy"] = "true"
+            if checksum:
+                headers["X-Checksum"] = checksum
 
-        text, code = self.rest_put_stream(
+        self.rest_put_stream(
             url,
             fobj,
             headers=headers,
@@ -1067,27 +1127,35 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             matrix_parameters=matrix_parameters,
         )
 
-        if code not in (200, 201):
-            raise RuntimeError(text)
-
-    def copy(self, src, dst, suppress_layouts=False):
+    def copy(self, src, dst, suppress_layouts=False, fail_fast=False, dry_run=False):
         """
         Copy artifact from src to dst
+        Args:
+            src: from
+            dst: to
+            suppress_layouts: suppress cross-layout module path translation during copy
+            fail_fast: parameter will fail and abort the operation upon receiving an error.
+            dry_run: If true, distribution is only simulated.
+
+        Returns:
+            if dry_run==True (dict) response.json() else None
         """
         url = "/".join(
             [
                 src.drive.rstrip("/"),
                 "api/copy",
-                str(src.relative_to(src.drive)).rstrip("/"),
+                str(src.relative_to(src.drive)).strip("/"),
             ]
         )
 
         params = {
             "to": str(dst.relative_to(dst.drive)).rstrip("/"),
             "suppressLayouts": int(suppress_layouts),
+            "failFast": int(fail_fast),
+            "dry": int(dry_run),
         }
 
-        self.rest_post(
+        response = self.rest_post(
             url,
             params=params,
             session=src.session,
@@ -1095,10 +1163,22 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=src.cert,
             timeout=src.timeout,
         )
+        if dry_run:
+            logger.debug(response.text)
+            return response.json()
 
-    def move(self, src, dst, suppress_layouts=False):
+    def move(self, src, dst, suppress_layouts=False, fail_fast=False, dry_run=False):
         """
         Move artifact from src to dst
+        Args:
+            src: from
+            dst: to
+            suppress_layouts: suppress cross-layout module path translation during copy
+            fail_fast: parameter will fail and abort the operation upon receiving an error.
+            dry_run: If true, distribution is only simulated.
+
+        Returns:
+            if dry_run==True (dict) response.json() else None
         """
         url = "/".join(
             [
@@ -1111,9 +1191,11 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         params = {
             "to": str(dst.relative_to(dst.drive)).rstrip("/"),
             "suppressLayouts": int(suppress_layouts),
+            "failFast": int(fail_fast),
+            "dry": int(dry_run),
         }
 
-        self.rest_post(
+        response = self.rest_post(
             url,
             params=params,
             session=src.session,
@@ -1121,6 +1203,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=src.cert,
             timeout=src.timeout,
         )
+        if dry_run:
+            logger.debug(response.text)
+            return response.json()
 
     def get_properties(self, pathobj):
         """
@@ -1147,13 +1232,13 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         code = response.status_code
         text = response.text
         if code == 404 and ("Unable to find item" in text or "Not Found" in text):
-            raise OSError(2, "No such file or directory: '%s'" % url)
+            raise OSError(2, f"No such file or directory: '{url}'")
         if code == 404 and "No properties could be found" in text:
             return {}
 
-        response.raise_for_status()
+        raise_for_status(response)
 
-        return json.loads(text)["properties"]
+        return response.json()["properties"]
 
     def set_properties(self, pathobj, props, recursive):
         """
@@ -1172,7 +1257,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         if not recursive:
             params["recursive"] = "0"
 
-        text, code = self.rest_put(
+        response = self.rest_put(
             url,
             params=params,
             session=pathobj.session,
@@ -1181,10 +1266,12 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             timeout=pathobj.timeout,
         )
 
+        code = response.status_code
+        text = response.text
         if code == 404 and ("Unable to find item" in text or "Not Found" in text):
-            raise OSError(2, "No such file or directory: '%s'" % url)
-        if code != 204:
-            raise RuntimeError(text)
+            raise OSError(2, f"No such file or directory: '{url}'")
+
+        raise_for_status(response)
 
     def del_properties(self, pathobj, props, recursive):
         """
@@ -1214,6 +1301,41 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=pathobj.cert,
             timeout=pathobj.timeout,
         )
+
+    def update_properties(self, pathobj, properties, recursive=False):
+        """
+        Update item properties
+
+        Args:
+            pathobj: (ArtifactoryPath) object
+            properties: (dict) properties
+            recursive: (bool) apply recursively or not. For folders
+
+        Returns: None
+        """
+        url = "/".join(
+            [
+                pathobj.drive.rstrip("/"),
+                "api/metadata",
+                str(pathobj.relative_to(pathobj.drive)).strip("/"),
+            ]
+        )
+
+        # construct data according to Artifactory format
+        json_data = {"props": properties}
+
+        params = {"recursive": int(recursive)}
+
+        response = self.rest_patch(
+            url,
+            json_data=json_data,
+            params=params,
+            session=pathobj.session,
+            verify=pathobj.verify,
+            cert=pathobj.cert,
+            timeout=pathobj.timeout,
+        )
+        raise_for_status(response)
 
     def scandir(self, pathobj):
         return _ScandirIter((pathobj.joinpath(x) for x in self.listdir(pathobj)))
@@ -1309,10 +1431,10 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         auth_type = kwargs.get("auth_type")
 
         if apikey:
-            logging.debug("Use XJFrogApiAuth apikey")
+            logger.debug("Use XJFrogApiAuth apikey")
             obj.auth = XJFrogArtApiAuth(apikey=apikey)
         elif token:
-            logging.debug("Use XJFrogArtBearerAuth token")
+            logger.debug("Use XJFrogArtBearerAuth token")
             obj.auth = XJFrogArtBearerAuth(token=token)
         else:
             auth = kwargs.get("auth")
@@ -1445,7 +1567,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         :return: raw object for download
         """
         if self.is_file():
-            raise OSError("Only folders could be archived")
+            raise ArtifactoryException("Only folders could be archived")
 
         if archive_type not in ["zip", "tar", "tar.gz", "tgz"]:
             raise NotImplementedError(archive_type + " is not support by current API")
@@ -1764,6 +1886,32 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                 explode_archive_atomic=explode_archive_atomic,
             )
 
+    def deploy_by_checksum(
+        self,
+        sha1=None,
+        sha256=None,
+        checksum=None,
+        parameters={},
+    ):
+        """
+        Deploy an artifact to the specified destination by checking if the
+        artifact content already exists in Artifactory.
+
+        :param pathobj: ArtifactoryPath object
+        :param sha1: sha1Value
+        :param sha256: sha256Value
+        :param checksum: sha1Value or sha256Value
+        """
+        return self._accessor.deploy(
+            self,
+            fobj=None,
+            sha1=sha1,
+            sha256=sha256,
+            checksum=checksum,
+            by_checksum=True,
+            parameters=parameters,
+        )
+
     def deploy_deb(
         self, file_name, distribution, component, architecture, parameters={}
     ):
@@ -1786,7 +1934,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         self.deploy_file(file_name, parameters=params)
 
-    def copy(self, dst, suppress_layouts=False):
+    def copy(self, dst, suppress_layouts=False, fail_fast=False, dry_run=False):
         """
         Copy artifact from this path to destination.
         If files are on the same instance of artifactory, lightweight (local)
@@ -1797,6 +1945,9 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         repository layouts. The default behaviour is to copy to the repository
         root, but remap the [org], [module], [baseVer], etc. structure to the
         target repository.
+
+        fail_fast: parameter will fail and abort the operation upon receiving an error.
+        dry_run: If true, distribution is only simulated.
 
         For example, if we have a builds repository using the default maven2
         repository where we publish our builds. We also have a published
@@ -1832,27 +1983,62 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         http://example.com/artifactory/published/production/foo-0.0.1.pom
         http://example.com/artifactory/published/production/product-1.0.0.tar.gz
         http://example.com/artifactory/published/production/product-1.0.0.tar.pom
+
+        Returns:
+            if dry_run==True (dict) response.json() else None
         """
         if self.drive.rstrip("/") == dst.drive.rstrip("/"):
-            self._accessor.copy(self, dst, suppress_layouts=suppress_layouts)
+            output = self._accessor.copy(
+                self,
+                dst,
+                suppress_layouts=suppress_layouts,
+                fail_fast=fail_fast,
+                dry_run=dry_run,
+            )
+            return output
         else:
-            with self.open() as fobj:
-                dst.deploy(fobj)
+            stat = self.stat()
+            if stat.is_dir:
+                raise ArtifactoryException(
+                    "Only files could be copied across different instances"
+                )
 
-    def move(self, dst, suppress_layouts=False):
+            if dry_run:
+                logger.debug(
+                    "Artifactory drive is different. Will do a standard upload"
+                )
+                return
+
+            with self.open() as fobj:
+                dst.deploy(fobj, md5=stat.md5, sha1=stat.sha1, sha256=stat.sha256)
+
+    def move(self, dst, suppress_layouts=False, fail_fast=False, dry_run=False):
         """
-        Move artifact from this path to destinaiton.
+        Move artifact from this path to destination.
 
         The suppress_layouts parameter, when set to True, will allow artifacts
         from one path to be moved directly into another path without enforcing
         repository layouts. The default behaviour is to move the repository
         root, but remap the [org], [module], [baseVer], etc. structure to the
         target repository.
+
+        fail_fast: parameter will fail and abort the operation upon receiving an error.
+        dry_run: If true, distribution is only simulated.
+
+        Returns:
+            if dry_run==True (dict) response.json() else None
         """
         if self.drive.rstrip("/") != dst.drive.rstrip("/"):
             raise NotImplementedError("Moving between instances is not implemented yet")
 
-        self._accessor.move(self, dst)
+        output = self._accessor.move(
+            self,
+            dst,
+            suppress_layouts=suppress_layouts,
+            fail_fast=fail_fast,
+            dry_run=dry_run,
+        )
+        return output
 
     @property
     def properties(self):
@@ -1864,12 +2050,15 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
     @properties.setter
     def properties(self, properties):
         properties_to_remove = set(self.properties) - set(properties)
-        if properties_to_remove:
-            self.del_properties(properties_to_remove, recursive=False)
-        self.set_properties(properties, recursive=False)
+        for prop in properties_to_remove:
+            properties[prop] = None
+        self.update_properties(properties=properties, recursive=False)
 
     @properties.deleter
     def properties(self):
+        """
+        Delete properties
+        """
         self.del_properties(self.properties, recursive=False)
 
     def set_properties(self, properties, recursive=True):
@@ -1885,15 +2074,10 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         if not properties:
             return
 
-        # If URL > 13KB, nginx default raise error '414 Request-URI Too Large'
-        MAX_SIZE = 50
-        if len(properties) > MAX_SIZE:
-            for chunk in chunks(properties, MAX_SIZE):
-                self._accessor.set_properties(self, chunk, recursive)
-        else:
-            self._accessor.set_properties(self, properties, recursive)
+        # Uses update properties since it can consume JSON as input and removes URL limit
+        self.update_properties(properties, recursive=recursive)
 
-    def del_properties(self, properties, recursive=None):
+    def del_properties(self, properties, recursive=False):
         """
         Delete properties listed in properties
 
@@ -1902,7 +2086,20 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         recursive  - on folders property attachment is recursive by default. It is
                      possible to force recursive behavior.
         """
-        return self._accessor.del_properties(self, properties, recursive)
+        properties_to_remove = dict.fromkeys(properties, None)
+        # Uses update properties since it can consume JSON as input and removes URL limit
+        self.update_properties(properties_to_remove, recursive=recursive)
+
+    def update_properties(self, properties, recursive=False):
+        """
+        Update properties, set/update/remove item or folder properties
+        Args:
+            properties: (dict) data to be set
+            recursive: (bool) recursive on folder
+
+        Returns: None
+        """
+        return self._accessor.update_properties(self, properties, recursive)
 
     def aql(self, *args):
         """
@@ -1912,15 +2109,16 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         aql_query_url = "{}/api/search/aql".format(self.drive.rstrip("/"))
         aql_query_text = self.create_aql_text(*args)
-        r = self.session.post(aql_query_url, data=aql_query_text)
-        r.raise_for_status()
-        content = r.json()
+        logger.debug(f"AQL query request text: {aql_query_text}")
+        response = self.session.post(aql_query_url, data=aql_query_text)
+        raise_for_status(response)
+        content = response.json()
         return content["results"]
 
     @staticmethod
     def create_aql_text(*args):
         """
-        Create AQL querty from string or list or dict arguments
+        Create AQL query from string or list or dict arguments
         """
         aql_query_text = ""
         for arg in args:
@@ -1929,6 +2127,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             elif isinstance(arg, list):
                 arg = "({})".format(json.dumps(arg)).replace("[", "").replace("]", "")
             aql_query_text += arg
+
         return aql_query_text
 
     def from_aql(self, result):
@@ -1939,10 +2138,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         result_type = result.get("type")
         if result_type not in ("file", "folder"):
-            raise RuntimeError(
-                "Path object with type '{}' doesn't support. File or folder only".format(
-                    result_type
-                )
+            raise ArtifactoryException(
+                f"Path object with type '{result_type}' doesn't support. File or folder only"
             )
 
         result_path = "{}/{repo}/{path}/{name}".format(self.drive.rstrip("/"), **result)
@@ -1965,7 +2162,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         :param target_repo: target repository
         :param docker_repo: Docker repository to promote
         :param tag: Docker tag to promote
-        :param copy (bool): whether to move the image or copy it
+        :param copy: (bool) whether to move the image or copy it
         :return:
         """
         promote_url = "{}/api/docker/{}/v2/promote".format(
@@ -1977,18 +2174,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             "tag": tag,
             "copy": copy,
         }
-        r = self.session.post(promote_url, json=promote_data)
-        if (
-            r.status_code == 400
-            and "Unsupported docker" in r.text
-            or r.status_code == 403
-            and "No permission" in r.text
-            or r.status_code == 404
-            and "Unable to find" in r.text
-        ):
-            raise ArtifactoryException(r.text)
-        else:
-            r.raise_for_status()
+        response = self.session.post(promote_url, json=promote_data)
+        raise_for_status(response)
 
     @property
     def repo(self):
@@ -2091,11 +2278,11 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             request_url = self.drive.rstrip("/artifactory") + url
         else:
             request_url = self.drive + url
-        r = self.session.get(request_url, auth=self.auth)
-        r.raise_for_status()
-        response = r.json()
+        response = self.session.get(request_url, auth=self.auth)
+        raise_for_status(response)
+        response_json = response.json()
         results = []
-        for i in response:
+        for i in response_json:
             if cls is Repository:
                 item = Repository.create_by_type(i["type"], self, i[key])
             else:

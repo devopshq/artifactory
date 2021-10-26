@@ -6,6 +6,8 @@ import unittest
 
 import dateutil
 import responses
+from responses.matchers import json_params_matcher
+from responses.matchers import query_param_matcher
 
 import artifactory
 from artifactory import ArtifactoryPath
@@ -395,29 +397,42 @@ class PureArtifactoryPathTest(unittest.TestCase):
 
 class ClassSetup(unittest.TestCase):
     def setUp(self):
-        self.file_stat = {
+        self.artifact_url = "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        self.path = ArtifactoryPath(self.artifact_url)
+        self.sha1 = "fc6c9e8ba6eaca4fa97868ac900570282133c095"
+        self.sha256 = "fc6c9e8ba6eaca4fa97868ac900570282133c095fc6c9e8ba6eaca4fa97868ac900570282133c095"
+        # Response for deploying artifact by checksum
+        self.file_stat_without_modification_date = {
             "repo": "ext-release-local",
             "path": "/org/company/tool/1.0/tool-1.0.tar.gz",
             "created": "2014-02-24T21:20:59.999+04:00",
             "createdBy": "someuser",
-            "lastModified": "2014-02-24T21:20:36.000+04:00",
-            "modifiedBy": "anotheruser",
-            "lastUpdated": "2014-02-24T21:20:36.000+04:00",
             "downloadUri": "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz",
             "mimeType": "application/octet-stream",
             "size": "26776462",
             "checksums": {
-                "sha1": "fc6c9e8ba6eaca4fa97868ac900570282133c095",
-                "sha256": "fc6c9e8ba6eaca4fa97868ac900570282133c095fc6c9e8ba6eaca4fa97868ac900570282133c095",
+                "sha1": self.sha1,
+                "sha256": self.sha256,
                 "md5": "2af7d54a09e9c36d704cb3a2de28aff3",
             },
             "originalChecksums": {
-                "sha1": "fc6c9e8ba6eaca4fa97868ac900570282133c095",
-                "sha256": "fc6c9e8ba6eaca4fa97868ac900570282133c095fc6c9e8ba6eaca4fa97868ac900570282133c095",
+                "sha1": self.sha1,
+                "sha256": self.sha256,
                 "md5": "2af7d54a09e9c36d704cb3a2de28aff3",
             },
-            "uri": "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz",
+            "uri": "http://artifactory.local/artifactory/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz",
         }
+
+        # Response for file info api
+        self.file_stat = self.file_stat_without_modification_date.copy()
+        self.file_stat.update(
+            {
+                "lastModified": "2014-02-24T21:20:36.000+04:00",
+                "modifiedBy": "anotheruser",
+                "lastUpdated": "2014-02-24T21:20:36.000+04:00",
+                "uri": "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz",
+            }
+        )
 
         self.dir_stat = {
             "repo": "libs-release-local",
@@ -440,6 +455,10 @@ class ClassSetup(unittest.TestCase):
           },
           "uri" : "http://artifactory.local/artifactory/api/storage/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
         }"""
+
+        self.deploy_by_checksum_error = {
+            "errors": [{"status": 400, "message": "Checksum values not provided"}]
+        }
 
 
 class ArtifactoryAccessorTest(ClassSetup):
@@ -650,17 +669,22 @@ class ArtifactoryAccessorTest(ClassSetup):
         }
 
         path = self._mock_properties_response()
-        path.properties = properties
 
-        # Must delete only removed property
-        # rest delete is a second call, use index 1
-        self.assertEqual(responses.calls[1].request.params["properties"], "removethis")
+        resp_props = properties.copy()
+        resp_props["removethis"] = None
+        self.assertNotEqual(
+            properties, resp_props
+        )  # ensure not update original properties
 
-        # Must put all property
-        self.assertEqual(
-            responses.calls[2].request.params["properties"],
-            "addthis=addthis;test=test_property;time=2018-01-16 12:17:44.135143",
+        responses.add(
+            responses.PATCH,
+            url="http://artifactory.local/artifactory/api/metadata/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz",
+            match=[
+                json_params_matcher({"props": resp_props}),
+                query_param_matcher({"recursive": "0"}),
+            ],
         )
+        path.properties = properties
 
     @responses.activate
     def test_set_properties_without_remove(self):
@@ -678,11 +702,16 @@ class ArtifactoryAccessorTest(ClassSetup):
         }
 
         path = self._mock_properties_response()
-        path.properties = properties
-        self.assertEqual(
-            responses.calls[1].request.params["properties"],
-            "addthis=addthis;removethis=removethis_property;test=test_property;time=2018-01-16 12:17:44.135143",
+        responses.add(
+            responses.PATCH,
+            url="http://artifactory.local/artifactory/api/metadata/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz",
+            match=[
+                json_params_matcher({"props": properties}),
+                query_param_matcher({"recursive": "0"}),
+            ],
         )
+
+        path.properties = properties
 
     @staticmethod
     def _mock_properties_response():
@@ -712,18 +741,6 @@ class ArtifactoryAccessorTest(ClassSetup):
                 "properties": reference_props,
                 "uri": constructed_url,
             },
-        )
-        responses.add(
-            responses.DELETE,
-            constructed_url,
-            status=204,
-            body="",
-        )
-        responses.add(
-            responses.PUT,
-            constructed_url,
-            status=204,
-            body="",
         )
         return path
 
@@ -895,6 +912,114 @@ class ArtifactoryPathTest(ClassSetup):
 
         self.assertIn("X-Explode-Archive-Atomic", headers)
         self.assertEqual(headers["X-Explode-Archive-Atomic"], "true")
+
+    def test_deploy_by_checksum_sha1(self):
+        """
+        Test that file is deployed by sha1
+        :return:
+        """
+        with responses.RequestsMock() as rsps:
+            rsps.add(
+                responses.PUT,
+                self.artifact_url,
+                json=self.file_stat_without_modification_date,
+                status=200,
+            )
+            self.path.deploy_by_checksum(sha1=self.sha1)
+
+            self.assertEqual(len(rsps.calls), 1)
+            self.assertEqual(rsps.calls[0].request.url, self.artifact_url)
+            headers = rsps.calls[0].request.headers
+            self.assertEqual(headers["X-Checksum-Deploy"], "true")
+            self.assertEqual(headers["X-Checksum-Sha1"], self.sha1)
+            self.assertNotIn("X-Checksum-Sha256", headers)
+            self.assertNotIn("X-Checksum", headers)
+
+    def test_deploy_by_checksum_sha256(self):
+        """
+        Test that file is deployed by sha256
+        :return:
+        """
+        with responses.RequestsMock() as rsps:
+            rsps.add(
+                responses.PUT,
+                self.artifact_url,
+                json=self.file_stat_without_modification_date,
+                status=200,
+            )
+            self.path.deploy_by_checksum(sha256=self.sha256)
+
+            self.assertEqual(len(rsps.calls), 1)
+            self.assertEqual(rsps.calls[0].request.url, self.artifact_url)
+            headers = rsps.calls[0].request.headers
+            self.assertEqual(headers["X-Checksum-Deploy"], "true")
+            self.assertEqual(headers["X-Checksum-Sha256"], self.sha256)
+            self.assertNotIn("X-Checksum-Sha1", headers)
+            self.assertNotIn("X-Checksum", headers)
+
+    def test_deploy_by_checksum_sha1_or_sha256(self):
+        """
+        Test that file is deployed by sha1 or sha256
+        :return:
+        """
+        with responses.RequestsMock() as rsps:
+            rsps.add(
+                responses.PUT,
+                self.artifact_url,
+                json=self.file_stat_without_modification_date,
+                status=200,
+            )
+            self.path.deploy_by_checksum(checksum=self.sha1)
+
+            self.assertEqual(len(rsps.calls), 1)
+            self.assertEqual(rsps.calls[0].request.url, self.artifact_url)
+            headers = rsps.calls[0].request.headers
+            self.assertEqual(headers["X-Checksum-Deploy"], "true")
+            self.assertEqual(headers["X-Checksum"], self.sha1)
+            self.assertNotIn("X-Checksum-Sha1", headers)
+            self.assertNotIn("X-Checksum-Sha256", headers)
+
+        with responses.RequestsMock() as rsps:
+            rsps.add(
+                responses.PUT,
+                self.artifact_url,
+                json=self.file_stat_without_modification_date,
+                status=200,
+            )
+            self.path.deploy_by_checksum(checksum=self.sha256)
+
+            self.assertEqual(len(rsps.calls), 1)
+            self.assertEqual(rsps.calls[0].request.url, self.artifact_url)
+            headers = rsps.calls[0].request.headers
+            self.assertEqual(headers["X-Checksum-Deploy"], "true")
+            self.assertEqual(headers["X-Checksum"], self.sha256)
+            self.assertNotIn("X-Checksum-Sha1", headers)
+            self.assertNotIn("X-Checksum-Sha256", headers)
+
+    def test_deploy_by_checksum_error(self):
+        """
+        Test that file is deployed by checksum, which raises error
+        :return:
+        """
+        with responses.RequestsMock() as rsps:
+            rsps.add(
+                responses.PUT,
+                self.artifact_url,
+                json=self.deploy_by_checksum_error,
+                status=400,
+            )
+            with self.assertRaises(ArtifactoryException) as context:
+                self.path.deploy_by_checksum(sha1=f"{self.sha1}invalid")
+
+            self.assertEqual(str(context.exception), "Checksum values not provided")
+
+            self.assertEqual(len(rsps.calls), 1)
+            self.assertEqual(rsps.calls[0].request.url, self.artifact_url)
+            headers = rsps.calls[0].request.headers
+            self.assertEqual(headers["X-Checksum-Deploy"], "true")
+            self.assertEqual(headers["X-Checksum-Sha1"], f"{self.sha1}invalid")
+            self.assertNotIn("X-Checksum-Sha256", headers)
+            self.assertNotIn("X-Checksum", headers)
 
     @responses.activate
     def test_deploy_deb(self):

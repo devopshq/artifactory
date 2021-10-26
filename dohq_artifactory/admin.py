@@ -1,5 +1,4 @@
 import json
-import logging
 import random
 import re
 import string
@@ -7,24 +6,15 @@ import sys
 import time
 
 import jwt
-import requests
 from dateutil.parser import isoparse
 
 from dohq_artifactory.exception import ArtifactoryException
+from dohq_artifactory.exception import raise_for_status
+from dohq_artifactory.logger import logger
 
 
 def rest_delay():
     time.sleep(0.5)
-
-
-def raise_errors(r):
-    try:
-        r.raise_for_status()
-    except requests.HTTPError as e:
-        if e.response.status_code >= 400:
-            raise ArtifactoryException(e.response.text)
-        else:
-            raise e
 
 
 def _old_function_for_secret(pw_len=16):
@@ -99,7 +89,7 @@ class AdminObject(object):
         Create object
         :return: None
         """
-        logging.debug(
+        logger.debug(
             f"Create {self.__class__.__name__} [{getattr(self, self.resource_name)}]"
         )
         self._create_and_update(self._session.put)
@@ -118,7 +108,7 @@ class AdminObject(object):
             headers={"Content-Type": "application/json"},
             auth=self._auth,
         )
-        raise_errors(r)
+        raise_for_status(r)
         rest_delay()
         self.read()
 
@@ -137,21 +127,21 @@ class AdminObject(object):
         True if object exist,
         False else
         """
-        logging.debug(
+        logger.debug(
             f"Read {self.__class__.__name__} [{getattr(self, self.resource_name)}]"
         )
         request_url = f"{self.base_url}/{self.prefix_uri}/{self._uri}/{getattr(self, self.resource_name)}"
         r = self._session.get(request_url, auth=self._auth)
         if 404 == r.status_code or 400 == r.status_code:
-            logging.debug(
+            logger.debug(
                 f"{self.__class__.__name__} [{getattr(self, self.resource_name)}] does not exist"
             )
             return False
         else:
-            logging.debug(
+            logger.debug(
                 f"{self.__class__.__name__} [{getattr(self, self.resource_name)}] exist"
             )
-            raise_errors(r)
+            raise_for_status(r)
             response = r.json()
             self.raw = response
             self._read_response(response)
@@ -163,18 +153,18 @@ class AdminObject(object):
         :return:
         List of objects
         """
-        # logging.debug('List {x.__class__.__name__} [{x.name}]'.format(x=self))
+        logger.debug(f"List {self.__class__.__name__} [{self.name}]")
         request_url = f"{self.base_url}/{self.prefix_uri}/{self._uri}"
         response = self._session.get(
             request_url,
             auth=self._auth,
         )
         if response.status_code == 200:
-            # logging.debug('{x.__class__.__name__} [{x.name}] does not exist'.format(x=self))
+            logger.debug(f"{self.__class__.__name__} [{self.name}] does not exist")
             json_response = response.json()
             return [item.get(self.resource_name) for item in json_response]
         else:
-            # logging.debug('{x.__class__.__name__} [{x.name}] exist'.format(x=self))
+            logger.debug(f"{self.__class__.__name__} [{self.name}] exist")
             return "failed"
 
     def update(self):
@@ -182,7 +172,7 @@ class AdminObject(object):
         Update object
         :return: None
         """
-        logging.debug(
+        logger.debug(
             f"Create {self.__class__.__name__} [{getattr(self, self.resource_name)}]"
         )
         self._create_and_update(self._session.post)
@@ -192,7 +182,7 @@ class AdminObject(object):
         Remove object
         :return: None
         """
-        logging.debug(
+        logger.debug(
             f"Remove {self.__class__.__name__} [{getattr(self, self.resource_name)}]"
         )
         request_url = f"{self.base_url}/{self.prefix_uri}/{self._uri}/{getattr(self, self.resource_name)}"
@@ -200,7 +190,7 @@ class AdminObject(object):
             request_url,
             auth=self._auth,
         )
-        raise_errors(r)
+        raise_for_status(r)
         rest_delay()
 
 
@@ -301,7 +291,7 @@ class User(AdminObject):
             request_url,
             auth=(self.name, self.password),
         )
-        raise_errors(r)
+        raise_for_status(r)
         return r.text
 
     @property
@@ -483,7 +473,7 @@ class Group(AdminObject):
         TODO: New entrypoint would go like
         /api/groups/delete and consumes ["list", "of", "groupnames"]
         """
-        logging.debug(
+        logger.debug(
             f"Remove {self.__class__.__name__} [{getattr(self, self.resource_name)}]"
         )
         request_url = f"{self.base_url}/{self.prefix_uri}/{self._uri_deletion}/{getattr(self, self.resource_name)}"
@@ -496,13 +486,13 @@ class Group(AdminObject):
         Create object
         :return: None
         """
-        logging.debug(
+        logger.debug(
             f"Create {self.__class__.__name__} [{getattr(self, self.resource_name)}]"
         )
         data_json = self._create_json()
         data_json.update(self.additional_params)
-        request_url = f"{self.base_url}/{self.prefix_uri}/{self._uri}"
-        r = self._session.post(
+        request_url = f"{self.base_url}/{self.prefix_uri}/{self._uri}/{getattr(self, self.resource_name)}"
+        r = self._session.put(
             request_url,
             json=data_json,
             headers={"Content-Type": "application/json"},
@@ -1270,19 +1260,19 @@ class Token(AdminObject):
         True if object exist,
         False else
         """
-        logging.debug(
+        logger.debug(
             f"Read {self.__class__.__name__} [{getattr(self, self.resource_name)}]"
         )
         request_url = f"{self.base_url}/{self.prefix_uri}/{self._uri}"
         r = self._session.get(request_url, auth=self._auth)
         if 404 == r.status_code or 400 == r.status_code:
-            logging.debug(
+            logger.debug(
                 f"{self.__class__.__name__} [{getattr(self, self.resource_name)}] does not exist"
             )
             return False
         else:
-            logging.debug(
-                "{self.__class__.__name__} [{getattr(self, self.resource_name)}] exist"
+            logger.debug(
+                f"{self.__class__.__name__} [{getattr(self, self.resource_name)}] exist"
             )
             r.raise_for_status()
             response = r.json()
@@ -1299,7 +1289,7 @@ class Token(AdminObject):
         POST security/token/revoke
         revoke (calling it deletion to be consistent with other classes) a token
         """
-        logging.debug(
+        logger.debug(
             f"Delete {self.__class__.__name__} [{getattr(self, self.resource_name)}]"
         )
         request_url = f"{self.base_url}/{self.prefix_uri}/{self._uri}/revoke"
@@ -1363,7 +1353,7 @@ class Project(AdminObject):
             headers={"Content-Type": "application/json"},
             auth=self._auth,
         )
-        raise_errors(r)
+        raise_for_status(r)
         rest_delay()
         self.read()
 
@@ -1384,7 +1374,7 @@ class Project(AdminObject):
             headers={"Content-Type": "application/json"},
             auth=self._auth,
         )
-        raise_errors(r)
+        raise_for_status(r)
         rest_delay()
         self.read()
 

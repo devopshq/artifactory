@@ -1,21 +1,41 @@
 #!/usr/bin/env python
 import unittest
 
-import mock
 import requests
+import responses
 
-from dohq_artifactory.admin import raise_errors
 from dohq_artifactory.exception import ArtifactoryException
+from dohq_artifactory.exception import raise_for_status
 
 
 class UtilTest(unittest.TestCase):
     def test_raise_errors(self):
-        r = requests.Response()
-        r.status_code = 400
-        type(r).text = mock.PropertyMock(return_value="asd")
-        with self.assertRaises(ArtifactoryException) as cm:
-            raise_errors(r)
-        self.assertEqual("asd", str(cm.exception))
+        # no JSON body, just HTTP response message
+        with responses.RequestsMock() as mock:
+            url = "http://b.com/artifactory/"
+            mock.add(responses.GET, url, status=403)
+            resp = requests.get("http://b.com/artifactory/")
+
+            with self.assertRaises(ArtifactoryException) as cm:
+                raise_for_status(resp)
+            self.assertEqual(
+                f"403 Client Error: Forbidden for url: {url}", str(cm.exception)
+            )
+
+        # real JSON body, can parse for clean message
+        with responses.RequestsMock() as mock:
+            url = "http://b.com/artifactory/"
+            mock.add(
+                responses.GET,
+                url,
+                status=403,
+                json={"errors": [{"status": 401, "message": "Bad credentials"}]},
+            )
+            resp = requests.get("http://b.com/artifactory/")
+
+            with self.assertRaises(ArtifactoryException) as cm:
+                raise_for_status(resp)
+            self.assertEqual("Bad credentials", str(cm.exception))
 
 
 if __name__ == "__main__":
