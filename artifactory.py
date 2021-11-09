@@ -731,6 +731,38 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         return response
 
     @staticmethod
+    def rest_patch(
+        url,
+        json_data=None,
+        params=None,
+        session=None,
+        verify=True,
+        cert=None,
+        timeout=None,
+    ):
+        """
+        Perform a PATCH request to url with requests.session
+        :param url: url
+        :param json_data: (dict) JSON data to attach to patch request
+        :param params: request parameters
+        :param session:
+        :param verify:
+        :param cert:
+        :param timeout:
+        :return: request response object
+        """
+        url = quote_url(url)
+        response = session.patch(
+            url=url,
+            json=json_data,
+            params=params,
+            verify=verify,
+            cert=cert,
+            timeout=timeout,
+        )
+        return response
+
+    @staticmethod
     def rest_put_stream(
         url,
         stream,
@@ -1269,6 +1301,41 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             cert=pathobj.cert,
             timeout=pathobj.timeout,
         )
+
+    def update_properties(self, pathobj, properties, recursive=False):
+        """
+        Update item properties
+
+        Args:
+            pathobj: (ArtifactoryPath) object
+            properties: (dict) properties
+            recursive: (bool) apply recursively or not. For folders
+
+        Returns: None
+        """
+        url = "/".join(
+            [
+                pathobj.drive.rstrip("/"),
+                "api/metadata",
+                str(pathobj.relative_to(pathobj.drive)).strip("/"),
+            ]
+        )
+
+        # construct data according to Artifactory format
+        json_data = {"props": properties}
+
+        params = {"recursive": int(recursive)}
+
+        response = self.rest_patch(
+            url,
+            json_data=json_data,
+            params=params,
+            session=pathobj.session,
+            verify=pathobj.verify,
+            cert=pathobj.cert,
+            timeout=pathobj.timeout,
+        )
+        raise_for_status(response)
 
     def scandir(self, pathobj):
         return _ScandirIter((pathobj.joinpath(x) for x in self.listdir(pathobj)))
@@ -1987,12 +2054,15 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
     @properties.setter
     def properties(self, properties):
         properties_to_remove = set(self.properties) - set(properties)
-        if properties_to_remove:
-            self.del_properties(properties_to_remove, recursive=False)
-        self.set_properties(properties, recursive=False)
+        for prop in properties_to_remove:
+            properties[prop] = None
+        self.update_properties(properties=properties, recursive=False)
 
     @properties.deleter
     def properties(self):
+        """
+        Delete properties
+        """
         self.del_properties(self.properties, recursive=False)
 
     def set_properties(self, properties, recursive=True):
@@ -2008,15 +2078,10 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         if not properties:
             return
 
-        # If URL > 13KB, nginx default raise error '414 Request-URI Too Large'
-        MAX_SIZE = 50
-        if len(properties) > MAX_SIZE:
-            for chunk in chunks(properties, MAX_SIZE):
-                self._accessor.set_properties(self, chunk, recursive)
-        else:
-            self._accessor.set_properties(self, properties, recursive)
+        # Uses update properties since it can consume JSON as input and removes URL limit
+        self.update_properties(properties, recursive=recursive)
 
-    def del_properties(self, properties, recursive=None):
+    def del_properties(self, properties, recursive=False):
         """
         Delete properties listed in properties
 
@@ -2025,7 +2090,20 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         recursive  - on folders property attachment is recursive by default. It is
                      possible to force recursive behavior.
         """
-        return self._accessor.del_properties(self, properties, recursive)
+        properties_to_remove = dict.fromkeys(properties, None)
+        # Uses update properties since it can consume JSON as input and removes URL limit
+        self.update_properties(properties_to_remove, recursive=recursive)
+
+    def update_properties(self, properties, recursive=False):
+        """
+        Update properties, set/update/remove item or folder properties
+        Args:
+            properties: (dict) data to be set
+            recursive: (bool) recursive on folder
+
+        Returns: None
+        """
+        return self._accessor.update_properties(self, properties, recursive)
 
     def aql(self, *args):
         """
