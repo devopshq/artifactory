@@ -34,7 +34,3 @@ repos:
       - id: markdown-toc
         name: CONTRIBUTE.md
         files: CONTRIBUTE.md$
-  - repo: https://github.com/alphagov/verify-travis-pre-commit-hook
-    rev: 2d69b57aa5e58dd31c01002ae4abcdf9b54549a1
-    hooks:
-      - id: travis-yml-lint
