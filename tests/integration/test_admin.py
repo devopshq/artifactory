@@ -127,7 +127,7 @@ class TestLocalRepositories:
             test_repo.delete()
 
         test_repo = RepositoryLocal(
-            artifactory=artifactory, name=name, packageType=RepositoryLocal.DEBIAN
+            artifactory=artifactory, name=name, package_type=RepositoryLocal.DEBIAN
         )
         # CREATE
         test_repo.create()

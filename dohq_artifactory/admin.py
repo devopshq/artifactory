@@ -4,6 +4,7 @@ import re
 import string
 import sys
 import time
+import warnings
 
 import jwt
 from dateutil.parser import isoparse
@@ -54,6 +55,10 @@ if sys.version_info < (3, 6):
     generate_password = _old_function_for_secret
 else:
     generate_password = _new_function_with_secret_module
+
+
+def deprecation(message):
+    warnings.warn(message, DeprecationWarning, stacklevel=2)
 
 
 class AdminObject(object):
@@ -219,7 +224,7 @@ class User(AdminObject):
         self.internal_password_disabled = False
         self._groups = []
 
-        self._lastLoggedIn = None
+        self._last_logged_in = None
         self._realm = None
 
     def _create_json(self):
@@ -250,7 +255,7 @@ class User(AdminObject):
         self.disable_ui_access = response.get("disableUIAccess")
         self.internal_password_disabled = response.get("internalPasswordDisabled")
         self._groups = response.get("groups", [])
-        self._lastLoggedIn = (
+        self._last_logged_in = (
             isoparse(response["lastLoggedIn"]) if response.get("lastLoggedIn") else None
         )
         self._realm = response.get("realm")
@@ -261,6 +266,7 @@ class User(AdminObject):
         Method for backwards compatibility, see property encrypted_password
         :return:
         """
+        deprecation("encryptedPassword is deprecated, use encrypted_password")
         return self.encrypted_password
 
     @property
@@ -296,7 +302,16 @@ class User(AdminObject):
 
     @property
     def lastLoggedIn(self):
-        return self._lastLoggedIn
+        """
+        Method for backwards compatibility, see property last_logged_in
+        :return:
+        """
+        deprecation("lastLoggedIn is deprecated, use last_logged_in")
+        return self.last_logged_in
+
+    @property
+    def last_logged_in(self):
+        return self._last_logged_in
 
     @property
     def realm(self):
@@ -526,7 +541,7 @@ class GenericRepository(AdminObject):
         return self._artifactory.joinpath(self.name)
 
     def _generate_query(self, package):
-        if self.packageType == Repository.DOCKER:
+        if self.package_type == Repository.DOCKER:
             parts = package.split(":")
 
             name = parts[0]
@@ -536,7 +551,7 @@ class GenericRepository(AdminObject):
 
             return {"name": "manifest.json", "path": {"$match": package}}
 
-        if self.packageType == Repository.PYPI and "/" not in package:
+        if self.package_type == Repository.PYPI and "/" not in package:
             operators = {
                 "<=": "$lte",
                 "<": "$lt",
@@ -557,7 +572,7 @@ class GenericRepository(AdminObject):
 
             return {"@pypi.name": {"$match": package}}
 
-        if self.packageType == Repository.MAVEN and "/" not in package:
+        if self.package_type == Repository.MAVEN and "/" not in package:
             package = package.replace("#", ":")
 
             parts = list(package.split(":"))
@@ -577,7 +592,7 @@ class GenericRepository(AdminObject):
             "$or": [
                 {"name": {"$match": package}},
                 {"path": {"$match": package}},
-                {"@{}.name".format(self.packageType): {"$match": package}},
+                {"@{}.name".format(self.package_type): {"$match": package}},
                 {"@build.name": {"$match": package}},
                 {"artifact.module.build.name": {"$match": package}},
             ]
@@ -636,7 +651,7 @@ class GenericRepository(AdminObject):
 
 
 class Repository(GenericRepository):
-    # List packageType from wiki:
+    # List package_type from wiki:
     # https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON#RepositoryConfigurationJSON-application/vnd.org.jfrog.artifactory.repositories.LocalRepositoryConfiguration+json
     ALPINE = "alpine"
     BOWER = "bower"
@@ -654,11 +669,6 @@ class Repository(GenericRepository):
     HELM = "helm"
     IVY = "ivy"
     MAVEN = "maven"
-    SBT = "sbt"
-    HELM = "helm"
-    RPM = "rpm"
-    NUGET = "nuget"
-    GEMS = "gems"
     NPM = "npm"
     NUGET = "nuget"
     PUPPET = "puppet"
@@ -667,20 +677,46 @@ class Repository(GenericRepository):
     SBT = "sbt"
     YUM = "yum"
 
-    # List dockerApiVersion from wiki:
+    # List docker_api_version from wiki:
     V1 = "V1"
     V2 = "V2"
 
     @staticmethod
-    def create_by_type(type: str, artifactory, name):
-        if type == "LOCAL":
+    def create_by_type(repo_type="LOCAL", artifactory=None, name=None, *, type=None):
+        if type is not None:
+            deprecation("'type' argument is deprecated, use 'repo_type'")
+            repo_type = type
+
+        if repo_type == "LOCAL":
             return RepositoryLocal(artifactory, name)
-        elif type == "REMOTE":
+        elif repo_type == "REMOTE":
             return RepositoryRemote(artifactory, name)
-        elif type == "VIRTUAL":
+        elif repo_type == "VIRTUAL":
             return RepositoryVirtual(artifactory, name)
         else:
             return None
+
+    @property
+    def packageType(self):
+        deprecation("packageType is deprecated, use package_type")
+        return self.package_type
+
+    @property
+    def repoLayoutRef(self):
+        deprecation("repoLayoutRef is deprecated, use repo_layout_ref")
+        return self.repo_layout_ref
+
+    @property
+    def dockerApiVersion(self):
+        deprecation("dockerApiVersion is deprecated, use docker_api_version")
+        return self.docker_api_version
+
+    @property
+    def archiveBrowsingEnabled(self):
+        deprecation(
+            "archiveBrowsingEnabled is deprecated, use archive_browsing_enabled"
+        )
+        return self.archive_browsing_enabled
 
 
 class RepositoryLocal(Repository):
@@ -694,19 +730,30 @@ class RepositoryLocal(Repository):
         self,
         artifactory,
         name,
-        packageType=Repository.GENERIC,
-        dockerApiVersion=Repository.V1,
-        repoLayoutRef="maven-2-default",
+        package_type=Repository.GENERIC,
+        docker_api_version=Repository.V1,
+        repo_layout_ref="maven-2-default",
         max_unique_tags=0,
+        *,
+        packageType=None,
+        dockerApiVersion=None,
+        repoLayoutRef=None,
     ):
         super(RepositoryLocal, self).__init__(artifactory)
         self.name = name
         self.description = ""
-        self.packageType = packageType
-        self.repoLayoutRef = repoLayoutRef
-        self.archiveBrowsingEnabled = True
-        self.dockerApiVersion = dockerApiVersion
+        self.package_type = packageType or package_type
+        self.repo_layout_ref = repoLayoutRef or repo_layout_ref
+        self.archive_browsing_enabled = True
+        self.docker_api_version = dockerApiVersion or docker_api_version
         self.max_unique_tags = max_unique_tags
+
+        if any([packageType, dockerApiVersion, repoLayoutRef]):
+            msg = (
+                "packageType, dockerApiVersion, repoLayoutRef are deprecated, "
+                "use package_type, docker_api_version, repo_layout_ref"
+            )
+            deprecation(msg)
 
     def _create_json(self):
         """
@@ -716,12 +763,12 @@ class RepositoryLocal(Repository):
             "rclass": "local",
             "key": self.name,
             "description": self.description,
-            "packageType": self.packageType,
+            "packageType": self.package_type,
             "notes": "",
             "includesPattern": "**/*",
             "excludesPattern": "",
-            "repoLayoutRef": self.repoLayoutRef,
-            "dockerApiVersion": self.dockerApiVersion,
+            "repoLayoutRef": self.repo_layout_ref,
+            "dockerApiVersion": self.docker_api_version,
             "checksumPolicyType": "client-checksums",
             "handleReleases": True,
             "handleSnapshots": True,
@@ -730,13 +777,13 @@ class RepositoryLocal(Repository):
             "suppressPomConsistencyChecks": True,
             "blackedOut": False,
             "propertySets": [],
-            "archiveBrowsingEnabled": self.archiveBrowsingEnabled,
+            "archiveBrowsingEnabled": self.archive_browsing_enabled,
             "yumRootDepth": 0,
         }
         """
         Docker V2 API specific fields
         """
-        if self.dockerApiVersion == Repository.V2:
+        if self.docker_api_version == Repository.V2:
             data_json["maxUniqueTags"] = self.max_unique_tags
 
         return data_json
@@ -755,9 +802,9 @@ class RepositoryLocal(Repository):
 
         self.name = response["key"]
         self.description = response.get("description")
-        self.packageType = response.get("packageType")
-        self.repoLayoutRef = response.get("repoLayoutRef")
-        self.archiveBrowsingEnabled = response.get("archiveBrowsingEnabled")
+        self.package_type = response.get("packageType")
+        self.repo_layout_ref = response.get("repoLayoutRef")
+        self.archive_browsing_enabled = response.get("archiveBrowsingEnabled")
 
 
 class RepositoryVirtual(GenericRepository):
@@ -790,14 +837,25 @@ class RepositoryVirtual(GenericRepository):
         artifactory,
         name,
         repositories=None,
-        packageType=Repository.GENERIC,
+        package_type=Repository.GENERIC,
+        *,
+        packageType=None,
     ):
         super(RepositoryVirtual, self).__init__(artifactory)
         self.name = name
         self.description = ""
         self.notes = ""
-        self.packageType = packageType
+        self.package_type = packageType or package_type
         self.repositories = repositories or []
+
+        if packageType:
+            msg = "packageType is deprecated, use package_type"
+            deprecation(msg)
+
+    @property
+    def packageType(self):
+        deprecation("packageType is deprecated, use package_type")
+        return self.package_type
 
     def _create_json(self):
         """
@@ -807,7 +865,7 @@ class RepositoryVirtual(GenericRepository):
             "rclass": "virtual",
             "key": self.name,
             "description": self.description,
-            "packageType": self.packageType,
+            "packageType": self.package_type,
             "repositories": self._repositories,
             "notes": self.notes,
         }
@@ -828,7 +886,7 @@ class RepositoryVirtual(GenericRepository):
 
         self.name = response["key"]
         self.description = response.get("description")
-        self.packageType = response.get("packageType")
+        self.package_type = response.get("packageType")
         self._repositories = response.get("repositories")
 
     def add_repository(self, *repos):
@@ -871,18 +929,29 @@ class RepositoryRemote(Repository):
         artifactory,
         name,
         url=None,
-        packageType=Repository.GENERIC,
-        dockerApiVersion=Repository.V1,
-        repoLayoutRef="maven-2-default",
+        package_type=Repository.GENERIC,
+        docker_api_version=Repository.V1,
+        repo_layout_ref="maven-2-default",
+        *,
+        packageType=None,
+        dockerApiVersion=None,
+        repoLayoutRef=None,
     ):
         super(RepositoryRemote, self).__init__(artifactory)
         self.name = name
         self.description = ""
-        self.packageType = packageType
-        self.repoLayoutRef = repoLayoutRef
-        self.archiveBrowsingEnabled = True
-        self.dockerApiVersion = dockerApiVersion
+        self.package_type = packageType or package_type
+        self.repo_layout_ref = repoLayoutRef or repo_layout_ref
+        self.archive_browsing_enabled = True
+        self.docker_api_version = dockerApiVersion or docker_api_version
         self.url = url
+
+        if any([packageType, dockerApiVersion, repoLayoutRef]):
+            msg = (
+                "packageType, dockerApiVersion, repoLayoutRef are deprecated, "
+                "use package_type, docker_api_version, repo_layout_ref"
+            )
+            deprecation(msg)
 
     def _create_json(self):
         """
@@ -892,12 +961,12 @@ class RepositoryRemote(Repository):
             "rclass": "remote",
             "key": self.name,
             "description": self.description,
-            "packageType": self.packageType,
+            "packageType": self.package_type,
             "notes": "",
             "includesPattern": "**/*",
             "excludesPattern": "",
-            "repoLayoutRef": self.repoLayoutRef,
-            "dockerApiVersion": self.dockerApiVersion,
+            "repoLayoutRef": self.repo_layout_ref,
+            "dockerApiVersion": self.docker_api_version,
             "checksumPolicyType": "client-checksums",
             "handleReleases": True,
             "handleSnapshots": True,
@@ -906,7 +975,7 @@ class RepositoryRemote(Repository):
             "suppressPomConsistencyChecks": True,
             "blackedOut": False,
             "propertySets": [],
-            "archiveBrowsingEnabled": self.archiveBrowsingEnabled,
+            "archiveBrowsingEnabled": self.archive_browsing_enabled,
             "yumRootDepth": 0,
             "url": self.url,
             "debianTrivialLayout": False,
@@ -933,9 +1002,9 @@ class RepositoryRemote(Repository):
 
         self.name = response["key"]
         self.description = response.get("description")
-        self.packageType = response.get("packageType")
-        self.repoLayoutRef = response.get("repoLayoutRef")
-        self.archiveBrowsingEnabled = response.get("archiveBrowsingEnabled")
+        self.package_type = response.get("packageType")
+        self.repo_layout_ref = response.get("repoLayoutRef")
+        self.archive_browsing_enabled = response.get("archiveBrowsingEnabled")
         self.url = response.get("url")
 
 
