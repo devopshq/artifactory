@@ -1,12 +1,12 @@
-# This workflow will upload a Python Package using Twine when a release is created
-# For more information see: https://help.github.com/en/actions/language-and-framework-guides/using-python-with-github-actions#publishing-to-package-registries
-
+# This workflow will be triggered when new TAG is pushed. It will create version.txt file with tag name
+# Then workflow will publish a package to PyPi with version from version.txt
 
 name: Upload Python Package
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - '*'
 
 jobs:
   deploy:
@@ -23,6 +23,15 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install build
+
+    - name: Set version
+      run: |
+          echo ${{ github.ref_name }} > version.txt
+
+    - name: Test version.txt file
+      run: |
+          python -m unittest tests.test_version
+
     - name: Build package
       run: python -m build
     - name: Publish package
