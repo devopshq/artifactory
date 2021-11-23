@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
+import re
 
 try:
     from setuptools import setup
@@ -10,6 +10,9 @@ except ImportError:
 
 with open("version.txt") as file:
     __version__ = next(file).strip()
+
+# just double check that version is correct
+assert re.match(r"^v\d\.\d\.\d$|^v\d\.\d\.\d\.dev\d+$", __version__)
 
 # default build status, see: https://pypi.python.org/pypi?%3Aaction=list_classifiers
 if "dev" in __version__:

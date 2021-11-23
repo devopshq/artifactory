@@ -1,4 +1,5 @@
 import os
+import re
 import unittest
 
 
@@ -12,4 +13,4 @@ class TestVersion(unittest.TestCase):
             print("\n\nVersion is", version)
 
         # check that version matches vX.X.X or vX.X.X.devXXX
-        self.assertRegex(version, r"\d\.\d\.\d$|\d\.\d\.\d\.dev\d+$")
+        assert re.match(r"^v\d\.\d\.\d$|^v\d\.\d\.\d\.dev\d+$", version)
