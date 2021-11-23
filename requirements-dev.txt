@@ -9,4 +9,4 @@ flake8
 pre-commit
 tox
 PyJWT
-responses
+responses>=0.14.0
