@@ -30,7 +30,10 @@ jobs:
 
     - name: Test version.txt file
       run: |
-          python -m unittest tests.test_version
+          if [ ! -f version.txt ]; then
+              echo "version.txt does not exist"
+              exit 1
+          fi
 
     - name: Build package
       run: python -m build
