@@ -12,11 +12,10 @@ try:
     with open("version.txt") as file:
         __version__ = file.readline().strip()
 
-    # check that version is correct (vX.X.X or vX.X.X.devXXX), eg v0.8.0.dev0
-    assert re.match(r"^v\d\.\d\.\d$|^v\d\.\d\.\d\.dev\d+$", __version__)
+    # check that version is correct (X.X.X or X.X.X.devXXX), eg 0.8.0.dev0
+    assert re.match(r"^\d\.\d\.\d$|^\d\.\d\.\d\.dev\d+$", __version__)
 except FileNotFoundError:
     # when user installs via pip install git+https://github.com/devopshq/artifactory.git
-    # this should be discouraged, publish dev package instead
     __version__ = "0.8.0.alpha0"
 
 # default build status, see: https://pypi.python.org/pypi?%3Aaction=list_classifiers
