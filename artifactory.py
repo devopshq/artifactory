@@ -599,6 +599,7 @@ ArtifactoryFileStat = collections.namedtuple(
         "md5",
         "is_dir",
         "children",
+        "repo",
     ],
 )
 
@@ -862,6 +863,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             md5=checksums.get("md5", None),
             is_dir=is_dir,
             children=children,
+            repo=jsn.get("repo", None),
         )
 
         return stat
