@@ -603,6 +603,18 @@ ArtifactoryFileStat = collections.namedtuple(
     ],
 )
 
+ArtifactoryDownloadStat = collections.namedtuple(
+    "ArtifactoryDownloadStat",
+    [
+        "last_downloaded",
+        "download_count",
+        "last_downloaded_by",
+        "remote_download_count",
+        "remote_last_downloaded",
+        "uri",
+    ],
+)
+
 
 class _ScandirIter:
     """
@@ -805,11 +817,18 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         raise_for_status(response)
         return response
 
-    def get_stat_json(self, pathobj):
+    def get_stat_json(self, pathobj, key=None):
         """
         Request remote file/directory status info
         Returns a json object as specified by Artifactory REST API
+        Args:
+            pathobj: ArtifactoryPath for which we request data
+            key: (str) (optional) additional key to specify query, eg 'stats', 'lastModified'
+
+        Returns:
+            (dict) stat dictionary
         """
+
         url = "/".join(
             [
                 pathobj.drive.rstrip("/"),
@@ -824,6 +843,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             verify=pathobj.verify,
             cert=pathobj.cert,
             timeout=pathobj.timeout,
+            params=key,
         )
         code = response.status_code
         text = response.text
@@ -864,6 +884,24 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             is_dir=is_dir,
             children=children,
             repo=jsn.get("repo", None),
+        )
+
+        return stat
+
+    def download_stats(self, pathobj):
+        jsn = self.get_stat_json(pathobj, key="stats")
+
+        # divide timestamp by 1000 since it is provided in ms
+        download_time = datetime.datetime.fromtimestamp(
+            jsn.get("lastDownloaded", 0) / 1000
+        )
+        stat = ArtifactoryDownloadStat(
+            last_downloaded=download_time,
+            last_downloaded_by=jsn.get("lastDownloadedBy", None),
+            download_count=jsn.get("downloadCount", None),
+            remote_download_count=jsn.get("remoteDownloadCount", None),
+            remote_last_downloaded=jsn.get("remoteLastDownloaded", None),
+            uri=jsn.get("uri", None),
         )
 
         return stat
@@ -1539,6 +1577,18 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         pathobj = pathobj or self
         return self._accessor.stat(pathobj=pathobj)
+
+    def download_stats(self, pathobj=None):
+        """
+         Item statistics record the number of times an item was downloaded, last download date and last downloader.
+        Args:
+            pathobj: (optional) path object for which to retrieve stats
+
+        Returns:
+
+        """
+        pathobj = pathobj or self
+        return self._accessor.download_stats(pathobj=pathobj)
 
     def with_name(self, name):
         """
