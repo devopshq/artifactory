@@ -26,6 +26,7 @@ jobs:
 
     - name: Set version
       run: |
+          rm -f version.txt
           echo ${{ github.ref_name }} > version.txt
 
     - name: Test version.txt file

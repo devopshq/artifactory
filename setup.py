@@ -8,18 +8,19 @@ except ImportError:
     from distutils.core import setup
 
 
-try:
-    with open("version.txt") as file:
-        __version__ = file.readline().strip()
+with open("version.txt") as file:
+    __version__ = file.readline().strip()
 
-    # check that version is correct (X.X.X or X.X.X.devXXX), eg 0.8.0.dev0
-    assert re.match(r"^\d\.\d\.\d$|^\d\.\d\.\d\.dev\d+$", __version__)
-except FileNotFoundError:
-    # when user installs via pip install git+https://github.com/devopshq/artifactory.git
-    __version__ = "0.8.0.alpha0"
+# check that version is correct (X.X.X or X.X.X.devXXX or X.X.X.alphaX), eg 0.8.0.dev0
+assert re.match(
+    r"^\d\.\d\.\d$|^\d\.\d\.\d\.dev\d+$|^\d\.\d\.\d\.alpha\d+$", __version__
+)
+
 
 # default build status, see: https://pypi.python.org/pypi?%3Aaction=list_classifiers
-if "dev" in __version__ or "alpha" in __version__:
+if "alpha" in __version__:
+    dev_status = "3 - Alpha"
+elif "dev" in __version__:
     dev_status = "4 - Beta"
 else:
     dev_status = "5 - Production/Stable"
