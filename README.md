@@ -39,7 +39,9 @@ package.
   * [Artifact properties](#artifact-properties)
   * [Repository Scheduled Replication Status](#repository-scheduled-replication-status)
   * [Artifactory Query Language](#artifactory-query-language)
-  * [FileStat](#filestat)
+  * [Artifact Stat](#artifact-stat)
+    + [File/Folder Statistics](#filefolder-statistics)
+    + [Get Download Statistics](#get-download-statistics)
   * [Promote Docker image](#promote-docker-image)
   * [Builds](#builds)
   * [Exception handling](#exception-handling)
@@ -586,8 +588,9 @@ artifact_pathlib_list = list(map(arti_path.from_aql, artifacts_list))
 ```
 
 
-## FileStat
-You can get hash (`md5`, `sha1`, `sha256`), create date, and change date:
+## Artifact Stat
+### File/Folder Statistics
+You can get hash (`md5`, `sha1`, `sha256`), creator, create date, and change date:
 
 ```python
 from artifactory import ArtifactoryPath
@@ -605,6 +608,27 @@ print(stat.sha256)
 print(stat.ctime)
 print(stat.is_dir)
 print(stat.size)
+print(stat.created_by)
+```
+
+### Get Download Statistics
+Information about number of downloads, user that last downloaded and date of last download
+```python
+from artifactory import ArtifactoryPath
+
+path = ArtifactoryPath(
+    "http://repo.jfrog.org/artifactory/distributions/org/apache/tomcat/apache-tomcat-7.0.11.tar.gz"
+)
+
+# Get FileStat
+download_stat = path.download_stats()
+print(download_stat)
+print(download_stat.last_downloaded)
+print(download_stat.last_downloaded_by)
+print(download_stat.download_count)
+print(download_stat.remote_download_count)
+print(download_stat.remote_last_downloaded)
+print(download_stat.uri)
 ```
 
 ## Promote Docker image
@@ -618,10 +642,12 @@ path.promote_docker_image("docker-staging", "docker-prod", "my-application", "0.
 ```
 
 ## Builds
-~~~python
+```python
 from artifactory import ArtifactoryBuildManager
 
-arti_build = ArtifactoryBuildManager("https://repo.jfrog.org/artifactory", project="proj_name", auth=("admin", "admin"))
+arti_build = ArtifactoryBuildManager(
+    "https://repo.jfrog.org/artifactory", project="proj_name", auth=("admin", "admin")
+)
 
 # Get all builds
 all_builds = arti_build.builds
@@ -651,22 +677,21 @@ print(build_number1.diff(3))
   All artifacts from all scopes are included by default while dependencies are not. Scopes are additive (or)
 """
 
-build_number1.promote(ci_user="admin", properties={                               
-     "components": ["c1","c3","c14"],
-     "release-name": ["fb3-ga"]
- })
-~~~
+build_number1.promote(
+    ci_user="admin",
+    properties={"components": ["c1", "c3", "c14"], "release-name": ["fb3-ga"]},
+)
+```
 
 ## Exception handling
 Exceptions in this library are represented by `dohq_artifactory.exception.ArtifactoryException` or by `OSError`
 If exception was caused by HTTPError you can always drill down the root cause by using following example:
-~~~python
+```python
 from artifactory import ArtifactoryPath
 from dohq_artifactory.exception import ArtifactoryException
 
 path = ArtifactoryPath(
-    "http://my_arti:8080/artifactory/installer/",
-    auth=("wrong_user", "wrong_pass")
+    "http://my_arti:8080/artifactory/installer/", auth=("wrong_user", "wrong_pass")
 )
 
 try:
@@ -674,9 +699,11 @@ try:
 except ArtifactoryException as exc:
     print(exc)  # clean artifactory error message
     # >>> Bad credentials
-    print(exc.__cause__)  # HTTP error that triggered exception, you can use this object for more info
+    print(
+        exc.__cause__
+    )  # HTTP error that triggered exception, you can use this object for more info
     # >>> 401 Client Error: Unauthorized for url: http://my_arti:8080/artifactory/installer/
-~~~
+```
 
 # Admin area
 You can manipulate with user\group\repository and permission. First, create `ArtifactoryPath` object without a repository
@@ -728,7 +755,7 @@ user.delete()
 ```
 
 ### API Keys
-~~~python
+```python
 from dohq_artifactory import User
 
 user = User(artifactory_, "username")
@@ -751,7 +778,7 @@ user.api_key.revoke()
 
 # remove all API keys in system, only if user has admin rights
 user.api_key.revoke_for_all_users()
-~~~
+```
 
 ## Group
 ### Internal
@@ -1361,18 +1388,18 @@ path = ArtifactoryPath(
 The library can be configured to emit logging that will give you better insight into what it's doing.
 Just configure [logging](https://docs.python.org/3/library/logging.html) module in your python script. 
 Simplest example to add debug messages to a console:
-~~~python
+```python
 import logging
 from artifactory import ArtifactoryPath
 
 logging.basicConfig()
 # set level only for artifactory module, if omitted, then global log level is used, eg from basicConfig
-logging.getLogger('artifactory').setLevel(logging.DEBUG)
+logging.getLogger("artifactory").setLevel(logging.DEBUG)
 
 path = ArtifactoryPath(
     "http://my-artifactory/artifactory/myrepo/restricted-path", apikey="MY_API_KEY"
 )
-~~~
+```
 
 
 ## Global Configuration File ##
