@@ -1,12 +1,9 @@
--e .
-
-pathlib; python_version<"3.4"
 requests
 python-dateutil
+PyJWT
 pytest
 mock
 flake8
 pre-commit
 tox
-PyJWT
-responses
+responses>=0.14.0
