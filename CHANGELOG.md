@@ -1,3 +1,6 @@
+## 0.8.1  (Work In Progress)
+- 
+
 ## 0.8.0
 - Add a method to get download statistics for a path - `path.download_stats()`
 - Add `path.deploy_by_checksum(...)` method
