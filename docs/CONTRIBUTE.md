@@ -16,8 +16,7 @@ We will be grateful to see you in the ranks of the contributors! We have [some i
 Development takes place on GitHub, where the git-flow branch structure is used:
 
 * ``master`` - contains the latest released code.
-* ``develop`` - is used for development of the next release. **Pull request must be in this branch**
-* ``feature/XXX`` - feature branches are used for development of new features before they are merged to ``develop``.
+* ``feature/XXX`` - feature branches are used for development of new features before they are merged to ``master``.
 
 ### Prepare development environment
 It is recommended to use Unix systems. You can use free Oracle Virtualbox and Ubuntu.  
