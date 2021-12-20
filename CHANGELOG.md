@@ -3,8 +3,8 @@
 
 ## 0.8.0
 - Add Python 3.10 support
-- Add a method to get download statistics for a path - `path.download_stats()`
-- Add `path.deploy_by_checksum(...)` method
+- Add a method to get download statistics for a path - `path.download_stats()` (#288)
+- Add `path.deploy_by_checksum(...)` method (#27)
 - Raises `ArtifactoryException` instead of `requests.HTTPError` (#179)
 - Better logging control with `logging.getLogger("artifactory")` (#235)
 - Allow "verify" in the configuration to be a certfile (#281)
