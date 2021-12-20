@@ -1,3 +1,9 @@
+## 0.8.0
+- Add a method to get download statistics for a path - `path.download_stats()`
+- Add `path.deploy_by_checksum(...)` method
+- Raises `ArtifactoryException` instead of `requests.HTTPError`
+- Better logging control with `logging.getLogger("artifactory")`
+
 ## April, 2018
 - Add Admin Area object - you can add\update\read\delete user, group, repository, permission
 
