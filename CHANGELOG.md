@@ -1,5 +1,5 @@
 ## 0.8.1  (Work In Progress)
-- 
+- Fix recursive properties issue (#326)
 
 ## 0.8.0
 - Add Python 3.10 support
