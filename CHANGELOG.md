@@ -2,10 +2,17 @@
 - 
 
 ## 0.8.0
-- Add a method to get download statistics for a path - `path.download_stats()`
-- Add `path.deploy_by_checksum(...)` method
-- Raises `ArtifactoryException` instead of `requests.HTTPError`
-- Better logging control with `logging.getLogger("artifactory")`
+- Add Python 3.10 support
+- Add a method to get download statistics for a path - `path.download_stats()` (#288)
+- Add `path.deploy_by_checksum(...)` method (#27)
+- Raises `ArtifactoryException` instead of `requests.HTTPError` (#179)
+- Better logging control with `logging.getLogger("artifactory")` (#235)
+- Allow "verify" in the configuration to be a certfile (#281)
+- Update properties now uses PATCH method (#65)
+- Various documentation improvements
+- Added `dry run` option to supported methods (#268)
+- Copy function first tries to copy by checksum (#162)
+
 
 ## April, 2018
 - Add Admin Area object - you can add\update\read\delete user, group, repository, permission
