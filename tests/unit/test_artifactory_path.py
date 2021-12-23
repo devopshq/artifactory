@@ -681,7 +681,12 @@ class ArtifactoryAccessorTest(ClassSetup):
             url="http://artifactory.local/artifactory/api/metadata/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz",
             match=[
                 json_params_matcher({"props": resp_props}),
-                query_param_matcher({"recursive": "0"}),
+                query_param_matcher(
+                    {
+                        "recursive": "0",
+                        "recursiveProperties": "0",
+                    }
+                ),
             ],
         )
         path.properties = properties
@@ -707,7 +712,12 @@ class ArtifactoryAccessorTest(ClassSetup):
             url="http://artifactory.local/artifactory/api/metadata/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz",
             match=[
                 json_params_matcher({"props": properties}),
-                query_param_matcher({"recursive": "0"}),
+                query_param_matcher(
+                    {
+                        "recursive": "0",
+                        "recursiveProperties": "0",
+                    }
+                ),
             ],
         )
 

@@ -1364,7 +1364,10 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         # construct data according to Artifactory format
         json_data = {"props": properties}
 
-        params = {"recursive": int(recursive)}
+        params = {
+            "recursive": int(recursive),
+            "recursiveProperties": int(recursive),  # for version 6 and below
+        }
 
         response = self.rest_patch(
             url,
