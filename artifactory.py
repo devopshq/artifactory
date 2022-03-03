@@ -245,6 +245,12 @@ def sha256sum(filename):
     return sha256.hexdigest()
 
 
+def datetime_xheader(datetime):
+    if isinstance(datetime, datetime.datetime):
+        return str(int(round(1000 * datetime.timestamp())))
+    return datetime
+
+
 def chunks(data, size):
     """
     Get chink for dict, copy as-is from https://stackoverflow.com/a/8290508/6753144
@@ -1109,6 +1115,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         explode_archive_atomic=None,
         checksum=None,
         by_checksum=False,
+        date_created=None,
+        date_last_modified=None,
     ):
         """
         Uploads a given file-like object
@@ -1126,6 +1134,8 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         :param explode_archive_atomic: (bool) if True, archive will be exploded in an atomic operation upon deployment
         :param checksum: sha1Value or sha256Value
         :param by_checksum: (bool) if True, deploy artifact by checksum, default False
+        :param date_created: (optional) datetime or str (POSIX timestamp in milliseconds), overrides Created date
+        :param date_last_modified: (optional) datetime or str (POSIX timestamp in milliseconds), overrides Last Modified date
         """
 
         if fobj and by_checksum:
@@ -1155,6 +1165,12 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             headers["X-Checksum-Deploy"] = "true"
             if checksum:
                 headers["X-Checksum"] = checksum
+        if date_created:
+            headers["X-Artifactory-Created"] = datetime_xheader(date_created)
+        if date_last_modified:
+            headers["X-Artifactory-Last-Modified"] = datetime_xheader(
+                date_last_modified
+            )
 
         self.rest_put_stream(
             url,
@@ -1897,6 +1913,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         parameters={},
         explode_archive=None,
         explode_archive_atomic=None,
+        date_created=None,
+        date_last_modified=None,
     ):
         """
         Upload the given file object to this path
@@ -1910,6 +1928,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             parameters=parameters,
             explode_archive=explode_archive,
             explode_archive_atomic=explode_archive_atomic,
+            date_created=date_created,
+            date_last_modified=date_last_modified,
         )
 
     def deploy_file(
@@ -1921,6 +1941,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         parameters={},
         explode_archive=False,
         explode_archive_atomic=False,
+        date_created=None,
+        date_last_modified=None,
     ):
         """
         Upload the given file to this path
@@ -1943,6 +1965,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                 parameters=parameters,
                 explode_archive=explode_archive,
                 explode_archive_atomic=explode_archive_atomic,
+                date_created=date_created,
+                date_last_modified=date_last_modified,
             )
 
     def deploy_by_checksum(
@@ -1951,6 +1975,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         sha256=None,
         checksum=None,
         parameters={},
+        date_created=None,
+        date_last_modified=None,
     ):
         """
         Deploy an artifact to the specified destination by checking if the
@@ -1969,6 +1995,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             checksum=checksum,
             by_checksum=True,
             parameters=parameters,
+            date_created=date_created,
+            date_last_modified=date_last_modified,
         )
 
     def deploy_deb(
