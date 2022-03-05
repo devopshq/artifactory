@@ -245,7 +245,7 @@ path = ArtifactoryPath(
     "http://my_url:8080/artifactory/my_repo/winx64/aas", auth=("user", "password")
 )
 
-with path.archive(archive_type="zip", check_sum=False) as archive:
+with path.archive(archive_type="zip", check_sum=False).open() as archive:
     with open(r"D:\target.zip", "wb") as out:
         out.write(archive.read())
 
