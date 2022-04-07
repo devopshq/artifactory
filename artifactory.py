@@ -2405,27 +2405,6 @@ class ArtifactorySaaSPath(ArtifactoryPath):
 
     _flavour = _saas_artifactory_flavour
 
-    def chmod(self, mode):
-        """
-        Throw NotImplementedError
-        Changing access rights makes no sense for Artifactory.
-        """
-        raise NotImplementedError()
-
-    def lchmod(self, mode):
-        """
-        Throw NotImplementedError
-        Changing access rights makes no sense for Artifactory.
-        """
-        raise NotImplementedError()
-
-    def symlink_to(self, target, target_is_directory=False):
-        """
-        Throw NotImplementedError
-        Artifactory doesn't have symlinks
-        """
-        raise NotImplementedError()
-
 
 class ArtifactoryBuild:
     __slots__ = ("name", "last_started", "build_manager")
