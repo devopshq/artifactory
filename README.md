@@ -2,7 +2,7 @@
 
 
 [![docs](https://img.shields.io/readthedocs/pip.svg)][1]
-[![dohq-artifactory build Status](https://app.travis-ci.com/devopshq/artifactory.svg?branch=master)][2] 
+[![dohq-artifactory build Status](https://github.com/devopshq/artifactory/workflows/CI/badge.svg?branch=master)][2]
 [![dohq-artifactory on PyPI](https://img.shields.io/pypi/v/dohq-artifactory.svg)][3] 
 [![dohq-artifactory license](https://img.shields.io/pypi/l/dohq-artifactory.svg)][4]
 
@@ -13,7 +13,7 @@ possible to the origin with few exceptions. Current module was forked from outda
 package.
 
 [1]: https://devopshq.github.io/artifactory/
-[2]: https://app.travis-ci.com/devopshq/artifactory
+[2]: https://github.com/devopshq/artifactory/actions/workflows/ci.yml
 [3]: https://pypi.python.org/pypi/dohq-artifactory
 [4]: https://github.com/devopshq/artifactory/blob/master/LICENSE
 [5]: https://www.jfrog.com/confluence/display/JFROG/JFrog+Artifactory
