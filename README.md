@@ -818,7 +818,7 @@ attr = "ldapGroupName=r.devops.testartifactory;groupsStrategy=STATIC;groupDn={}"
     dn
 )
 test_group = GroupLDAP(
-    artifactory=artifactory_, name="r.devops.testartifactory", realmAttributes=attr
+    artifactory=artifactory_, name="r.devops.testartifactory", realm_attributes=attr
 )
 test_group.create()
 ```
