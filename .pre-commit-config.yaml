@@ -22,6 +22,10 @@ repos:
     rev: 4.0.1
     hooks:
       - id: flake8
+  - repo: https://github.com/mgedmin/check-python-versions
+    rev: "0.19.1"
+    hooks:
+      - id: check-python-versions
   - repo: https://github.com/Lucas-C/pre-commit-hooks-nodejs
     rev: v1.1.2
     hooks:
