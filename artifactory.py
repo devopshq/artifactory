@@ -2185,6 +2185,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                 arg = "({})".format(json.dumps(arg))
             elif isinstance(arg, list):
                 arg = "({})".format(json.dumps(arg)).replace("[", "").replace("]", "")
+            elif isinstance(arg, int):
+                arg = "({})".format(arg)
             aql_query_text += arg
 
         return aql_query_text
