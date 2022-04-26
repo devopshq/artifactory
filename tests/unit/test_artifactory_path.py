@@ -1258,9 +1258,17 @@ class TestArtifactoryAql(unittest.TestCase):
         assert aql_text == 'items.find({"repo": "myrepo"})'
 
     def test_create_aql_text_list(self):
-        args = ["items.find()", ".include", ["name", "repo"]]
+        args = [
+            "items.find()",
+            ".include",
+            ["name", "repo"],
+            ".offset",
+            10,
+            ".limit",
+            20,
+        ]
         aql_text = self.aql.create_aql_text(*args)
-        assert aql_text == 'items.find().include("name", "repo")'
+        assert aql_text == 'items.find().include("name", "repo").offset(10).limit(20)'
 
     def test_create_aql_text_list_in_dict(self):
         args = [
