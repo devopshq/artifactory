@@ -54,7 +54,7 @@ setup(
     install_requires=[
         "requests",
         "python-dateutil",
-        "PyJWT",
+        "PyJWT~=2.0",
     ],
     zip_safe=False,
     package_data={"": ["README.md"]},
