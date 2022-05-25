@@ -1267,7 +1267,10 @@ class Token(AdminObject):
         r.raise_for_status()
         response = r.json()
         access_token = response.get("access_token")
-        access_token_decoded = jwt.decode(access_token, verify=False)
+        access_token_decoded = jwt.decode(
+            access_token,
+            options={"verify_signature": False},
+        )
 
         self.token = response
         self.token_id = access_token_decoded.get("jti")
