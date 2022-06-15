@@ -5,7 +5,7 @@ class ArtifactoryException(Exception):
     pass
 
 
-def raise_for_status(response):
+def raise_for_status(response: requests.Response) -> None:
     """
     Custom raise_for_status method.
     Raises ArtifactoryException with clear message and keeps cause
