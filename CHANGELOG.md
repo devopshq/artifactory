@@ -1,5 +1,9 @@
-## 0.8.1  (Work In Progress)
-- Fix recursive properties issue (#326)
+## 0.8.1
+ - Fix recursive properties issue #326
+ - Remove unnecessary ArtifactorySaaSPath methods #339
+ - Complete Python 3.9 and 3.10 support #347
+ - Handling int arguments in create_aql_text method #349
+ - Fix jwt.exceptions.DecodeError #351
 
 ## 0.8.0
 - Add Python 3.10 support
