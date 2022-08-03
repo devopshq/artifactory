@@ -2652,7 +2652,7 @@ class ArtifactoryBuildManager(ArtifactoryPath):
             "status": status,
             "comment": comment,
             "ciUser": ci_user,
-            #"timestamp": iso_time,
+            # "timestamp": iso_time,
             "dryRun": dry_run,
             "copy": require_copy,
             "artifacts": artifacts,
