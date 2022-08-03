@@ -2647,12 +2647,10 @@ class ArtifactoryBuildManager(ArtifactoryPath):
         if not isinstance(properties, dict):
             raise ArtifactoryException("properties must be a dict")
 
-        iso_time = datetime.datetime.now().astimezone().isoformat()
         json_data = {
             "status": status,
             "comment": comment,
             "ciUser": ci_user,
-            # "timestamp": iso_time,
             "dryRun": dry_run,
             "copy": require_copy,
             "artifacts": artifacts,
