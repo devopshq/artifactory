@@ -701,6 +701,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
     @staticmethod
     def rest_post(
         url,
+        json_data=None,
         params=None,
         headers=None,
         session=None,
@@ -714,6 +715,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         url = quote_url(url)
         response = session.post(
             url,
+            json=json_data,
             params=params,
             headers=headers,
             verify=verify,
@@ -2640,17 +2642,17 @@ class ArtifactoryBuildManager(ArtifactoryPath):
         :param fail_fast: fail and abort the operation upon receiving an error. Default: true
         :return:
         """
-        url = f"/api/build/promote/{build_name}/{build_number}"
+        url = f"{self.drive}/api/build/promote/{build_name}/{build_number}"
 
         if not isinstance(properties, dict):
             raise ArtifactoryException("properties must be a dict")
 
         iso_time = datetime.datetime.now().astimezone().isoformat()
-        params = {
+        json_data = {
             "status": status,
             "comment": comment,
             "ciUser": ci_user,
-            "timestamp": iso_time,
+            #"timestamp": iso_time,
             "dryRun": dry_run,
             "copy": require_copy,
             "artifacts": artifacts,
@@ -2659,10 +2661,10 @@ class ArtifactoryBuildManager(ArtifactoryPath):
             "failFast": fail_fast,
         }
         if source_repo:
-            params["sourceRepo"] = source_repo
+            json_data["sourceRepo"] = source_repo
 
         if target_repo:
-            params["targetRepo"] = target_repo
+            json_data["targetRepo"] = target_repo
 
         if dependencies:
             if not scopes:
@@ -2673,11 +2675,11 @@ class ArtifactoryBuildManager(ArtifactoryPath):
             if not isinstance(scopes, list):
                 raise ArtifactoryException("scopes must be a list")
 
-            params["scopes"] = scopes
+            json_data["scopes"] = scopes
 
-        self.rest_post(
+        self._accessor.rest_post(
             url,
-            params=params,
+            json_data=json_data,
             session=self.session,
             verify=self.verify,
             cert=self.cert,
