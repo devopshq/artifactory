@@ -701,13 +701,13 @@ class _ArtifactoryAccessor(pathlib._Accessor):
     @staticmethod
     def rest_post(
         url,
-        json_data=None,
         params=None,
         headers=None,
         session=None,
         verify=True,
         cert=None,
         timeout=None,
+        json_data=None,
     ):
         """
         Perform a POST request to url with requests.session
