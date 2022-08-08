@@ -2646,8 +2646,10 @@ class ArtifactoryBuildManager(ArtifactoryPath):
 
         if not isinstance(properties, dict):
             raise ArtifactoryException("properties must be a dict")
-        
-        iso_time = datetime.datetime.now().astimezone().strftime('%Y-%m-%dT%H:%M:%S.%f%z')
+
+        iso_time = (
+            datetime.datetime.now().astimezone().strftime("%Y-%m-%dT%H:%M:%S.%f%z")
+        )
         json_data = {
             "status": status,
             "comment": comment,
