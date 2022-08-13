@@ -33,6 +33,7 @@ import os
 import pathlib
 import re
 import sys
+import platform
 import urllib.parse
 from itertools import islice
 
@@ -63,6 +64,8 @@ except ImportError:
     import ConfigParser as configparser
 
 default_config_path = "~/.artifactory_python.cfg"
+if platform.system().lower() == 'windows':
+    default_config_path = "~\\.artifactory_python.cfg"
 global_config = None
 
 
