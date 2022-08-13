@@ -27,7 +27,7 @@
 
 ## DevOpsHQ (dohq-artifactory) => Original (Parallels)
 Our library `dohq-artifactory` have this diff (unlinke the original)
-  - Support [Artifactory AQL](./docs/AQL.md)
+  - Support [Artifactory AQL](./README.md#artifactory-query-language)
   - Request use `Session` by default
   - Set property operation is more transactional #8
   - We support our library :)
