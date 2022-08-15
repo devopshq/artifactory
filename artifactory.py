@@ -31,6 +31,7 @@ import io
 import json
 import os
 import pathlib
+import platform
 import re
 import sys
 import urllib.parse
@@ -63,6 +64,8 @@ except ImportError:
     import ConfigParser as configparser
 
 default_config_path = "~/.artifactory_python.cfg"
+if platform.system() == "Windows":
+    default_config_path = "~\\.artifactory_python.cfg"
 global_config = None
 
 
