@@ -805,6 +805,7 @@ class RepositoryLocal(Repository):
         self.package_type = response.get("packageType")
         self.repo_layout_ref = response.get("repoLayoutRef")
         self.archive_browsing_enabled = response.get("archiveBrowsingEnabled")
+        self.docker_api_version = response.get("dockerApiVersion", None)
 
 
 class RepositoryVirtual(GenericRepository):
@@ -888,6 +889,7 @@ class RepositoryVirtual(GenericRepository):
         self.description = response.get("description")
         self.package_type = response.get("packageType")
         self._repositories = response.get("repositories")
+        self.docker_api_version = response.get("dockerApiVersion", None)
 
     def add_repository(self, *repos):
         for value in repos:
@@ -1006,6 +1008,7 @@ class RepositoryRemote(Repository):
         self.repo_layout_ref = response.get("repoLayoutRef")
         self.archive_browsing_enabled = response.get("archiveBrowsingEnabled")
         self.url = response.get("url")
+        self.docker_api_version = response.get("dockerApiVersion", None)
 
 
 class PermissionTarget(AdminObject):
