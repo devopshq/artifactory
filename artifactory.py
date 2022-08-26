@@ -2585,7 +2585,7 @@ class ArtifactoryBuildManager(ArtifactoryPath):
         return self._get_info(build_name, build_number)
 
     def _get_info(self, build_name, build_number=""):
-        url = requests.utils.quote(build_name, safe='')
+        url = requests.utils.quote(build_name, safe="")
         if build_number:
             url += f"/{build_number}"
         return self._get_build_api_response(url)
