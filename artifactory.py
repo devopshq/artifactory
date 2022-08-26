@@ -2585,15 +2585,16 @@ class ArtifactoryBuildManager(ArtifactoryPath):
         return self._get_info(build_name, build_number)
 
     def _get_info(self, build_name, build_number=""):
-        url = build_name
+        url = requests.utils.quote(build_name, safe='')
         if build_number:
             url += f"/{build_number}"
         return self._get_build_api_response(url)
 
     def _get_build_api_response(self, url):
         url = f"{self.drive}/api/build/{url}"
-        obj = self.joinpath(url)
-        resp = self._accessor.get_response(obj).json()
+        response = self.session.get(url)
+        raise_for_status(response)
+        resp = response.json()
         return resp
 
     def get_build_diff(self, build_name, build_number1, build_number2):
