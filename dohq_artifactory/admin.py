@@ -1036,8 +1036,9 @@ class PermissionTarget(AdminObject):
         repositories=None,
         users=None,
         groups=None,
-        includesPattern="**",
-        excludesPattern="",
+        *,
+        includes_pattern="**",
+        excludes_pattern="",
     ):
         super(PermissionTarget, self).__init__(artifactory)
         self.name = name
