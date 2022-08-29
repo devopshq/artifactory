@@ -1041,7 +1041,7 @@ class PermissionTarget(AdminObject):
     ):
         super(PermissionTarget, self).__init__(artifactory)
         self.name = name
-        self.includesPattern = includesPattern
+        self.includesPattern = includes_pattern
         self.excludesPattern = excludesPattern
         self.repositories = repositories or []
         self.users = users or {}
