@@ -809,7 +809,13 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
     @staticmethod
     def rest_get_stream(
-        url, params=None, session=None, verify=True, cert=None, timeout=None, skip_quote_url=False
+        url,
+        params=None,
+        session=None,
+        verify=True,
+        cert=None,
+        timeout=None,
+        skip_quote_url=False,
     ):
         """
         Perform a chunked GET request to url with requests.session
