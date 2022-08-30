@@ -809,13 +809,14 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
     @staticmethod
     def rest_get_stream(
-        url, params=None, session=None, verify=True, cert=None, timeout=None
+        url, params=None, session=None, verify=True, cert=None, timeout=None, skip_quote_url=False
     ):
         """
         Perform a chunked GET request to url with requests.session
         This is specifically to download files.
         """
-        url = quote_url(url)
+        if not skip_quote_url:
+            url = quote_url(url)
         response = session.get(
             url, params=params, stream=True, verify=verify, cert=cert, timeout=timeout
         )
@@ -1079,7 +1080,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         response = self.get_response(pathobj)
         return response.raw
 
-    def get_response(self, pathobj):
+    def get_response(self, pathobj, skip_quote_url=False):
         """
         :param pathobj: ArtifactoryPath object
         :return: request response
@@ -1098,6 +1099,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             verify=pathobj.verify,
             cert=pathobj.cert,
             timeout=pathobj.timeout,
+            skip_quote_url=skip_quote_url,
         )
 
         return response
@@ -2592,9 +2594,8 @@ class ArtifactoryBuildManager(ArtifactoryPath):
 
     def _get_build_api_response(self, url):
         url = f"{self.drive}/api/build/{url}"
-        response = self.session.get(url)
-        raise_for_status(response)
-        resp = response.json()
+        obj = self.joinpath(url)
+        resp = self._accessor.get_response(obj, skip_quote_url=True).json()
         return resp
 
     def get_build_diff(self, build_name, build_number1, build_number2):
