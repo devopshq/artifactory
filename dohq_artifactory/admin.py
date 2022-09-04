@@ -1029,11 +1029,21 @@ class PermissionTarget(AdminObject):
     ROLE_ANNOTATE = (ANNOTATE, READ)
     ROLE_READ = READ
 
-    def __init__(self, artifactory, name, repositories=None, users=None, groups=None):
+    def __init__(
+        self,
+        artifactory,
+        name,
+        repositories=None,
+        users=None,
+        groups=None,
+        *,
+        includes_pattern="**",
+        excludes_pattern="",
+    ):
         super(PermissionTarget, self).__init__(artifactory)
         self.name = name
-        self.includesPattern = "**"
-        self.excludesPattern = ""
+        self.includesPattern = includes_pattern
+        self.excludesPattern = excludes_pattern
         self.repositories = repositories or []
         self.users = users or {}
         self.groups = groups or {}
