@@ -809,13 +809,20 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
     @staticmethod
     def rest_get_stream(
-        url, params=None, session=None, verify=True, cert=None, timeout=None
+        url,
+        params=None,
+        session=None,
+        verify=True,
+        cert=None,
+        timeout=None,
+        quote=True,
     ):
         """
         Perform a chunked GET request to url with requests.session
         This is specifically to download files.
         """
-        url = quote_url(url)
+        if quote:
+            url = quote_url(url)
         response = session.get(
             url, params=params, stream=True, verify=verify, cert=cert, timeout=timeout
         )
@@ -1079,7 +1086,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         response = self.get_response(pathobj)
         return response.raw
 
-    def get_response(self, pathobj):
+    def get_response(self, pathobj, quote=True):
         """
         :param pathobj: ArtifactoryPath object
         :return: request response
@@ -1098,6 +1105,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
             verify=pathobj.verify,
             cert=pathobj.cert,
             timeout=pathobj.timeout,
+            quote=quote,
         )
 
         return response
@@ -2585,7 +2593,10 @@ class ArtifactoryBuildManager(ArtifactoryPath):
         return self._get_info(build_name, build_number)
 
     def _get_info(self, build_name, build_number=""):
-        url = build_name
+        # If a build name contains slash "/" it must be encoded,
+        # otherwise the part after the slash will be treated as a build number
+        # maven-demo/1-build-snapshot => maven-demo%2F1-build-snapshot
+        url = requests.utils.quote(build_name, safe="")
         if build_number:
             url += f"/{build_number}"
         return self._get_build_api_response(url)
@@ -2593,7 +2604,7 @@ class ArtifactoryBuildManager(ArtifactoryPath):
     def _get_build_api_response(self, url):
         url = f"{self.drive}/api/build/{url}"
         obj = self.joinpath(url)
-        resp = self._accessor.get_response(obj).json()
+        resp = self._accessor.get_response(obj, quote=False).json()
         return resp
 
     def get_build_diff(self, build_name, build_number1, build_number2):
