@@ -2593,6 +2593,8 @@ class ArtifactoryBuildManager(ArtifactoryPath):
         return self._get_info(build_name, build_number)
 
     def _get_info(self, build_name, build_number=""):
+        # If a build name contains slash "/" it must be encoded, otherwise the part after the slash will be treated as a build number
+        # maven-demo/1-build-snapshot => maven-demo%2F1-build-snapshot
         url = requests.utils.quote(build_name, safe="")
         if build_number:
             url += f"/{build_number}"
