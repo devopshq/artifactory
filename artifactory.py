@@ -2228,7 +2228,15 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         return obj
 
     def promote_docker_image(
-        self, source_repo, target_repo, docker_repo, tag, copy=False, *, target_docker_repo=None, target_tag=None
+        self,
+        source_repo,
+        target_repo,
+        docker_repo,
+        tag,
+        copy=False,
+        *,
+        target_docker_repo=None,
+        target_tag=None,
     ):
         """
         Promote Docker image from source repo to target repo
