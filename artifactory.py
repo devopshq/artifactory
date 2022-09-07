@@ -1421,6 +1421,9 @@ class _ArtifactoryAccessor(pathlib._Accessor):
 
             file.write(chunk)
 
+        if real_chunk > 0:
+            progress_func(bytes_read + real_chunk, file_size)
+
 
 _artifactory_accessor = _ArtifactoryAccessor()
 
