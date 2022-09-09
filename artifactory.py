@@ -2228,7 +2228,15 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         return obj
 
     def promote_docker_image(
-        self, source_repo, target_repo, docker_repo, tag, copy=False
+        self,
+        source_repo,
+        target_repo,
+        docker_repo,
+        tag,
+        copy=False,
+        *,
+        target_docker_repo=None,
+        target_tag=None,
     ):
         """
         Promote Docker image from source repo to target repo
@@ -2237,6 +2245,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         :param docker_repo: Docker repository to promote
         :param tag: Docker tag to promote
         :param copy: (bool) whether to move the image or copy it
+        :param target_docker_repo: An optional docker repository name, if null, will use the same name as 'docker_repo'
+        :param target_tag: An optional target tag to assign the image after promotion, if null - will use the same tag
         :return:
         """
         promote_url = "{}/api/docker/{}/v2/promote".format(
@@ -2247,6 +2257,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             "dockerRepository": docker_repo,
             "tag": tag,
             "copy": copy,
+            "targetDockerRepository": target_docker_repo,
+            "targetTag": target_tag,
         }
         response = self.session.post(promote_url, json=promote_data)
         raise_for_status(response)
