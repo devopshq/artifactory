@@ -640,11 +640,7 @@ class _ScandirIter:
         return self.iterator
 
 
-_artifactory_access_parent_class = None
-try:
-    _artifactory_access_parent_class = pathlib._Accessor
-except AttributeError:
-    _artifactory_access_parent_class = (
+_artifactory_access_parent_class = (
         pathlib.WindowsPath if os.name == "nt" else pathlib.PosixPath
     )
 
