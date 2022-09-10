@@ -640,7 +640,17 @@ class _ScandirIter:
         return self.iterator
 
 
-class _ArtifactoryAccessor(pathlib._Accessor):
+_artifactory_access_parent_class = None
+try:
+    _artifactory_access_parent_class = pathlib._Accessor
+except AttributeError:
+    _artifactory_access_parent_class = (
+        pathlib.WindowsPath if os.name == "nt" else pathlib.PosixPath
+    )
+
+
+class _ArtifactoryAccessor(_artifactory_access_parent_class):
+
     """
     Implements operations with Artifactory REST API
     """
@@ -1896,6 +1906,16 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         Changing access rights makes no sense for Artifactory.
         """
         raise NotImplementedError()
+
+    def unlink(self, missing_ok=False):
+        """
+        Removes a file or folder
+        """
+        try:
+            self._accessor.unlink(self)
+        except ArtifactoryException:
+            if not missing_ok:
+                raise
 
     def symlink_to(self, target, target_is_directory=False):
         """
