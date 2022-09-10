@@ -641,8 +641,8 @@ class _ScandirIter:
 
 
 _artifactory_access_parent_class = (
-        pathlib.WindowsPath if os.name == "nt" else pathlib.PosixPath
-    )
+    pathlib.WindowsPath if os.name == "nt" else pathlib.PosixPath
+)
 
 
 class _ArtifactoryAccessor(_artifactory_access_parent_class):
