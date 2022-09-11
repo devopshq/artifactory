@@ -640,12 +640,7 @@ class _ScandirIter:
         return self.iterator
 
 
-_artifactory_access_parent_class = (
-    pathlib.WindowsPath if os.name == "nt" else pathlib.PosixPath
-)
-
-
-class _ArtifactoryAccessor(_artifactory_access_parent_class):
+class _ArtifactoryAccessor:
 
     """
     Implements operations with Artifactory REST API
