@@ -26,7 +26,7 @@
 - Add docs about `stat()`
 
 ## DevOpsHQ (dohq-artifactory) => Original (Parallels)
-Our library `dohq-artifactory` have this diff (unlinke the original)
+Our library `dohq-artifactory` have this diff (unlike the original)
   - Support [Artifactory AQL](./README.md#artifactory-query-language)
   - Request use `Session` by default
   - Set property operation is more transactional #8
