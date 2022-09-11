@@ -999,7 +999,7 @@ class _ArtifactoryAccessor:
         """
 
         if not pathobj.exists():
-            raise OSError(2, f"No such file or directory: {pathobj}")
+            raise FileNotFoundError(2, f"No such file or directory: {pathobj}")
 
         url = "/".join(
             [
@@ -1904,7 +1904,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         try:
             self._accessor.unlink(self)
-        except ArtifactoryException:
+        except FileNotFoundError:
             if not missing_ok:
                 raise
 
