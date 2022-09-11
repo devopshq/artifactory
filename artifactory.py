@@ -640,7 +640,8 @@ class _ScandirIter:
         return self.iterator
 
 
-class _ArtifactoryAccessor(pathlib._Accessor):
+class _ArtifactoryAccessor:
+
     """
     Implements operations with Artifactory REST API
     """
@@ -998,7 +999,7 @@ class _ArtifactoryAccessor(pathlib._Accessor):
         """
 
         if not pathobj.exists():
-            raise OSError(2, f"No such file or directory: {pathobj}")
+            raise FileNotFoundError(2, f"No such file or directory: {pathobj}")
 
         url = "/".join(
             [
@@ -1896,6 +1897,16 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         Changing access rights makes no sense for Artifactory.
         """
         raise NotImplementedError()
+
+    def unlink(self, missing_ok=False):
+        """
+        Removes a file or folder
+        """
+        try:
+            self._accessor.unlink(self)
+        except FileNotFoundError:
+            if not missing_ok:
+                raise
 
     def symlink_to(self, target, target_is_directory=False):
         """

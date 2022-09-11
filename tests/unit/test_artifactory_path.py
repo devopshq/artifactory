@@ -801,7 +801,7 @@ class ArtifactoryAccessorTest(ClassSetup):
             status=404,
             body="Unable to find item",
         )
-        with self.assertRaises(OSError) as context:
+        with self.assertRaises(FileNotFoundError) as context:
             path.unlink()
 
         self.assertTrue("No such file or directory" in context.exception.strerror)
