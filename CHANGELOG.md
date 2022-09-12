@@ -1,3 +1,13 @@
+## 0.8.2
+- Support python 3.11 #376
+- fix writeto progress_func: the last chunk #375
+- Add support for "targetTag" variable of Docker Build promotion API #370
+- Bugfix: JSONDecodeError handling for simplejson #354
+- Bugfix: Build Promotion works #334
+- fix docker_api_version of repo #333
+- update default_config_path on windows #362 
+- Bugfix: get build runs failed with an exception #366
+
 ## 0.8.1
  - Fix recursive properties issue #326
  - Remove unnecessary ArtifactorySaaSPath methods #339
