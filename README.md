@@ -1436,5 +1436,4 @@ the right thing.
 # Advertising
 - [artifactory-du](https://github.com/devopshq/artifactory-du) - estimate file space usage. Summarize disk usage in 
   JFrog Artifactory of the set of FILEs, recursively for directories.
-- [artifactory-cleanup-rules](https://github.com/devopshq/artifactory-du/issues/2) - python-script for Artifactory 
-  intelligence cleanup rules with config.
+- [artifactory-cleanup](https://github.com/devopshq/artifactory-cleanup) - is an extended and flexible cleanup tool for JFrog Artifactory.
