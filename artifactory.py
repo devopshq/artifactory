@@ -1422,7 +1422,7 @@ class _ArtifactoryAccessor:
 
             file.write(chunk)
 
-        if real_chunk > 0:
+        if callable(progress_func) and real_chunk > 0:
             progress_func(bytes_read + real_chunk, file_size)
 
 
