@@ -1,3 +1,6 @@
+## 0.8.3
+- fix: add callable check to progress_bar #379
+
 ## 0.8.2
 - Support python 3.11 #376
 - fix writeto progress_func: the last chunk #375
