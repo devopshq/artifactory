@@ -604,6 +604,7 @@ ArtifactoryFileStat = collections.namedtuple(
         "children",
         "repo",
         "created",
+        "last_modified",
         "last_updated",
     ],
 )
@@ -887,9 +888,10 @@ class _ArtifactoryAccessor:
         checksums = jsn.get("checksums", {})
 
         ctime = dateutil.parser.parse(jsn["created"])
+        mtime = dateutil.parser.parse(jsn["lastModified"])
         stat = ArtifactoryFileStat(
             ctime=ctime,
-            mtime=dateutil.parser.parse(jsn["lastModified"]),
+            mtime=mtime,
             created_by=jsn.get("createdBy"),
             modified_by=jsn.get("modifiedBy"),
             mime_type=jsn.get("mimeType"),
@@ -901,6 +903,7 @@ class _ArtifactoryAccessor:
             children=children,
             repo=jsn.get("repo", None),
             created=ctime,
+            last_modified=mtime,
             last_updated=dateutil.parser.parse(jsn["lastUpdated"]),
         )
 
@@ -1589,7 +1592,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         The following fields are available:
           created -- file creation time
-          mtime -- file modification time
+          last_modified -- file modification time
           last_updated -- artifact update time
           created_by -- original uploader
           modified_by -- last user modifying the file
@@ -1601,6 +1604,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
           is_dir -- 'True' if path is a directory
           children -- list of children names
           ctime -- file creation time (an alias for .created)
+          mtime -- file modification time (an alias for .last_modified)
         """
         pathobj = pathobj or self
         return self._accessor.stat(pathobj=pathobj)
