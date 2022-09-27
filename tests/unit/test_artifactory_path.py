@@ -496,6 +496,9 @@ class ArtifactoryAccessorTest(ClassSetup):
             stats.ctime, dateutil.parser.parse("2014-02-24T21:20:59.999+04:00")
         )
         self.assertEqual(
+            stats.created, dateutil.parser.parse("2014-02-24T21:20:59.999+04:00")
+        )
+        self.assertEqual(
             stats.mtime, dateutil.parser.parse("2014-02-24T21:20:36.000+04:00")
         )
         self.assertEqual(
@@ -531,6 +534,9 @@ class ArtifactoryAccessorTest(ClassSetup):
         stats = a.stat(path)
         self.assertEqual(
             stats.ctime, dateutil.parser.parse("2014-02-18T15:35:29.361+04:00")
+        )
+        self.assertEqual(
+            stats.created, dateutil.parser.parse("2014-02-18T15:35:29.361+04:00")
         )
         self.assertEqual(
             stats.mtime, dateutil.parser.parse("2014-02-18T15:35:29.361+04:00")
@@ -596,6 +602,9 @@ class ArtifactoryAccessorTest(ClassSetup):
         stats = path.stat()
         self.assertEqual(
             stats.ctime, dateutil.parser.parse("2014-02-24T21:20:59.999+04:00")
+        )
+        self.assertEqual(
+            stats.created, dateutil.parser.parse("2014-02-24T21:20:59.999+04:00")
         )
         self.assertEqual(
             stats.mtime, dateutil.parser.parse("2014-02-24T21:20:36.000+04:00")
