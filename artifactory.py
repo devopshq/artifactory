@@ -603,6 +603,7 @@ ArtifactoryFileStat = collections.namedtuple(
         "is_dir",
         "children",
         "repo",
+        "last_updated",
     ],
 )
 
@@ -897,6 +898,7 @@ class _ArtifactoryAccessor:
             is_dir=is_dir,
             children=children,
             repo=jsn.get("repo", None),
+            last_updated=dateutil.parser.parse(jsn["lastUpdated"]),
         )
 
         return stat
@@ -1585,6 +1587,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         The following fields are available:
           ctime -- file creation time
           mtime -- file modification time
+          last_updated -- artifact update time
           created_by -- original uploader
           modified_by -- last user modifying the file
           mime_type -- MIME type of the file

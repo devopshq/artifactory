@@ -498,6 +498,9 @@ class ArtifactoryAccessorTest(ClassSetup):
         self.assertEqual(
             stats.mtime, dateutil.parser.parse("2014-02-24T21:20:36.000+04:00")
         )
+        self.assertEqual(
+            stats.last_updated, dateutil.parser.parse("2014-02-24T21:20:36.000+04:00")
+        )
         self.assertEqual(stats.created_by, "someuser")
         self.assertEqual(stats.modified_by, "anotheruser")
         self.assertEqual(stats.mime_type, "application/octet-stream")
@@ -531,6 +534,9 @@ class ArtifactoryAccessorTest(ClassSetup):
         )
         self.assertEqual(
             stats.mtime, dateutil.parser.parse("2014-02-18T15:35:29.361+04:00")
+        )
+        self.assertEqual(
+            stats.last_updated, dateutil.parser.parse("2014-02-18T15:35:29.361+04:00")
         )
         self.assertEqual(stats.created_by, None)
         self.assertEqual(stats.modified_by, None)
@@ -593,6 +599,9 @@ class ArtifactoryAccessorTest(ClassSetup):
         )
         self.assertEqual(
             stats.mtime, dateutil.parser.parse("2014-02-24T21:20:36.000+04:00")
+        )
+        self.assertEqual(
+            stats.last_updated, dateutil.parser.parse("2014-02-24T21:20:36.000+04:00")
         )
         self.assertEqual(stats.created_by, "someuser")
         self.assertEqual(stats.modified_by, "anotheruser")
