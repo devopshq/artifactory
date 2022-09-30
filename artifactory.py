@@ -603,6 +603,9 @@ ArtifactoryFileStat = collections.namedtuple(
         "is_dir",
         "children",
         "repo",
+        "created",
+        "last_modified",
+        "last_updated",
     ],
 )
 
@@ -884,9 +887,11 @@ class _ArtifactoryAccessor:
 
         checksums = jsn.get("checksums", {})
 
+        ctime = dateutil.parser.parse(jsn["created"])
+        mtime = dateutil.parser.parse(jsn["lastModified"])
         stat = ArtifactoryFileStat(
-            ctime=dateutil.parser.parse(jsn["created"]),
-            mtime=dateutil.parser.parse(jsn["lastModified"]),
+            ctime=ctime,
+            mtime=mtime,
             created_by=jsn.get("createdBy"),
             modified_by=jsn.get("modifiedBy"),
             mime_type=jsn.get("mimeType"),
@@ -897,6 +902,9 @@ class _ArtifactoryAccessor:
             is_dir=is_dir,
             children=children,
             repo=jsn.get("repo", None),
+            created=ctime,
+            last_modified=mtime,
+            last_updated=dateutil.parser.parse(jsn["lastUpdated"]),
         )
 
         return stat
@@ -1583,8 +1591,9 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             if None is provided then applied to ArtifactoryPath itself
 
         The following fields are available:
-          ctime -- file creation time
-          mtime -- file modification time
+          created -- file creation time
+          last_modified -- file modification time
+          last_updated -- artifact update time
           created_by -- original uploader
           modified_by -- last user modifying the file
           mime_type -- MIME type of the file
@@ -1594,6 +1603,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
           md5 -- MD5 digest of the file
           is_dir -- 'True' if path is a directory
           children -- list of children names
+          ctime -- file creation time (an alias for .created)
+          mtime -- file modification time (an alias for .last_modified)
         """
         pathobj = pathobj or self
         return self._accessor.stat(pathobj=pathobj)
