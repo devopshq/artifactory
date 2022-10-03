@@ -138,9 +138,15 @@ class AdminObject(object):
         request_url = f"{self.base_url}/{self.prefix_uri}/{self._uri}/{getattr(self, self.resource_name)}"
         r = self._session.get(request_url, auth=self._auth)
         if 404 == r.status_code or 400 == r.status_code:
-            logger.debug(
-                f"{self.__class__.__name__} [{getattr(self, self.resource_name)}] does not exist"
-            )
+            if 'Artifactory Pro' in r.text:
+                logger.debug(
+                    f"{self.__class__.__name__} [{getattr(self, self.resource_name)}] not available without Artifactory"
+                    f"Pro license (see jfrog.com/artifactory/features)"
+                )
+            else:
+                logger.debug(
+                    f"{self.__class__.__name__} [{getattr(self, self.resource_name)}] does not exist"
+                )
             return False
         else:
             logger.debug(
@@ -1351,9 +1357,15 @@ class Token(AdminObject):
         request_url = f"{self.base_url}/{self.prefix_uri}/{self._uri}"
         r = self._session.get(request_url, auth=self._auth)
         if 404 == r.status_code or 400 == r.status_code:
-            logger.debug(
-                f"{self.__class__.__name__} [{getattr(self, self.resource_name)}] does not exist"
-            )
+            if 'Artifactory Pro' in r.text:
+                logger.debug(
+                    f"{self.__class__.__name__} [{getattr(self, self.resource_name)}] not available without Artifactory"
+                    f"Pro license (see jfrog.com/artifactory/features)"
+                )
+            else:
+                logger.debug(
+                    f"{self.__class__.__name__} [{getattr(self, self.resource_name)}] does not exist"
+                )
             return False
         else:
             logger.debug(
