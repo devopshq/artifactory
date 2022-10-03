@@ -141,7 +141,7 @@ class AdminObject(object):
             if "Artifactory Pro" in r.text:
                 logger.debug(
                     f"{self.__class__.__name__} [{getattr(self, self.resource_name)}] not available without Artifactory"
-                    f"Pro license (see jfrog.com/artifactory/features)"
+                    f"Pro license (see https://jfrog.com/artifactory/features)"
                 )
             else:
                 logger.debug(
@@ -1360,7 +1360,7 @@ class Token(AdminObject):
             if "Artifactory Pro" in r.text:
                 logger.debug(
                     f"{self.__class__.__name__} [{getattr(self, self.resource_name)}] not available without Artifactory"
-                    f"Pro license (see jfrog.com/artifactory/features)"
+                    f"Pro license (see https://jfrog.com/artifactory/features)"
                 )
             else:
                 logger.debug(
