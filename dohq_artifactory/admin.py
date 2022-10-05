@@ -137,9 +137,14 @@ class AdminObject(object):
         )
         request_url = f"{self.base_url}/{self.prefix_uri}/{self._uri}/{getattr(self, self.resource_name)}"
         r = self._session.get(request_url, auth=self._auth)
-        if 404 == r.status_code or 400 == r.status_code:
+        if 404 == r.status_code:
             logger.debug(
                 f"{self.__class__.__name__} [{getattr(self, self.resource_name)}] does not exist"
+            )
+            return False
+        elif 400 == r.status_code:
+            logger.debug(
+                f"{self.__class__.__name__} [{getattr(self, self.resource_name)}] error: {r.json()}"
             )
             return False
         else:
@@ -1350,9 +1355,14 @@ class Token(AdminObject):
         )
         request_url = f"{self.base_url}/{self.prefix_uri}/{self._uri}"
         r = self._session.get(request_url, auth=self._auth)
-        if 404 == r.status_code or 400 == r.status_code:
+        if 404 == r.status_code:
             logger.debug(
                 f"{self.__class__.__name__} [{getattr(self, self.resource_name)}] does not exist"
+            )
+            return False
+        elif 400 == r.status_code:
+            logger.debug(
+                f"{self.__class__.__name__} [{getattr(self, self.resource_name)}] error: {r.json()}"
             )
             return False
         else:
