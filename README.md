@@ -602,13 +602,18 @@ path = ArtifactoryPath(
 # Get FileStat
 stat = path.stat()
 print(stat)
-print(stat.md5)
+print(ctime)
+print(mtime)
+print(created_by)
+print(modified_by)
+print(mime_type)
+print(size)
 print(stat.sha1)
 print(stat.sha256)
-print(stat.created)
+print(stat.md5)
 print(stat.is_dir)
-print(stat.size)
-print(stat.created_by)
+print(stat.children)
+print(stat.repo)
 ```
 
 ### Get Download Statistics
