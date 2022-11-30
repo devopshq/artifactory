@@ -704,8 +704,10 @@ class Repository(GenericRepository):
             return RepositoryRemote(artifactory, name)
         elif repo_type == "VIRTUAL":
             return RepositoryVirtual(artifactory, name)
+        elif repo_type == "FEDERATED":
+            return RepositoryFederated(artifactory, name)
         else:
-            return None
+            raise ValueError(f"Unknown repo type: {repo_type}")
 
     @property
     def packageType(self):
@@ -813,6 +815,15 @@ class RepositoryLocal(Repository):
         self.repo_layout_ref = response.get("repoLayoutRef")
         self.archive_browsing_enabled = response.get("archiveBrowsingEnabled")
         self.docker_api_version = response.get("dockerApiVersion", None)
+
+
+class RepositoryFederated(RepositoryLocal):
+    def _read_response(self, response):
+        """
+        JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
+        """
+        self._validate_type(response["rclass"], "federated")
+        self._extract_params(response)
 
 
 class RepositoryVirtual(GenericRepository):
