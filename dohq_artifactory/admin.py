@@ -621,6 +621,12 @@ class GenericRepository(AdminObject):
             query.extend([".limit", limit])
         return query
 
+    def _validate_type(self, rclass: str, expected_type: str):
+        if rclass.lower() != expected_type:
+            raise ArtifactoryException(
+                f"Repository '{self.name}' have '{rclass}', but expected '{expected_type}'"
+            )
+
     def search_raw(self, *args, **kwargs):
         query = self._build_query(*args, **kwargs)
 
@@ -698,8 +704,10 @@ class Repository(GenericRepository):
             return RepositoryRemote(artifactory, name)
         elif repo_type == "VIRTUAL":
             return RepositoryVirtual(artifactory, name)
+        elif repo_type == "FEDERATED":
+            return RepositoryFederated(artifactory, name)
         else:
-            return None
+            raise ValueError(f"Unknown repo type: {repo_type}")
 
     @property
     def packageType(self):
@@ -797,20 +805,25 @@ class RepositoryLocal(Repository):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
         """
-        rclass = response["rclass"].lower()
-        if rclass != "local":
-            raise ArtifactoryException(
-                "Repository '{}' have '{}', but expect 'local'".format(
-                    self.name, rclass
-                )
-            )
+        self._validate_type(response["rclass"], "local")
+        self._extract_params(response)
 
+    def _extract_params(self, response: dict):
         self.name = response["key"]
         self.description = response.get("description")
         self.package_type = response.get("packageType")
         self.repo_layout_ref = response.get("repoLayoutRef")
         self.archive_browsing_enabled = response.get("archiveBrowsingEnabled")
         self.docker_api_version = response.get("dockerApiVersion", None)
+
+
+class RepositoryFederated(RepositoryLocal):
+    def _read_response(self, response):
+        """
+        JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
+        """
+        self._validate_type(response["rclass"], "federated")
+        self._extract_params(response)
 
 
 class RepositoryVirtual(GenericRepository):
@@ -882,13 +895,7 @@ class RepositoryVirtual(GenericRepository):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
         """
-        rclass = response["rclass"].lower()
-        if rclass != "virtual":
-            raise ArtifactoryException(
-                "Repository '{}' have '{}', but expect 'virtual'".format(
-                    self.name, rclass
-                )
-            )
+        self._validate_type(response["rclass"], "virtual")
 
         self.name = response["key"]
         self.description = response.get("description")
@@ -999,13 +1006,7 @@ class RepositoryRemote(Repository):
         """
         JSON Documentation: https://www.jfrog.com/confluence/display/RTF/Repository+Configuration+JSON
         """
-        rclass = response["rclass"].lower()
-        if rclass != "remote":
-            raise ArtifactoryException(
-                "Repository '{}' have '{}', but expect 'remote'".format(
-                    self.name, rclass
-                )
-            )
+        self._validate_type(response["rclass"], "remote")
 
         self.name = response["key"]
         self.description = response.get("description")
