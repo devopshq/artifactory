@@ -1,3 +1,7 @@
+## 0.8.4
+- stat: add .created, .last_updated, .last_modified to returned namedtuple #382
+- Add federated repo #399
+
 ## 0.8.3
 - fix: add callable check to progress_bar #379
 
