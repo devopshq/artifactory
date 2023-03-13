@@ -1142,7 +1142,7 @@ class _ArtifactoryAccessor:
         explode_archive_atomic=None,
         checksum=None,
         by_checksum=False,
-        **kwargs,  # TODO: v.10.0: replace with explicit kwarg quote_parameters; for now kwargs for forward compat
+        quote_parameters=None,  # TODO: v0.10.0: change default to True
     ):
         """
         Uploads a given file-like object
@@ -1164,7 +1164,6 @@ class _ArtifactoryAccessor:
             default False until v0.10.0
         """
 
-        quote_parameters = kwargs.get("quote_parameters")
         if quote_parameters is None:
             warn(
                 "The current default value of quote_parameters (False) will change to True in v0.10.0.\n"
