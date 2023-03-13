@@ -315,21 +315,31 @@ class HTTPResponseWrapper(object):
         return int(self.getheader("content-length"))
 
 
-def encode_matrix_parameters(parameters):
+def encode_matrix_parameters(parameters, quote_parameters):
     """
     Performs encoding of url matrix parameters from dictionary to
     a string.
     See http://www.w3.org/DesignIssues/MatrixURIs.html for specs.
+    If quote_parameters is true, then apply URL quoting to the values and the parameter names.
     """
     result = []
 
     for param in iter(sorted(parameters)):
-        if isinstance(parameters[param], (list, tuple)):
-            value = f";{param}=".join(parameters[param])
-        else:
-            value = parameters[param]
+        raw_value = parameters[param]
 
-        result.append("=".join((param, value)))
+        resolved_param = urllib.parse.quote(param) if quote_parameters else param
+
+        if isinstance(raw_value, (list, tuple)):
+            values = (
+                [urllib.parse.quote(v) for v in raw_value]
+                if quote_parameters
+                else raw_value
+            )
+            value = f";{resolved_param}=".join(values)
+        else:
+            value = urllib.parse.quote(raw_value) if quote_parameters else raw_value
+
+        result.append("=".join((resolved_param, value)))
 
     return ";".join(result)
 
