@@ -910,9 +910,7 @@ class ArtifactoryPathTest(ClassSetup):
             file.write("I am a test file")
 
             constructed_url = f"{path}{test_file.name};{matrix_parameters}"
-            responses.add(
-                responses.PUT, constructed_url, status=200, match_querystring=True
-            )
+            responses.add(responses.PUT, constructed_url, status=200)
 
             path.deploy_file(
                 test_file,
@@ -1092,9 +1090,7 @@ class ArtifactoryPathTest(ClassSetup):
             file.write("I am a test file")
 
             constructed_url = f"{path}{test_file.name};{matrix_parameters}"
-            responses.add(
-                responses.PUT, constructed_url, status=200, match_querystring=True
-            )
+            responses.add(responses.PUT, constructed_url, status=200)
 
             path.deploy_deb(
                 test_file,
