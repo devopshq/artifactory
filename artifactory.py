@@ -36,6 +36,7 @@ import re
 import sys
 import urllib.parse
 from itertools import islice
+from warnings import warn
 
 import dateutil.parser
 import requests
@@ -1141,6 +1142,7 @@ class _ArtifactoryAccessor:
         explode_archive_atomic=None,
         checksum=None,
         by_checksum=False,
+        **kwargs,  # TODO: v.10.0: replace with explicit kwarg quote_parameters; for now kwargs for forward compat
     ):
         """
         Uploads a given file-like object
@@ -1158,7 +1160,18 @@ class _ArtifactoryAccessor:
         :param explode_archive_atomic: (bool) if True, archive will be exploded in an atomic operation upon deployment
         :param checksum: sha1Value or sha256Value
         :param by_checksum: (bool) if True, deploy artifact by checksum, default False
+        :param quote_parameters: (bool) if True, apply URL quoting to matrix parameter names and values,
+            default False until v0.10.0
         """
+
+        quote_parameters = kwargs.get("quote_parameters")
+        if quote_parameters is None:
+            warn(
+                "The current default value of quote_parameters (False) will change to True in v0.10.0.\n"
+                "To ensure consistent behavior and remove this warning, explicitly set a value for quote_parameters.\n"
+                "For more details see https://github.com/devopshq/artifactory/issues/408."
+            )
+            quote_parameters = False
 
         if fobj and by_checksum:
             raise ArtifactoryException("Either fobj or by_checksum, but not both")
@@ -1169,7 +1182,9 @@ class _ArtifactoryAccessor:
         url = str(pathobj)
 
         matrix_parameters = (
-            f";{encode_matrix_parameters(parameters)}" if parameters else None
+            f";{encode_matrix_parameters(parameters, quote_parameters=quote_parameters)}"
+            if parameters
+            else None
         )
         headers = {}
 
