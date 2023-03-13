@@ -937,16 +937,36 @@ class ArtifactoryPathTest(ClassSetup):
             constructed_url = f"{path}{test_file.name};{matrix_parameters}"
             responses.add(responses.PUT, constructed_url, status=200)
 
-            path.deploy_file(
-                test_file,
-                explode_archive=True,
-                explode_archive_atomic=True,
-                parameters={
-                    "deb.architecture": "amd64",
-                    "deb.component": "contrib",
-                    "deb.distribution": ["dist1", "dist2"],
-                },
-            )
+            # can't use pytest.mark.parametrize with unittest classes
+            for quote_params in (None, True, False):
+                with mock.patch(
+                    "urllib.parse.quote", new=mock.Mock(wraps=quote_original)
+                ) as q, mock.patch("artifactory.warn") as w:
+                    path.deploy_file(
+                        test_file,
+                        explode_archive=True,
+                        explode_archive_atomic=True,
+                        parameters={
+                            "deb.architecture": "amd64",
+                            "deb.component": "contrib",
+                            "deb.distribution": ["dist1", "dist2"],
+                        },
+                        quote_parameters=quote_params,
+                    )
+                    # TODO: v0.10.0 - None test will not be needed, warn test will not be needed
+                    if quote_params is None:
+                        w.assert_called_once_with(
+                            "The current default value of quote_parameters (False) will change to True in v0.10.0.\n"
+                            "To ensure consistent behavior and remove this warning, explicitly set a value for quote_parameters.\n"
+                            "For more details see https://github.com/devopshq/artifactory/issues/408."
+                        )
+                    else:
+                        w.assert_not_called()
+
+                    if quote_params:
+                        assert q.call_count == 7  # once for each key and value
+                    else:
+                        q.assert_not_called()
 
         request_url = responses.calls[1].request.url
         self.assertEqual(request_url, constructed_url)
