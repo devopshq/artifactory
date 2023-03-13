@@ -1815,7 +1815,11 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         sha256 = hashlib.sha256(data).hexdigest()
 
         fobj = io.BytesIO(data)
-        self.deploy(fobj, md5=md5, sha1=sha1, sha256=sha256)
+        self.deploy(fobj, md5=md5, sha1=sha1, sha256=sha256, quote_parameters=False)
+        # TODO: v0.10.0 - possibly remove quote_parameters explicit setting
+        # Because this call never has parameters, it should not matter what it's set to.
+        # In this version, we set it explicitly to avoid the warning.
+        # In 0.10.0 or later, we can either keep it explicitly set to False, or remove it entirely.
         return len(data)
 
     def write_text(self, data, encoding="utf-8", errors="strict"):
@@ -1960,6 +1964,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         parameters={},
         explode_archive=None,
         explode_archive_atomic=None,
+        quote_parameters=None,
     ):
         """
         Upload the given file object to this path
@@ -1973,6 +1978,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             parameters=parameters,
             explode_archive=explode_archive,
             explode_archive_atomic=explode_archive_atomic,
+            quote_parameters=quote_parameters,
         )
 
     def deploy_file(
@@ -1984,6 +1990,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         parameters={},
         explode_archive=False,
         explode_archive_atomic=False,
+        quote_parameters=None,
     ):
         """
         Upload the given file to this path
@@ -2006,6 +2013,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                 parameters=parameters,
                 explode_archive=explode_archive,
                 explode_archive_atomic=explode_archive_atomic,
+                quote_parameters=quote_parameters,
             )
 
     def deploy_by_checksum(
@@ -2014,6 +2022,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         sha256=None,
         checksum=None,
         parameters={},
+        quote_parameters=None,
     ):
         """
         Deploy an artifact to the specified destination by checking if the
@@ -2032,10 +2041,17 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             checksum=checksum,
             by_checksum=True,
             parameters=parameters,
+            quote_parameters=quote_parameters,
         )
 
     def deploy_deb(
-        self, file_name, distribution, component, architecture, parameters={}
+        self,
+        file_name,
+        distribution,
+        component,
+        architecture,
+        parameters={},
+        quote_parameters=None,
     ):
         """
         Convenience method to deploy .deb packages
@@ -2046,6 +2062,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         component -- repository component (e.g. 'main')
         architecture -- package architecture (e.g. 'i386')
         parameters -- attach any additional metadata
+        quote_parameters -- URL quote parameter values and names
         """
         params = {
             "deb.distribution": distribution,
@@ -2054,7 +2071,9 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         }
         params.update(parameters)
 
-        self.deploy_file(file_name, parameters=params)
+        self.deploy_file(
+            file_name, parameters=params, quote_parameters=quote_parameters
+        )
 
     def copy(self, dst, suppress_layouts=False, fail_fast=False, dry_run=False):
         """
@@ -2132,7 +2151,17 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                 return
 
             with self.open() as fobj:
-                dst.deploy(fobj, md5=stat.md5, sha1=stat.sha1, sha256=stat.sha256)
+                dst.deploy(
+                    fobj,
+                    md5=stat.md5,
+                    sha1=stat.sha1,
+                    sha256=stat.sha256,
+                    quote_parameters=False,
+                )
+                # TODO: v0.10.0 - possibly remove quote_parameters explicit setting
+                # Because this call never has parameters, it should not matter what it's set to.
+                # In this version, we set it explicitly to avoid the warning.
+                # In 0.10.0 or later, we can either keep it explicitly set to False, or remove it entirely.
 
     def move(self, dst, suppress_layouts=False, fail_fast=False, dry_run=False):
         """
