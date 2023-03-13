@@ -1005,7 +1005,10 @@ class ArtifactoryPathTest(ClassSetup):
                 json=self.file_stat_without_modification_date,
                 status=200,
             )
-            self.path.deploy_by_checksum(sha1=self.sha1)
+            self.path.deploy_by_checksum(sha1=self.sha1, quote_parameters=True)
+            # TODO: v0.10.0 - remove quote_parameters explicit setting
+            # These tests should allow the default value of the underlying method to be used.
+            # In this version, we set it explicitly to avoid the warning.
 
             self.assertEqual(len(rsps.calls), 1)
             self.assertEqual(rsps.calls[0].request.url, self.artifact_url)
@@ -1027,7 +1030,10 @@ class ArtifactoryPathTest(ClassSetup):
                 json=self.file_stat_without_modification_date,
                 status=200,
             )
-            self.path.deploy_by_checksum(sha256=self.sha256)
+            self.path.deploy_by_checksum(sha256=self.sha256, quote_parameters=True)
+            # TODO: v0.10.0 - remove quote_parameters explicit setting
+            # These tests should allow the default value of the underlying method to be used.
+            # In this version, we set it explicitly to avoid the warning.
 
             self.assertEqual(len(rsps.calls), 1)
             self.assertEqual(rsps.calls[0].request.url, self.artifact_url)
@@ -1049,7 +1055,10 @@ class ArtifactoryPathTest(ClassSetup):
                 json=self.file_stat_without_modification_date,
                 status=200,
             )
-            self.path.deploy_by_checksum(checksum=self.sha1)
+            self.path.deploy_by_checksum(checksum=self.sha1, quote_parameters=True)
+            # TODO: v0.10.0 - remove quote_parameters explicit setting
+            # These tests should allow the default value of the underlying method to be used.
+            # In this version, we set it explicitly to avoid the warning.
 
             self.assertEqual(len(rsps.calls), 1)
             self.assertEqual(rsps.calls[0].request.url, self.artifact_url)
@@ -1066,7 +1075,10 @@ class ArtifactoryPathTest(ClassSetup):
                 json=self.file_stat_without_modification_date,
                 status=200,
             )
-            self.path.deploy_by_checksum(checksum=self.sha256)
+            self.path.deploy_by_checksum(checksum=self.sha256, quote_parameters=True)
+            # TODO: v0.10.0 - remove quote_parameters explicit setting
+            # These tests should allow the default value of the underlying method to be used.
+            # In this version, we set it explicitly to avoid the warning.
 
             self.assertEqual(len(rsps.calls), 1)
             self.assertEqual(rsps.calls[0].request.url, self.artifact_url)
@@ -1089,7 +1101,12 @@ class ArtifactoryPathTest(ClassSetup):
                 status=400,
             )
             with self.assertRaises(ArtifactoryException) as context:
-                self.path.deploy_by_checksum(sha1=f"{self.sha1}invalid")
+                self.path.deploy_by_checksum(
+                    sha1=f"{self.sha1}invalid", quote_parameters=True
+                )
+                # TODO: v0.10.0 - remove quote_parameters explicit setting
+                # These tests should allow the default value of the underlying method to be used.
+                # In this version, we set it explicitly to avoid the warning.
 
             self.assertEqual(str(context.exception), "Checksum values not provided")
 
@@ -1143,7 +1160,11 @@ class ArtifactoryPathTest(ClassSetup):
                 component="contrib",
                 architecture="amd64",
                 parameters={"z.additional": "param"},
+                quote_parameters=True,
             )
+            # TODO: v0.10.0 - remove quote_parameters explicit setting
+            # These tests should allow the default value of the underlying method to be used.
+            # In this version, we set it explicitly to avoid the warning.
 
         request_url = responses.calls[1].request.url
         self.assertEqual(request_url, constructed_url)
