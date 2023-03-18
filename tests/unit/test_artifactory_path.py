@@ -941,7 +941,7 @@ class ArtifactoryPathTest(ClassSetup):
             for quote_params in (None, True, False):
                 with mock.patch(
                     "urllib.parse.quote", new=mock.Mock(wraps=quote_original)
-                ) as q, mock.patch("artifactory.warn") as w:
+                ) as q:
                     path.deploy_file(
                         test_file,
                         explode_archive=True,
@@ -955,13 +955,12 @@ class ArtifactoryPathTest(ClassSetup):
                     )
                     # TODO: v0.10.0 - None test will not be needed, warn test will not be needed
                     if quote_params is None:
-                        w.assert_called_once_with(
-                            "The current default value of quote_parameters (False) will change to True in v0.10.0.\n"
-                            "To ensure consistent behavior and remove this warning, explicitly set a value for quote_parameters.\n"
-                            "For more details see https://github.com/devopshq/artifactory/issues/408."
+                        self.assertWarnsRegex(
+                            UserWarning,
+                            r"^The current default value of quote_parameters \(False\) will change to True in v0\.10\.0\.\n"
+                            r"To ensure consistent behavior and remove this warning, explicitly set a value for quote_parameters.\n"
+                            r"For more details see https://github\.com/devopshq/artifactory/issues/408\.$",
                         )
-                    else:
-                        w.assert_not_called()
 
                     if quote_params:
                         assert q.call_count == 7  # once for each key and value
