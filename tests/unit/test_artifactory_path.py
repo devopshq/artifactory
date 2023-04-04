@@ -10,6 +10,8 @@ import mock
 import responses
 from responses.matchers import json_params_matcher
 from responses.matchers import query_param_matcher
+from responses.matchers import query_string_matcher
+from urllib3.util import parse_url
 
 import artifactory
 from artifactory import ArtifactoryPath
@@ -920,77 +922,119 @@ class ArtifactoryPathTest(ClassSetup):
         constructed_url = (
             "http://artifactory.local/artifactory" "/api/storage" "/libs-release-local"
         )
-        responses.add(
-            responses.GET,
-            constructed_url,
-            status=200,
-            json=self.dir_stat,
-        )
-
-        matrix_parameters = "deb.architecture=amd64;deb.component=contrib;deb.distribution=dist1;deb.distribution=dist2"
 
         # file is required to calculate checksums
         with tempfile.NamedTemporaryFile(mode="w") as file:
             test_file = pathlib.Path(file.name)
             file.write("I am a test file")
 
-            constructed_url = f"{path}{test_file.name};{matrix_parameters}"
-            responses.add(responses.PUT, constructed_url, status=200)
-
             # can't use pytest.mark.parametrize with unittest classes
-            for quote_params in (None, True, False):
-                with mock.patch(
-                    "urllib.parse.quote", new=mock.Mock(wraps=quote_original)
-                ) as q:
-                    path.deploy_file(
-                        test_file,
-                        explode_archive=True,
-                        explode_archive_atomic=True,
-                        parameters={
-                            "deb.architecture": "amd64",
-                            "deb.component": "contrib",
-                            "deb.distribution": ["dist1", "dist2"],
-                        },
-                        quote_parameters=quote_params,
+            for i, quote_params in enumerate((None, True, False)):
+                responses.add(
+                    responses.GET,
+                    constructed_url,
+                    status=200,
+                    json=self.dir_stat,
+                )
+
+                static_matrix_parameters = "deb.architecture=amd64;deb.component=contrib;deb.distribution=dist1;deb.distribution=dist2"
+                if quote_params:
+                    expected_properties = {
+                        "deb.architecture": "amd64",
+                        "deb.component": "contrib",
+                        "deb.distribution": ["dist1", "dist2"],
+                        "propA": "a%3Fb",
+                        "prop%253FB": "a%250b",
+                        "prop%3FC": "see",
+                    }
+                    matrix_parameters = f"{static_matrix_parameters};prop%253FB=a%250b;prop%3FC=see;propA=a%3Fb"
+                else:
+                    expected_properties = {
+                        "deb.architecture": "amd64",
+                        "deb.component": "contrib",
+                        "deb.distribution": ["dist1", "dist2"],
+                        "propA": "a?b",
+                        "prop%3FB": "a%0b",
+                        "prop?C": "see",
+                    }
+                    matrix_parameters = (
+                        f"{static_matrix_parameters};prop%3FB=a%0b;prop?C=see;propA=a?b"
                     )
-                    # TODO: v0.10.0 - None test will not be needed, warn test will not be needed
-                    if quote_params is None:
-                        self.assertWarnsRegex(
-                            UserWarning,
-                            r"^The current default value of quote_parameters \(False\) will change to True in v0\.10\.0\.\n"
-                            r"To ensure consistent behavior and remove this warning, explicitly set a value for quote_parameters.\n"
-                            r"For more details see https://github\.com/devopshq/artifactory/issues/408\.$",
-                        )
 
-                    if quote_params:
-                        assert q.call_count == 7  # once for each key and value
-                    else:
-                        q.assert_not_called()
+                item_constructed_url = f"{path}{test_file.name};{matrix_parameters}"
+                responses.add(responses.PUT, item_constructed_url, status=200)
 
-        request_url = responses.calls[1].request.url
-        self.assertEqual(request_url, constructed_url)
+                path.deploy_file(
+                    test_file,
+                    explode_archive=True,
+                    explode_archive_atomic=True,
+                    parameters={
+                        "deb.architecture": "amd64",
+                        "deb.component": "contrib",
+                        "deb.distribution": ["dist1", "dist2"],
+                        "propA": "a?b",
+                        "prop%3FB": "a%0b",
+                        "prop?C": "see",
+                    },
+                    quote_parameters=quote_params,
+                )
 
-        # verify that all headers are present and checksums are calculated properly
-        headers = responses.calls[1].request.headers
-        self.assertIn("X-Checksum-Md5", headers)
-        self.assertEqual(headers["X-Checksum-Md5"], "d41d8cd98f00b204e9800998ecf8427e")
+                responses.remove(responses.GET, constructed_url)
+                responses.add(
+                    responses.GET,
+                    constructed_url,
+                    status=200,
+                    match=[query_string_matcher("properties")],
+                    json=dict(properties=expected_properties),
+                )
 
-        self.assertIn("X-Checksum-Sha1", headers)
-        self.assertEqual(
-            headers["X-Checksum-Sha1"], "da39a3ee5e6b4b0d3255bfef95601890afd80709"
-        )
+                props = path.properties
+                assert props == expected_properties
 
-        self.assertIn("X-Checksum-Sha256", headers)
-        self.assertEqual(
-            headers["X-Checksum-Sha256"],
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        )
+                # TODO: v0.10.0 - None test will not be needed, warn test will not be needed
+                if quote_params is None:
+                    self.assertWarnsRegex(
+                        UserWarning,
+                        r"^The current default value of quote_parameters \(False\) will change to True in v0\.10\.0\.\n"
+                        r"To ensure consistent behavior and remove this warning, explicitly set a value for quote_parameters.\n"
+                        r"For more details see https://github\.com/devopshq/artifactory/issues/408\.$",
+                    )
 
-        self.assertIn("X-Explode-Archive", headers)
-        self.assertEqual(headers["X-Explode-Archive"], "true")
+                # We are in a for loop, each iteration makes 3 mocked requests,
+                # and the one we want to do all these assertions on is the middle one.
+                request_index = (i * 3) + 1
+                request_url = responses.calls[request_index].request.url
+                # the reason we need to call parse_url here is because Responses calls it:
+                # https://github.com/getsentry/responses/blob/master/responses/__init__.py#L306
+                # and it ends up changing parts of the URL that it thinks are escaped; namely
+                # it changes %0b in our test URL to %0B and so the assertion ends up failing.
+                expected_url = parse_url(item_constructed_url).url
+                self.assertEqual(request_url, expected_url)
 
-        self.assertIn("X-Explode-Archive-Atomic", headers)
-        self.assertEqual(headers["X-Explode-Archive-Atomic"], "true")
+                # verify that all headers are present and checksums are calculated properly
+                headers = responses.calls[request_index].request.headers
+                self.assertIn("X-Checksum-Md5", headers)
+                self.assertEqual(
+                    headers["X-Checksum-Md5"], "d41d8cd98f00b204e9800998ecf8427e"
+                )
+
+                self.assertIn("X-Checksum-Sha1", headers)
+                self.assertEqual(
+                    headers["X-Checksum-Sha1"],
+                    "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                )
+
+                self.assertIn("X-Checksum-Sha256", headers)
+                self.assertEqual(
+                    headers["X-Checksum-Sha256"],
+                    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                )
+
+                self.assertIn("X-Explode-Archive", headers)
+                self.assertEqual(headers["X-Explode-Archive"], "true")
+
+                self.assertIn("X-Explode-Archive-Atomic", headers)
+                self.assertEqual(headers["X-Explode-Archive-Atomic"], "true")
 
     def test_deploy_by_checksum_sha1(self):
         """
