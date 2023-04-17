@@ -1409,10 +1409,10 @@ path = ArtifactoryPath(
 
 ## Global Configuration File ##
 
-Artifactory Python module also can specify all connection-related settings in a central file, 
-```~/.artifactory_python.cfg``` that is read upon the creation of first ```ArtifactoryPath``` object and is stored 
-globally. For instance, you can specify per-instance settings of authentication tokens, so that you won't need to 
-explicitly pass ```auth``` parameter to ```ArtifactoryPath```.
+Artifactory Python module also can specify all connection-related settings in a central file, given by environment
+variable ```$DOHQ_ARTIFACTORY_PYTHON_CFG``` (default if not set: ```~/.artifactory_python.cfg```) that is read upon
+the creation of first ```ArtifactoryPath``` object and is stored globally. For instance, you can specify per-instance
+settings of authentication tokens, so that you won't need to explicitly pass ```auth``` parameter to ```ArtifactoryPath```.
 
 Example:
 
