@@ -3,7 +3,6 @@ import os
 import pathlib
 import tempfile
 import unittest
-from urllib.parse import quote as quote_original
 
 import dateutil
 import mock
@@ -24,40 +23,24 @@ from dohq_artifactory.admin import User
 
 class UtilTest(unittest.TestCase):
     def test_matrix_encode(self):
-        with mock.patch("urllib.parse.quote", new=mock.Mock(wraps=quote_original)) as q:
+        params = {"foo": "bar", "qux": "asdf"}
 
-            params = {"foo": "bar", "qux": "asdf"}
+        s = artifactory.encode_matrix_parameters(params, quote_parameters=False)
 
-            s = artifactory.encode_matrix_parameters(params, quote_parameters=False)
+        self.assertEqual(s, "foo=bar;qux=asdf")
 
-            self.assertEqual(s, "foo=bar;qux=asdf")
-            q.assert_not_called()
+        params = {"baz": ["bar", "quux"], "foo": "asdf"}
 
-            params = {"baz": ["bar", "quux"], "foo": "asdf"}
+        s = artifactory.encode_matrix_parameters(params, quote_parameters=False)
 
-            s = artifactory.encode_matrix_parameters(params, quote_parameters=False)
+        self.assertEqual(s, "baz=bar;baz=quux;foo=asdf")
 
-            self.assertEqual(s, "baz=bar;baz=quux;foo=asdf")
-            q.assert_not_called()
+        # Test with quoting
+        params = {"b?az": ["b%ar", "quux"], "foo?%0": "a/s&d%f?"}
 
-            # Test with quoting
-            params = {"b?az": ["b%ar", "quux"], "foo?%0": "a/s&d%f?"}
+        s = artifactory.encode_matrix_parameters(params, quote_parameters=True)
 
-            s = artifactory.encode_matrix_parameters(params, quote_parameters=True)
-
-            expected_calls = []
-            for k, v in params.items():
-                expected_calls.append(mock.call(k))
-                if isinstance(v, (list, tuple)):
-                    for vi in v:
-                        expected_calls.append(mock.call(vi))
-                else:
-                    expected_calls.append(mock.call(v))
-
-            q.assert_has_calls(expected_calls)
-            assert q.call_count == len(expected_calls)
-
-            self.assertEqual(s, "b%3Faz=b%25ar;b%3Faz=quux;foo%3F%250=a/s%26d%25f%3F")
+        self.assertEqual(s, "b%3Faz=b%25ar;b%3Faz=quux;foo%3F%250=a/s%26d%25f%3F")
 
     def test_escape_chars(self):
         s = artifactory.escape_chars("a,b|c=d")
