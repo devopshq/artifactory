@@ -5,7 +5,6 @@ import tempfile
 import unittest
 
 import dateutil
-import mock
 import responses
 from responses.matchers import json_params_matcher
 from responses.matchers import query_param_matcher
