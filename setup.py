@@ -25,12 +25,7 @@ elif "dev" in __version__:
 else:
     dev_status = "5 - Production/Stable"
 
-tests_require = [
-    "pytest>=7.0.0",
-    "responses>=0.23.1",
-    "mock",
-    "flake8"
-]
+tests_require = ["pytest>=7.0.0", "responses>=0.23.1", "mock", "flake8"]
 
 setup(
     name="dohq-artifactory",
