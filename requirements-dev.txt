@@ -1,9 +1,0 @@
-requests
-python-dateutil
-PyJWT
-pytest
-mock
-flake8
-pre-commit
-tox
-responses>=0.14.0
