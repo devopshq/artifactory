@@ -64,9 +64,12 @@ try:
 except ImportError:
     import ConfigParser as configparser
 
-default_config_path = "~/.artifactory_python.cfg"
-if platform.system() == "Windows":
+if "DOHQ_ARTIFACTORY_PYTHON_CFG" in os.environ:
+    default_config_path = os.environ["DOHQ_ARTIFACTORY_PYTHON_CFG"]
+elif platform.system() == "Windows":
     default_config_path = "~\\.artifactory_python.cfg"
+else:
+    default_config_path = "~/.artifactory_python.cfg"
 global_config = None
 
 
