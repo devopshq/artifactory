@@ -36,6 +36,7 @@ import re
 import sys
 import urllib.parse
 from itertools import islice
+from warnings import warn
 
 import dateutil.parser
 import requests
@@ -318,21 +319,31 @@ class HTTPResponseWrapper(object):
         return int(self.getheader("content-length"))
 
 
-def encode_matrix_parameters(parameters):
+def encode_matrix_parameters(parameters, quote_parameters):
     """
     Performs encoding of url matrix parameters from dictionary to
     a string.
     See http://www.w3.org/DesignIssues/MatrixURIs.html for specs.
+    If quote_parameters is true, then apply URL quoting to the values and the parameter names.
     """
     result = []
 
     for param in iter(sorted(parameters)):
-        if isinstance(parameters[param], (list, tuple)):
-            value = f";{param}=".join(parameters[param])
-        else:
-            value = parameters[param]
+        raw_value = parameters[param]
 
-        result.append("=".join((param, value)))
+        resolved_param = urllib.parse.quote(param) if quote_parameters else param
+
+        if isinstance(raw_value, (list, tuple)):
+            values = (
+                [urllib.parse.quote(v) for v in raw_value]
+                if quote_parameters
+                else raw_value
+            )
+            value = f";{resolved_param}=".join(values)
+        else:
+            value = urllib.parse.quote(raw_value) if quote_parameters else raw_value
+
+        result.append("=".join((resolved_param, value)))
 
     return ";".join(result)
 
@@ -1134,6 +1145,7 @@ class _ArtifactoryAccessor:
         explode_archive_atomic=None,
         checksum=None,
         by_checksum=False,
+        quote_parameters=None,  # TODO: v0.10.0: change default to True
     ):
         """
         Uploads a given file-like object
@@ -1151,7 +1163,17 @@ class _ArtifactoryAccessor:
         :param explode_archive_atomic: (bool) if True, archive will be exploded in an atomic operation upon deployment
         :param checksum: sha1Value or sha256Value
         :param by_checksum: (bool) if True, deploy artifact by checksum, default False
+        :param quote_parameters: (bool) if True, apply URL quoting to matrix parameter names and values,
+            default False until v0.10.0
         """
+
+        if quote_parameters is None:
+            warn(
+                "The current default value of quote_parameters (False) will change to True in v0.10.0.\n"
+                "To ensure consistent behavior and remove this warning, explicitly set a value for quote_parameters.\n"
+                "For more details see https://github.com/devopshq/artifactory/issues/408."
+            )
+            quote_parameters = False
 
         if fobj and by_checksum:
             raise ArtifactoryException("Either fobj or by_checksum, but not both")
@@ -1162,7 +1184,9 @@ class _ArtifactoryAccessor:
         url = str(pathobj)
 
         matrix_parameters = (
-            f";{encode_matrix_parameters(parameters)}" if parameters else None
+            f";{encode_matrix_parameters(parameters, quote_parameters=quote_parameters)}"
+            if parameters
+            else None
         )
         headers = {}
 
@@ -1793,7 +1817,11 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         sha256 = hashlib.sha256(data).hexdigest()
 
         fobj = io.BytesIO(data)
-        self.deploy(fobj, md5=md5, sha1=sha1, sha256=sha256)
+        self.deploy(fobj, md5=md5, sha1=sha1, sha256=sha256, quote_parameters=False)
+        # TODO: v0.10.0 - possibly remove quote_parameters explicit setting
+        # Because this call never has parameters, it should not matter what it's set to.
+        # In this version, we set it explicitly to avoid the warning.
+        # In 0.10.0 or later, we can either keep it explicitly set to False, or remove it entirely.
         return len(data)
 
     def write_text(self, data, encoding="utf-8", errors="strict"):
@@ -1938,6 +1966,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         parameters={},
         explode_archive=None,
         explode_archive_atomic=None,
+        quote_parameters=None,
     ):
         """
         Upload the given file object to this path
@@ -1951,6 +1980,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             parameters=parameters,
             explode_archive=explode_archive,
             explode_archive_atomic=explode_archive_atomic,
+            quote_parameters=quote_parameters,
         )
 
     def deploy_file(
@@ -1962,6 +1992,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         parameters={},
         explode_archive=False,
         explode_archive_atomic=False,
+        quote_parameters=None,
     ):
         """
         Upload the given file to this path
@@ -1984,6 +2015,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                 parameters=parameters,
                 explode_archive=explode_archive,
                 explode_archive_atomic=explode_archive_atomic,
+                quote_parameters=quote_parameters,
             )
 
     def deploy_by_checksum(
@@ -1992,6 +2024,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         sha256=None,
         checksum=None,
         parameters={},
+        quote_parameters=None,
     ):
         """
         Deploy an artifact to the specified destination by checking if the
@@ -2010,10 +2043,17 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             checksum=checksum,
             by_checksum=True,
             parameters=parameters,
+            quote_parameters=quote_parameters,
         )
 
     def deploy_deb(
-        self, file_name, distribution, component, architecture, parameters={}
+        self,
+        file_name,
+        distribution,
+        component,
+        architecture,
+        parameters={},
+        quote_parameters=None,
     ):
         """
         Convenience method to deploy .deb packages
@@ -2024,6 +2064,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         component -- repository component (e.g. 'main')
         architecture -- package architecture (e.g. 'i386')
         parameters -- attach any additional metadata
+        quote_parameters -- URL quote parameter values and names
         """
         params = {
             "deb.distribution": distribution,
@@ -2032,7 +2073,9 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         }
         params.update(parameters)
 
-        self.deploy_file(file_name, parameters=params)
+        self.deploy_file(
+            file_name, parameters=params, quote_parameters=quote_parameters
+        )
 
     def copy(self, dst, suppress_layouts=False, fail_fast=False, dry_run=False):
         """
@@ -2110,7 +2153,17 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                 return
 
             with self.open() as fobj:
-                dst.deploy(fobj, md5=stat.md5, sha1=stat.sha1, sha256=stat.sha256)
+                dst.deploy(
+                    fobj,
+                    md5=stat.md5,
+                    sha1=stat.sha1,
+                    sha256=stat.sha256,
+                    quote_parameters=False,
+                )
+                # TODO: v0.10.0 - possibly remove quote_parameters explicit setting
+                # Because this call never has parameters, it should not matter what it's set to.
+                # In this version, we set it explicitly to avoid the warning.
+                # In 0.10.0 or later, we can either keep it explicitly set to False, or remove it entirely.
 
     def move(self, dst, suppress_layouts=False, fail_fast=False, dry_run=False):
         """

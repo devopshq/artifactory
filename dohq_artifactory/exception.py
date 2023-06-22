@@ -23,7 +23,7 @@ def raise_for_status(response: requests.Response) -> None:
         try:
             response_json = exception.response.json()
             error_list = response_json.pop("errors", None)
-        except requests.compat.JSONDecodeError:
+        except (requests.compat.JSONDecodeError, requests.exceptions.JSONDecodeError):
             # not a JSON response
             raise ArtifactoryException(str(exception)) from exception
 

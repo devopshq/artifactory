@@ -25,6 +25,7 @@ elif "dev" in __version__:
 else:
     dev_status = "5 - Production/Stable"
 
+tests_require = ["pytest>=7.0.0", "responses>=0.23.1", "mock", "flake8"]
 
 setup(
     name="dohq-artifactory",
@@ -52,10 +53,11 @@ setup(
     url="https://devopshq.github.io/artifactory/",
     download_url="https://github.com/devopshq/artifactory",
     install_requires=[
-        "requests",
+        "requests>=2.30.0",
         "python-dateutil",
         "PyJWT~=2.0",
     ],
+    extras_require={"tests": tests_require},
     zip_safe=False,
     package_data={"": ["README.md"]},
     packages=["dohq_artifactory"],
