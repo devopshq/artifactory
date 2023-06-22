@@ -20,9 +20,10 @@ Development takes place on GitHub, where the git-flow branch structure is used:
 
 ### Prepare development environment
 It is recommended to use Unix systems. You can use free Oracle Virtualbox and Ubuntu.  
-Setup script for Ubuntu system (python version might be 3.6+):
+Setup script for Ubuntu system (python version must be 3.7+):
 ```bash
-python3.7 -m pip install -r requirements-dev.txt
+python3.7 -m pip install tox
+python3.7 -m pip install .[tests]
 python3.7 -m pytest -munit
 
 # install ruby (required for pre-commit)
@@ -36,7 +37,8 @@ python3.7 -m pre_commit run --all-files
 If you use another system procedure might be different.  
 General script:
 ```bash
-python -m pip install -r requirements-dev.txt
+python -m pip install tox
+python -m pip install .[tests]
 python -m pytest -munit
 
 # Install `pre-commit` hooks after clone:

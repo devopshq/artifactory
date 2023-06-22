@@ -773,7 +773,7 @@ class ArtifactoryAccessorTest(ClassSetup):
         responses.add(
             responses.GET,
             constructed_url,
-            status=204,
+            status=200,
             json={
                 "properties": reference_props,
                 "uri": constructed_url,
