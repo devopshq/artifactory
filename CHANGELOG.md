@@ -1,3 +1,8 @@
+## 0.9.0
+- Fix Requests dependency is unversioned, but at least 2.26.0 is not supported #414
+- Fix Property values are not URL quoted for matrix parameters #408
+- Add $DOHQ_ARTIFACTORY_PYTHON_CFG environment variable #413
+
 ## 0.8.4
 - stat: add .created, .last_updated, .last_modified to returned namedtuple #382
 - Add federated repo #399
