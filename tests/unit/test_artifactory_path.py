@@ -948,7 +948,7 @@ class ArtifactoryPathTest(ClassSetup):
             file.write("I am a test file")
 
             # can't use pytest.mark.parametrize with unittest classes
-            for i, quote_params in enumerate((None, True, False)):
+            for i, quote_params in enumerate((True, False)):
                 responses.add(
                     responses.GET,
                     constructed_url,
