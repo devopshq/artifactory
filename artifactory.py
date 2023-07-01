@@ -36,7 +36,6 @@ import re
 import sys
 import urllib.parse
 from itertools import islice
-from warnings import warn
 
 import dateutil.parser
 import requests
@@ -1145,7 +1144,7 @@ class _ArtifactoryAccessor:
         explode_archive_atomic=None,
         checksum=None,
         by_checksum=False,
-        quote_parameters=None,  # TODO: v0.10.0: change default to True
+        quote_parameters=True,
     ):
         """
         Uploads a given file-like object
@@ -1164,16 +1163,8 @@ class _ArtifactoryAccessor:
         :param checksum: sha1Value or sha256Value
         :param by_checksum: (bool) if True, deploy artifact by checksum, default False
         :param quote_parameters: (bool) if True, apply URL quoting to matrix parameter names and values,
-            default False until v0.10.0
+            default True since v0.10.0
         """
-
-        if quote_parameters is None:
-            warn(
-                "The current default value of quote_parameters (False) will change to True in v0.10.0.\n"
-                "To ensure consistent behavior and remove this warning, explicitly set a value for quote_parameters.\n"
-                "For more details see https://github.com/devopshq/artifactory/issues/408."
-            )
-            quote_parameters = False
 
         if fobj and by_checksum:
             raise ArtifactoryException("Either fobj or by_checksum, but not both")
@@ -1848,11 +1839,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         sha256 = hashlib.sha256(data).hexdigest()
 
         fobj = io.BytesIO(data)
-        self.deploy(fobj, md5=md5, sha1=sha1, sha256=sha256, quote_parameters=False)
-        # TODO: v0.10.0 - possibly remove quote_parameters explicit setting
-        # Because this call never has parameters, it should not matter what it's set to.
-        # In this version, we set it explicitly to avoid the warning.
-        # In 0.10.0 or later, we can either keep it explicitly set to False, or remove it entirely.
+        self.deploy(fobj, md5=md5, sha1=sha1, sha256=sha256)
         return len(data)
 
     def write_text(self, data, encoding="utf-8", errors="strict"):
@@ -2189,12 +2176,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                     md5=stat.md5,
                     sha1=stat.sha1,
                     sha256=stat.sha256,
-                    quote_parameters=False,
                 )
-                # TODO: v0.10.0 - possibly remove quote_parameters explicit setting
-                # Because this call never has parameters, it should not matter what it's set to.
-                # In this version, we set it explicitly to avoid the warning.
-                # In 0.10.0 or later, we can either keep it explicitly set to False, or remove it entirely.
 
     def move(self, dst, suppress_layouts=False, fail_fast=False, dry_run=False):
         """
