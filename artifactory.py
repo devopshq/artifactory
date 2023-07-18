@@ -1636,6 +1636,29 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         pathobj = pathobj or self
         return self._accessor.stat(pathobj=pathobj)
 
+    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+        """
+        Create a new directory at this given path.
+        """
+        try:
+            self._accessor.mkdir(self, mode)
+        except FileNotFoundError:
+            if not parents or self.parent == self:
+                raise
+            self.parent.mkdir(parents=True, exist_ok=True)
+            self.mkdir(mode, parents=False, exist_ok=exist_ok)
+        except OSError:
+            # Cannot rely on checking for EEXIST, since the operating system
+            # could give priority to other errors like EACCES or EROFS
+            if not exist_ok or not self.is_dir():
+                raise
+
+    def rmdir(self):
+        """
+        Remove this directory.  The directory must be empty.
+        """
+        self._accessor.rmdir(self)
+
     def download_stats(self, pathobj=None):
         """
          Item statistics record the number of times an item was downloaded, last download date and last downloader.
