@@ -1659,6 +1659,12 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         self._accessor.rmdir(self)
 
+    def _scandir(self):
+        """
+        Override Path._scandir. Only required on Python >= 3.11
+        """
+        return self._accessor.scandir(self)
+
     def download_stats(self, pathobj=None):
         """
          Item statistics record the number of times an item was downloaded, last download date and last downloader.
