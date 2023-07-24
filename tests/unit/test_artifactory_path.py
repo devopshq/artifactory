@@ -455,6 +455,12 @@ class ClassSetup(unittest.TestCase):
             ],
             "uri": "http://artifactory.local/artifactory/api/storage/libs-release-local",
         }
+        self.dir_mkdir = {
+            "repo": "libs-release-local",
+            "path": "/testdir",
+            "created": "2014-02-18T15:35:29.361+04:00",
+            "uri": "http://artifactory.local/artifactory/api/storage/libs-release-local",
+        }
 
         self.property_data = """{
           "properties" : {
@@ -675,8 +681,39 @@ class ArtifactoryAccessorTest(ClassSetup):
 
         self.assertRaises(OSError, a.listdir, path)
 
+    @responses.activate
     def test_mkdir(self):
-        pass
+        a = self.cls()
+
+        # Directory
+        path = ArtifactoryPath(
+            "http://artifactory.local/artifactory/libs-release-local/testdir"
+        )
+
+        constructed_url_stat = "http://artifactory.local/artifactory/api/storage/libs-release-local/testdir"
+        constructed_url_mkdir = (
+            "http://artifactory.local/artifactory/libs-release-local/testdir/"
+        )
+        responses.add(
+            responses.GET,
+            constructed_url_stat,
+            status=404,
+            json="""
+{
+  "errors" : [ {
+    "status" : 404,
+    "message" : "Not Found."
+  } ]
+}
+""",
+        )
+        responses.add(
+            responses.PUT,
+            constructed_url_mkdir,
+            status=200,
+            json=self.dir_mkdir,
+        )
+        a.mkdir(path, "")
 
     @responses.activate
     def test_get_properties(self):
