@@ -1811,6 +1811,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                 continue
             yield self._make_child_relpath(name)
 
+    iterdir = __iter__
+
     def read_text(self, encoding=None, errors=None):
         """
         Read file content
