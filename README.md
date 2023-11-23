@@ -576,7 +576,7 @@ aqlargs = [
         ]
     },
     ".include",
-    ["repo", "path", "name"],
+    ["repo", "path", "name", "type"],
     ".sort",
     {"$asc": ["repo", "path", "name"]},
 ]
