@@ -101,6 +101,10 @@ class ArtifactoryFlavorTest(unittest.TestCase):
             "https://example.com/artifactory/foo", "https://example.com/artifactory/foo"
         )
         check(
+            "https://example.com/artifactory/foo/example.com/bar",
+            "https://example.com/artifactory/foo/example.com/bar"
+        )
+        check(
             "https://example.com/artifactory/foo/#1",
             "https://example.com/artifactory/foo/%231",
         )
