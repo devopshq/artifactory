@@ -1887,10 +1887,12 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         return self._accessor.creator(self)
 
-    def is_dir(self):
+    def is_dir(self, follow_symlinks=False):
         """
         Whether this path is a directory.
         """
+        if follow_symlinks:
+            raise TypeError('Artifactory does not have symlink feature')
         return self._accessor.is_dir(self)
 
     def is_file(self):
