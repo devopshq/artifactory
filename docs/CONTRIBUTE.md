@@ -20,18 +20,18 @@ Development takes place on GitHub, where the git-flow branch structure is used:
 
 ### Prepare development environment
 It is recommended to use Unix systems. You can use free Oracle Virtualbox and Ubuntu.  
-Setup script for Ubuntu system (python version must be 3.7+):
+Setup script for Ubuntu system (python version must be 3.8+):
 ```bash
-python3.7 -m pip install tox
-python3.7 -m pip install .[tests]
-python3.7 -m pytest -munit
+python3 -m pip install tox
+python3 -m pip install .[tests]
+python3 -m pytest -munit
 
 # install ruby (required for pre-commit)
 sudo apt install ruby
 
 # run pre-commit
-python3.7 -m pre_commit install
-python3.7 -m pre_commit run --all-files
+python3 -m pre_commit install
+python3 -m pre_commit run --all-files
 ```
 
 If you use another system procedure might be different.  
