@@ -36,7 +36,6 @@ import re
 import sys
 import urllib.parse
 from itertools import islice
-from warnings import warn
 
 import dateutil.parser
 import requests
@@ -411,13 +410,13 @@ def quote_url(url):
     parsed_url = urllib3.util.parse_url(url)
     if parsed_url.port:
         quoted_path = requests.utils.quote(
-            url.rpartition(f"{parsed_url.host}:{parsed_url.port}")[2]
+            url.partition(f"{parsed_url.host}:{parsed_url.port}")[2]
         )
         quoted_url = (
             f"{parsed_url.scheme}://{parsed_url.host}:{parsed_url.port}{quoted_path}"
         )
     else:
-        quoted_path = requests.utils.quote(url.rpartition(parsed_url.host)[2])
+        quoted_path = requests.utils.quote(url.partition(parsed_url.host)[2])
         quoted_url = f"{parsed_url.scheme}://{parsed_url.host}{quoted_path}"
 
     return quoted_url
@@ -877,7 +876,7 @@ class _ArtifactoryAccessor:
         )
         code = response.status_code
         text = response.text
-        if code == 404 and ("Unable to find item" in text or "Not Found" in text):
+        if code == 404 and ("Unable to find item" in text or "Not Found" in text or "File not found" in text):
             raise OSError(2, f"No such file or directory: {url}")
 
         raise_for_status(response)
@@ -1145,7 +1144,7 @@ class _ArtifactoryAccessor:
         explode_archive_atomic=None,
         checksum=None,
         by_checksum=False,
-        quote_parameters=None,  # TODO: v0.10.0: change default to True
+        quote_parameters=True,
     ):
         """
         Uploads a given file-like object
@@ -1164,16 +1163,8 @@ class _ArtifactoryAccessor:
         :param checksum: sha1Value or sha256Value
         :param by_checksum: (bool) if True, deploy artifact by checksum, default False
         :param quote_parameters: (bool) if True, apply URL quoting to matrix parameter names and values,
-            default False until v0.10.0
+            default True since v0.10.0
         """
-
-        if quote_parameters is None:
-            warn(
-                "The current default value of quote_parameters (False) will change to True in v0.10.0.\n"
-                "To ensure consistent behavior and remove this warning, explicitly set a value for quote_parameters.\n"
-                "For more details see https://github.com/devopshq/artifactory/issues/408."
-            )
-            quote_parameters = False
 
         if fobj and by_checksum:
             raise ArtifactoryException("Either fobj or by_checksum, but not both")
@@ -1636,6 +1627,35 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         pathobj = pathobj or self
         return self._accessor.stat(pathobj=pathobj)
 
+    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+        """
+        Create a new directory at this given path.
+        """
+        try:
+            self._accessor.mkdir(self, mode)
+        except FileNotFoundError:
+            if not parents or self.parent == self:
+                raise
+            self.parent.mkdir(parents=True, exist_ok=True)
+            self.mkdir(mode, parents=False, exist_ok=exist_ok)
+        except OSError:
+            # Cannot rely on checking for EEXIST, since the operating system
+            # could give priority to other errors like EACCES or EROFS
+            if not exist_ok or not self.is_dir():
+                raise
+
+    def rmdir(self):
+        """
+        Remove this directory.  The directory must be empty.
+        """
+        self._accessor.rmdir(self)
+
+    def _scandir(self):
+        """
+        Override Path._scandir. Only required on Python >= 3.11
+        """
+        return self._accessor.scandir(self)
+
     def download_stats(self, pathobj=None):
         """
          Item statistics record the number of times an item was downloaded, last download date and last downloader.
@@ -1782,6 +1802,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                 continue
             yield self._make_child_relpath(name)
 
+    iterdir = __iter__
+
     def read_text(self, encoding=None, errors=None):
         """
         Read file content
@@ -1817,11 +1839,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         sha256 = hashlib.sha256(data).hexdigest()
 
         fobj = io.BytesIO(data)
-        self.deploy(fobj, md5=md5, sha1=sha1, sha256=sha256, quote_parameters=False)
-        # TODO: v0.10.0 - possibly remove quote_parameters explicit setting
-        # Because this call never has parameters, it should not matter what it's set to.
-        # In this version, we set it explicitly to avoid the warning.
-        # In 0.10.0 or later, we can either keep it explicitly set to False, or remove it entirely.
+        self.deploy(fobj, md5=md5, sha1=sha1, sha256=sha256)
         return len(data)
 
     def write_text(self, data, encoding="utf-8", errors="strict"):
@@ -1869,7 +1887,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         return self._accessor.creator(self)
 
-    def is_dir(self):
+    def is_dir(self, *, follow_symlinks=True):
         """
         Whether this path is a directory.
         """
@@ -2158,12 +2176,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                     md5=stat.md5,
                     sha1=stat.sha1,
                     sha256=stat.sha256,
-                    quote_parameters=False,
                 )
-                # TODO: v0.10.0 - possibly remove quote_parameters explicit setting
-                # Because this call never has parameters, it should not matter what it's set to.
-                # In this version, we set it explicitly to avoid the warning.
-                # In 0.10.0 or later, we can either keep it explicitly set to False, or remove it entirely.
 
     def move(self, dst, suppress_layouts=False, fail_fast=False, dry_run=False):
         """

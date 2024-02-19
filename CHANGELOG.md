@@ -1,3 +1,6 @@
+## 0.9.1
+- Support Python 3.11 #396 396
+
 ## 0.9.0
 - Fix Requests dependency is unversioned, but at least 2.26.0 is not supported #414
 - Fix Property values are not URL quoted for matrix parameters #408

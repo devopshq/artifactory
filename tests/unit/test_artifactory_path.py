@@ -101,6 +101,10 @@ class ArtifactoryFlavorTest(unittest.TestCase):
             "https://example.com/artifactory/foo", "https://example.com/artifactory/foo"
         )
         check(
+            "https://example.com/artifactory/foo/example.com/bar",
+            "https://example.com/artifactory/foo/example.com/bar"
+        )
+        check(
             "https://example.com/artifactory/foo/#1",
             "https://example.com/artifactory/foo/%231",
         )
@@ -455,6 +459,12 @@ class ClassSetup(unittest.TestCase):
             ],
             "uri": "http://artifactory.local/artifactory/api/storage/libs-release-local",
         }
+        self.dir_mkdir = {
+            "repo": "libs-release-local",
+            "path": "/testdir",
+            "created": "2014-02-18T15:35:29.361+04:00",
+            "uri": "http://artifactory.local/artifactory/api/storage/libs-release-local",
+        }
 
         self.property_data = """{
           "properties" : {
@@ -675,8 +685,39 @@ class ArtifactoryAccessorTest(ClassSetup):
 
         self.assertRaises(OSError, a.listdir, path)
 
+    @responses.activate
     def test_mkdir(self):
-        pass
+        a = self.cls()
+
+        # Directory
+        path = ArtifactoryPath(
+            "http://artifactory.local/artifactory/libs-release-local/testdir"
+        )
+
+        constructed_url_stat = "http://artifactory.local/artifactory/api/storage/libs-release-local/testdir"
+        constructed_url_mkdir = (
+            "http://artifactory.local/artifactory/libs-release-local/testdir/"
+        )
+        responses.add(
+            responses.GET,
+            constructed_url_stat,
+            status=404,
+            json="""
+{
+  "errors" : [ {
+    "status" : 404,
+    "message" : "Not Found."
+  } ]
+}
+""",
+        )
+        responses.add(
+            responses.PUT,
+            constructed_url_mkdir,
+            status=200,
+            json=self.dir_mkdir,
+        )
+        a.mkdir(path, "")
 
     @responses.activate
     def test_get_properties(self):
@@ -911,7 +952,7 @@ class ArtifactoryPathTest(ClassSetup):
             file.write("I am a test file")
 
             # can't use pytest.mark.parametrize with unittest classes
-            for i, quote_params in enumerate((None, True, False)):
+            for i, quote_params in enumerate((True, False)):
                 responses.add(
                     responses.GET,
                     constructed_url,
@@ -973,15 +1014,6 @@ class ArtifactoryPathTest(ClassSetup):
                 props = path.properties
                 assert props == expected_properties
 
-                # TODO: v0.10.0 - None test will not be needed, warn test will not be needed
-                if quote_params is None:
-                    self.assertWarnsRegex(
-                        UserWarning,
-                        r"^The current default value of quote_parameters \(False\) will change to True in v0\.10\.0\.\n"
-                        r"To ensure consistent behavior and remove this warning, explicitly set a value for quote_parameters.\n"
-                        r"For more details see https://github\.com/devopshq/artifactory/issues/408\.$",
-                    )
-
                 # We are in a for loop, each iteration makes 3 mocked requests,
                 # and the one we want to do all these assertions on is the middle one.
                 request_index = (i * 3) + 1
@@ -1030,10 +1062,7 @@ class ArtifactoryPathTest(ClassSetup):
                 json=self.file_stat_without_modification_date,
                 status=200,
             )
-            self.path.deploy_by_checksum(sha1=self.sha1, quote_parameters=True)
-            # TODO: v0.10.0 - remove quote_parameters explicit setting
-            # These tests should allow the default value of the underlying method to be used.
-            # In this version, we set it explicitly to avoid the warning.
+            self.path.deploy_by_checksum(sha1=self.sha1)
 
             self.assertEqual(len(rsps.calls), 1)
             self.assertEqual(rsps.calls[0].request.url, self.artifact_url)
@@ -1055,10 +1084,7 @@ class ArtifactoryPathTest(ClassSetup):
                 json=self.file_stat_without_modification_date,
                 status=200,
             )
-            self.path.deploy_by_checksum(sha256=self.sha256, quote_parameters=True)
-            # TODO: v0.10.0 - remove quote_parameters explicit setting
-            # These tests should allow the default value of the underlying method to be used.
-            # In this version, we set it explicitly to avoid the warning.
+            self.path.deploy_by_checksum(sha256=self.sha256)
 
             self.assertEqual(len(rsps.calls), 1)
             self.assertEqual(rsps.calls[0].request.url, self.artifact_url)
@@ -1080,10 +1106,7 @@ class ArtifactoryPathTest(ClassSetup):
                 json=self.file_stat_without_modification_date,
                 status=200,
             )
-            self.path.deploy_by_checksum(checksum=self.sha1, quote_parameters=True)
-            # TODO: v0.10.0 - remove quote_parameters explicit setting
-            # These tests should allow the default value of the underlying method to be used.
-            # In this version, we set it explicitly to avoid the warning.
+            self.path.deploy_by_checksum(checksum=self.sha1)
 
             self.assertEqual(len(rsps.calls), 1)
             self.assertEqual(rsps.calls[0].request.url, self.artifact_url)
@@ -1100,10 +1123,7 @@ class ArtifactoryPathTest(ClassSetup):
                 json=self.file_stat_without_modification_date,
                 status=200,
             )
-            self.path.deploy_by_checksum(checksum=self.sha256, quote_parameters=True)
-            # TODO: v0.10.0 - remove quote_parameters explicit setting
-            # These tests should allow the default value of the underlying method to be used.
-            # In this version, we set it explicitly to avoid the warning.
+            self.path.deploy_by_checksum(checksum=self.sha256)
 
             self.assertEqual(len(rsps.calls), 1)
             self.assertEqual(rsps.calls[0].request.url, self.artifact_url)
@@ -1126,12 +1146,7 @@ class ArtifactoryPathTest(ClassSetup):
                 status=400,
             )
             with self.assertRaises(ArtifactoryException) as context:
-                self.path.deploy_by_checksum(
-                    sha1=f"{self.sha1}invalid", quote_parameters=True
-                )
-                # TODO: v0.10.0 - remove quote_parameters explicit setting
-                # These tests should allow the default value of the underlying method to be used.
-                # In this version, we set it explicitly to avoid the warning.
+                self.path.deploy_by_checksum(sha1=f"{self.sha1}invalid")
 
             self.assertEqual(str(context.exception), "Checksum values not provided")
 
@@ -1185,11 +1200,7 @@ class ArtifactoryPathTest(ClassSetup):
                 component="contrib",
                 architecture="amd64",
                 parameters={"z.additional": "param"},
-                quote_parameters=True,
             )
-            # TODO: v0.10.0 - remove quote_parameters explicit setting
-            # These tests should allow the default value of the underlying method to be used.
-            # In this version, we set it explicitly to avoid the warning.
 
         request_url = responses.calls[1].request.url
         self.assertEqual(request_url, constructed_url)
