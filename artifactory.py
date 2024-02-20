@@ -862,7 +862,7 @@ class _ArtifactoryAccessor:
             [
                 pathobj.drive.rstrip("/"),
                 "api/storage",
-                str(pathobj.relative_to(pathobj.drive)).strip("/"),
+                pathobj.repo + pathobj.path_in_repo.rstrip("/"),
             ]
         )
 
@@ -1025,7 +1025,7 @@ class _ArtifactoryAccessor:
         url = "/".join(
             [
                 pathobj.drive.rstrip("/"),
-                str(pathobj.relative_to(pathobj.drive)).strip("/"),
+                pathobj.repo + pathobj.path_in_repo.rstrip("/"),
             ]
         )
 
@@ -1224,12 +1224,12 @@ class _ArtifactoryAccessor:
             [
                 src.drive.rstrip("/"),
                 "api/copy",
-                str(src.relative_to(src.drive)).strip("/"),
+                src.repo + src.path_in_repo.rstrip("/")
             ]
         )
 
         params = {
-            "to": str(dst.relative_to(dst.drive)).rstrip("/"),
+            "to": dst.repo + dst.path_in_repo.rstrip("/"),
             "suppressLayouts": int(suppress_layouts),
             "failFast": int(fail_fast),
             "dry": int(dry_run),
@@ -1264,12 +1264,12 @@ class _ArtifactoryAccessor:
             [
                 src.drive.rstrip("/"),
                 "api/move",
-                str(src.relative_to(src.drive)).rstrip("/"),
+                src.repo + src.path_in_repo.rstrip("/"),
             ]
         )
 
         params = {
-            "to": str(dst.relative_to(dst.drive)).rstrip("/"),
+            "to": dst.repo + dst.path_in_repo.rstrip("/"),
             "suppressLayouts": int(suppress_layouts),
             "failFast": int(fail_fast),
             "dry": int(dry_run),
@@ -1295,7 +1295,7 @@ class _ArtifactoryAccessor:
             [
                 pathobj.drive.rstrip("/"),
                 "api/storage",
-                str(pathobj.relative_to(pathobj.drive)).strip("/"),
+                pathobj.repo + pathobj.path_in_repo.rstrip("/"),
             ]
         )
 
@@ -1328,7 +1328,7 @@ class _ArtifactoryAccessor:
             [
                 pathobj.drive.rstrip("/"),
                 "api/storage",
-                str(pathobj.relative_to(pathobj.drive)).strip("/"),
+                pathobj.repo + pathobj.path_in_repo.rstrip("/"),
             ]
         )
 
@@ -1364,7 +1364,7 @@ class _ArtifactoryAccessor:
             [
                 pathobj.drive.rstrip("/"),
                 "api/storage",
-                str(pathobj.relative_to(pathobj.drive)).strip("/"),
+                pathobj.repo + pathobj.path_in_repo.rstrip("/"),
             ]
         )
 
@@ -1397,7 +1397,7 @@ class _ArtifactoryAccessor:
             [
                 pathobj.drive.rstrip("/"),
                 "api/metadata",
-                str(pathobj.relative_to(pathobj.drive)).strip("/"),
+                pathobj.repo + pathobj.path_in_repo.rstrip("/"),
             ]
         )
 
@@ -1707,7 +1707,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             raise NotImplementedError(archive_type + " is not support by current API")
 
         archive_url = (
-            self.drive + "/api/archive/download/" + self.repo + self.path_in_repo
+            self.drive + "/api/archive/download/" + self.repo + self.path_in_repo.rstrip("/")
         )
         archive_obj = self.joinpath(archive_url)
         archive_obj.session.params = {"archiveType": archive_type}
@@ -1716,20 +1716,6 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             archive_obj.session.params["includeChecksumFiles"] = True
 
         return archive_obj
-
-    def relative_to(self, *other):
-        """
-        Return the relative path to another path identified by the passed
-        arguments.  If the operation is not possible (because this is not
-        a subpath of the other path), raise ValueError.
-        """
-        obj = super(ArtifactoryPath, self).relative_to(*other)
-        obj.auth = self.auth
-        obj.verify = self.verify
-        obj.cert = self.cert
-        obj.session = self.session
-        obj.timeout = self.timeout
-        return obj
 
     def joinpath(self, *args):
         """
@@ -2807,31 +2793,3 @@ class ArtifactoryBuildManager(ArtifactoryPath):
             cert=self.cert,
             timeout=self.timeout,
         )
-
-
-def walk(pathobj, topdown=True):
-    """
-    os.walk like function to traverse the URI like a file system.
-
-    The only difference is that this function takes and returns Path objects
-    in places where original implementation will return strings
-    """
-    dirs = []
-    nondirs = []
-    for child in pathobj:
-        relpath = str(child.relative_to(str(pathobj)))
-        if relpath.startswith("/"):
-            relpath = relpath[1:]
-        if relpath.endswith("/"):
-            relpath = relpath[:-1]
-        if child.is_dir():
-            dirs.append(relpath)
-        else:
-            nondirs.append(relpath)
-    if topdown:
-        yield pathobj, dirs, nondirs
-    for dir in dirs:
-        for result in walk(pathobj / dir):
-            yield result
-    if not topdown:
-        yield pathobj, dirs, nondirs

@@ -1212,10 +1212,6 @@ class ArtifactoryPathTest(ClassSetup):
         self.assertEqual(c.auth, ("foo", "bar"))
 
         b = P("http://b/artifactory/c/d", auth=("foo", "bar"))
-        c = b.relative_to("http://b/artifactory/c")
-        self.assertEqual(c.auth, ("foo", "bar"))
-
-        b = P("http://b/artifactory/c/d", auth=("foo", "bar"))
         c = b.joinpath("d")
         self.assertEqual(c.auth, ("foo", "bar"))
 
