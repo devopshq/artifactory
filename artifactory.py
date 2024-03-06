@@ -2321,6 +2321,33 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         )
         return obj
 
+    def get_docker_images(self, docker_repo):
+        """
+        Get Docker image list from docker repo
+        :param docker_repo: Docker repository to list
+        :return: List[image]
+        """
+        url = f"{self.drive.rstrip('/')}/api/docker/{docker_repo}/v2/_catalog"
+        r = self.session.get(url)
+        raise_for_status(r)
+        content = r.json()
+
+        return content["repositories"]
+
+    def get_docker_image_tags(self, docker_repo, docker_image):
+        """
+        Get Docker image list from docker repo
+        :param docker_repo: Docker repository
+        :param docker_image: Docker image to list
+        :return: List[tag]
+        """
+        url = f"{self.drive.rstrip('/')}/api/docker/{docker_repo}/v2/{docker_image}/tags/list"
+        r = self.session.get(url)
+        raise_for_status(r)
+        content = r.json()
+
+        return content["tags"]
+
     def promote_docker_image(
         self,
         source_repo,
