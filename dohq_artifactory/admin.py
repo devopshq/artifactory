@@ -660,6 +660,12 @@ class GenericRepository(AdminObject):
         __div__ = __truediv__
         __rdiv__ = __rtruediv__
 
+    def __setstate__(self, state):
+        self.__dict__ = state
+
+    def __getstate__(self):
+        return self.__dict__
+
 
 class Repository(GenericRepository):
     # List package_type from wiki:
