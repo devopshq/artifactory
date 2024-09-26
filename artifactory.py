@@ -1565,6 +1565,12 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         super(ArtifactoryPath, self)._init(*args, **kwargs)
 
+    def __reduce__(self):
+        # pathlib.PurePath.__reduce__ doesn't include instance state, but we
+        # have state that needs to be included when pickling
+        pathlib_reduce = super().__reduce__()
+        return pathlib_reduce[0], pathlib_reduce[1], self.__dict__
+
     @property
     def top(self):
         obj = ArtifactoryPath(self.drive)
