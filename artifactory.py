@@ -422,7 +422,7 @@ def quote_url(url):
     return quoted_url
 
 
-class _ArtifactoryFlavour(pathlib._Flavour):
+class _ArtifactoryFlavour():
     """
     Implements Artifactory-specific pure path manipulations.
     I.e. what is 'drive', 'root' and 'path' and how to split full path into
@@ -440,7 +440,6 @@ class _ArtifactoryFlavour(pathlib._Flavour):
     sep = "/"
     altsep = "/"
     has_drv = True
-    pathmod = pathlib.posixpath
     is_supported = True
 
     def _get_base_url(self, url):
@@ -1501,10 +1500,16 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         # see changes in pathlib.Path, slots are no more applied
         # https://github.com/python/cpython/blob/ce121fd8755d4db9511ce4aab39d0577165e118e/Lib/pathlib.py#L952
         _accessor = _artifactory_accessor
+        parser = _ArtifactoryFlavour()
     else:
         # in 3.9 and below Pathlib limits what members can be present in 'Path' class
         __slots__ = ("auth", "verify", "cert", "session", "timeout")
 
+
+    def __init__(self, *args, **kwargs):
+        # supplying keyword arguments to pathlib.PurePath is deprecated
+        return super().__init__(*args)
+ 
     def __new__(cls, *args, **kwargs):
         """
         pathlib.Path overrides __new__ in order to create objects
@@ -1514,6 +1519,10 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         only then add auth information.
         """
         obj = pathlib.Path.__new__(cls, *args, **kwargs)
+     
+        if sys.version_info.major == 3 and sys.version_info.minor >= 12:
+            # supplying keyword arguments to pathlib.PurePath is deprecated
+            obj.__init__(*args)
 
         cfg_entry = get_global_config_entry(obj.drive)
 
