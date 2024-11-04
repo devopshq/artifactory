@@ -422,7 +422,7 @@ def quote_url(url):
     return quoted_url
 
 
-class _ArtifactoryFlavour():
+class _ArtifactoryFlavour:
     """
     Implements Artifactory-specific pure path manipulations.
     I.e. what is 'drive', 'root' and 'path' and how to split full path into
