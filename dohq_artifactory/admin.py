@@ -872,6 +872,7 @@ class RepositoryVirtual(GenericRepository):
         self.notes = ""
         self.package_type = packageType or package_type
         self.repositories = repositories or []
+        default_deployment_repo_name=None
 
         if packageType:
             msg = "packageType is deprecated, use package_type"
@@ -893,6 +894,7 @@ class RepositoryVirtual(GenericRepository):
             "packageType": self.package_type,
             "repositories": self._repositories,
             "notes": self.notes,
+            "defaultDeploymentRepo": self.default_deployment_repo_name
         }
 
         return data_json
@@ -908,6 +910,7 @@ class RepositoryVirtual(GenericRepository):
         self.package_type = response.get("packageType")
         self._repositories = response.get("repositories")
         self.docker_api_version = response.get("dockerApiVersion", None)
+        self.default_deployment_repo_name = response.get("defaultDeploymentRepo")
 
     def add_repository(self, *repos):
         for value in repos:
