@@ -872,7 +872,7 @@ class RepositoryVirtual(GenericRepository):
         self.notes = ""
         self.package_type = packageType or package_type
         self.repositories = repositories or []
-        default_deployment_repo_name=None
+        self.default_deployment_repo_name = default_deployment_repo_name
 
         if packageType:
             msg = "packageType is deprecated, use package_type"
