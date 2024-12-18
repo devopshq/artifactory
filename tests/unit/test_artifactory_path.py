@@ -102,7 +102,7 @@ class ArtifactoryFlavorTest(unittest.TestCase):
         )
         check(
             "https://example.com/artifactory/foo/example.com/bar",
-            "https://example.com/artifactory/foo/example.com/bar"
+            "https://example.com/artifactory/foo/example.com/bar",
         )
         check(
             "https://example.com/artifactory/foo/#1",
@@ -140,28 +140,28 @@ class ArtifactoryFlavorTest(unittest.TestCase):
 
         check(".com", ("", "", ".com"))
         check("example1.com", ("", "", "example1.com"))
-        check("example2.com/artifactory", ("example2.com/artifactory", "", ""))
-        check("example2.com/artifactory/", ("example2.com/artifactory", "", ""))
-        check("example3.com/artifactory/foo", ("example3.com/artifactory", "/foo/", ""))
+        check("example2.com/artifactory", ("example2.com/artifactory", "/", ""))
+        check("example2.com/artifactory/", ("example2.com/artifactory", "/", ""))
+        check("example3.com/artifactory/foo", ("example3.com/artifactory", "/", "foo"))
         check(
             "example3.com/artifactory/foo/bar",
-            ("example3.com/artifactory", "/foo/", "bar"),
+            ("example3.com/artifactory", "/", "foo/bar"),
         )
         check(
             "artifactory.local/artifactory/foo/bar",
-            ("artifactory.local/artifactory", "/foo/", "bar"),
+            ("artifactory.local/artifactory", "/", "foo/bar"),
         )
         check(
             "http://artifactory.local/artifactory/foo/bar",
-            ("http://artifactory.local/artifactory", "/foo/", "bar"),
+            ("http://artifactory.local/artifactory", "/", "foo/bar"),
         )
         check(
             "https://artifactory.a.b.c.d/artifactory/foo/bar",
-            ("https://artifactory.a.b.c.d/artifactory", "/foo/", "bar"),
+            ("https://artifactory.a.b.c.d/artifactory", "/", "foo/bar"),
         )
         check(
             "https://artifactory.a.b.c.d/artifactory/foo/artifactory/bar",
-            ("https://artifactory.a.b.c.d/artifactory", "/foo/", "artifactory/bar"),
+            ("https://artifactory.a.b.c.d/artifactory", "/", "foo/artifactory/bar"),
         )
 
     def test_special_characters(self):
@@ -169,32 +169,32 @@ class ArtifactoryFlavorTest(unittest.TestCase):
         https://github.com/devopshq/artifactory/issues/90
         """
         check = self._check_splitroot
-        check("https://a/b/`", ("https://a", "/b/", "`"))
-        check("https://a/b/~", ("https://a", "/b/", "~"))
-        check("https://a/b/!", ("https://a", "/b/", "!"))
-        check("https://a/b/@", ("https://a", "/b/", "@"))
-        check("https://a/b/#", ("https://a", "/b/", "#"))
-        check("https://a/b/$", ("https://a", "/b/", "$"))
-        check("https://a/b/%", ("https://a", "/b/", "%"))
-        check("https://a/b/^", ("https://a", "/b/", "^"))
-        check("https://a/b/&", ("https://a", "/b/", "&"))
-        check("https://a/b/*", ("https://a", "/b/", "*"))
-        check("https://a/b/(", ("https://a", "/b/", "("))
-        check("https://a/b/)", ("https://a", "/b/", ")"))
-        check("https://a/b/[", ("https://a", "/b/", "["))
-        check("https://a/b/]", ("https://a", "/b/", "]"))
-        check("https://a/b/{", ("https://a", "/b/", "{"))
-        check("https://a/b/}", ("https://a", "/b/", "}"))
-        check("https://a/b/|", ("https://a", "/b/", "|"))
-        check("https://a/b/\\", ("https://a", "/b/", "\\"))
-        check("https://a/b/:", ("https://a", "/b/", ":"))
-        check("https://a/b/;", ("https://a", "/b/", ";"))
-        check("https://a/b/'", ("https://a", "/b/", "'"))
-        check('https://a/b/"', ("https://a", "/b/", '"'))
-        check("https://a/b/,", ("https://a", "/b/", ","))
-        check("https://a/b/<", ("https://a", "/b/", "<"))
-        check("https://a/b/>", ("https://a", "/b/", ">"))
-        check("https://a/b/?", ("https://a", "/b/", "?"))
+        check("https://a/b/`", ("https://a", "/", "b/`"))
+        check("https://a/b/~", ("https://a", "/", "b/~"))
+        check("https://a/b/!", ("https://a", "/", "b/!"))
+        check("https://a/b/@", ("https://a", "/", "b/@"))
+        check("https://a/b/#", ("https://a", "/", "b/#"))
+        check("https://a/b/$", ("https://a", "/", "b/$"))
+        check("https://a/b/%", ("https://a", "/", "b/%"))
+        check("https://a/b/^", ("https://a", "/", "b/^"))
+        check("https://a/b/&", ("https://a", "/", "b/&"))
+        check("https://a/b/*", ("https://a", "/", "b/*"))
+        check("https://a/b/(", ("https://a", "/", "b/("))
+        check("https://a/b/)", ("https://a", "/", "b/)"))
+        check("https://a/b/[", ("https://a", "/", "b/["))
+        check("https://a/b/]", ("https://a", "/", "b/]"))
+        check("https://a/b/{", ("https://a", "/", "b/{"))
+        check("https://a/b/}", ("https://a", "/", "b/}"))
+        check("https://a/b/|", ("https://a", "/", "b/|"))
+        check("https://a/b/\\", ("https://a", "/", "b/\\"))
+        check("https://a/b/:", ("https://a", "/", "b/:"))
+        check("https://a/b/;", ("https://a", "/", "b/;"))
+        check("https://a/b/'", ("https://a", "/", "b/'"))
+        check('https://a/b/"', ("https://a", "/", 'b/"'))
+        check("https://a/b/,", ("https://a", "/", "b/,"))
+        check("https://a/b/<", ("https://a", "/", "b/<"))
+        check("https://a/b/>", ("https://a", "/", "b/>"))
+        check("https://a/b/?", ("https://a", "/", "b/?"))
 
     def test_splitroot_custom_drv(self):
         """https://github.com/devopshq/artifactory/issues/31 and
@@ -204,75 +204,75 @@ class ArtifactoryFlavorTest(unittest.TestCase):
 
         check(
             "https://artifactory.example.com",
-            ("https://artifactory.example.com", "", ""),
+            ("https://artifactory.example.com", "/", ""),
         )
         check(
             "https://artifactory.example.com/",
-            ("https://artifactory.example.com", "", ""),
+            ("https://artifactory.example.com", "/", ""),
         )
         check(
             "https://artifactory.example.com/root",
-            ("https://artifactory.example.com", "/root/", ""),
+            ("https://artifactory.example.com", "/", "root"),
         )
         check(
             "https://artifactory.example.com/root/",
-            ("https://artifactory.example.com", "/root/", ""),
+            ("https://artifactory.example.com", "/", "root"),
         )
         check(
             "https://artifactory.example.com/root/parts",
-            ("https://artifactory.example.com", "/root/", "parts"),
+            ("https://artifactory.example.com", "/", "root/parts"),
         )
         check(
             "https://artifactory.example.com/root/parts/",
-            ("https://artifactory.example.com", "/root/", "parts"),
+            ("https://artifactory.example.com", "/", "root/parts"),
         )
         check(
-            "https://artifacts.example.com", ("https://artifacts.example.com", "", "")
+            "https://artifacts.example.com", ("https://artifacts.example.com", "/", "")
         )
         check(
-            "https://artifacts.example.com/", ("https://artifacts.example.com", "", "")
+            "https://artifacts.example.com/", ("https://artifacts.example.com", "/", "")
         )
         check(
             "https://artifacts.example.com/root",
-            ("https://artifacts.example.com", "/root/", ""),
+            ("https://artifacts.example.com", "/", "root"),
         )
         check(
             "https://artifacts.example.com/root/",
-            ("https://artifacts.example.com", "/root/", ""),
+            ("https://artifacts.example.com", "/", "root"),
         )
         check(
             "https://artifacts.example.com/root/parts",
-            ("https://artifacts.example.com", "/root/", "parts"),
+            ("https://artifacts.example.com", "/", "root/parts"),
         )
         check(
             "https://artifacts.example.com/root/parts/",
-            ("https://artifacts.example.com", "/root/", "parts"),
+            ("https://artifacts.example.com", "/", "root/parts"),
         )
         check(
             "https://artifacts.example.com/root/artifactory/parts/",
-            ("https://artifacts.example.com", "/root/", "artifactory/parts"),
+            ("https://artifacts.example.com", "/", "root/artifactory/parts"),
         )
         check(
             "https://artifacts.example.com/artifacts",
-            ("https://artifacts.example.com", "/artifacts/", ""),
+            ("https://artifacts.example.com", "/", "artifacts"),
         )
 
     def test_splitroot_custom_root(self):
         check = self._check_splitroot
 
-        check("http://custom/root", ("http://custom/root", "", ""))
-        check("custom/root", ("custom/root", "", ""))
-        check("https://custom/root", ("https://custom/root", "", ""))
-        check("http://custom/root/", ("http://custom/root", "", ""))
+        check("http://custom/root", ("http://custom/root", "/", ""))
+        check("custom/root", ("custom/root", "/", ""))
+        check("https://custom/root", ("https://custom/root", "/", ""))
+        check("http://custom/root/", ("http://custom/root", "/", ""))
         check(
             "http://custom/root/artifactory",
-            ("http://custom/root", "/artifactory/", ""),
+            ("http://custom/root", "/", "artifactory"),
         )
-        check("http://custom/root/foo/bar", ("http://custom/root", "/foo/", "bar"))
-        check("https://custom/root/foo/baz", ("https://custom/root", "/foo/", "baz"))
+        check("http://custom/root/foo/bar", ("http://custom/root", "/", "foo/bar"))
+        check("https://custom/root/foo/baz", ("https://custom/root", "/", "foo/baz"))
         check(
             "https://custom/root/foo/with/artifactory/folder/baz",
-            ("https://custom/root", "/foo/", "with/artifactory/folder/baz"),
+            ("https://custom/root", "/", "foo/with/artifactory/folder/baz"),
         )
 
     def test_parse_parts(self):
@@ -282,15 +282,15 @@ class ArtifactoryFlavorTest(unittest.TestCase):
 
         check(
             ["http://b/artifactory/c/d.xml"],
-            ("http://b/artifactory", "/c/", ["http://b/artifactory/c/", "d.xml"]),
+            ("http://b/artifactory", "/", ["http://b/artifactory/", "c", "d.xml"]),
         )
 
         check(
             ["http://example.com/artifactory/foo"],
             (
                 "http://example.com/artifactory",
-                "/foo/",
-                ["http://example.com/artifactory/foo/"],
+                "/",
+                ["http://example.com/artifactory/", "foo"],
             ),
         )
 
@@ -298,8 +298,8 @@ class ArtifactoryFlavorTest(unittest.TestCase):
             ["http://example.com/artifactory/foo/bar"],
             (
                 "http://example.com/artifactory",
-                "/foo/",
-                ["http://example.com/artifactory/foo/", "bar"],
+                "/",
+                ["http://example.com/artifactory/", "foo", "bar"],
             ),
         )
 
@@ -307,8 +307,8 @@ class ArtifactoryFlavorTest(unittest.TestCase):
             ["http://example.com/artifactory/foo/bar/artifactory"],
             (
                 "http://example.com/artifactory",
-                "/foo/",
-                ["http://example.com/artifactory/foo/", "bar", "artifactory"],
+                "/",
+                ["http://example.com/artifactory/", "foo", "bar", "artifactory"],
             ),
         )
 
@@ -316,8 +316,8 @@ class ArtifactoryFlavorTest(unittest.TestCase):
             ["http://example.com/artifactory/foo/bar/artifactory/fi"],
             (
                 "http://example.com/artifactory",
-                "/foo/",
-                ["http://example.com/artifactory/foo/", "bar", "artifactory", "fi"],
+                "/",
+                ["http://example.com/artifactory/", "foo", "bar", "artifactory", "fi"],
             ),
         )
 
@@ -328,14 +328,14 @@ class PureArtifactoryPathTest(unittest.TestCase):
     def test_root(self):
         P = self.cls
 
-        self.assertEqual(P("http://a/artifactory/b").root, "/b/")
+        self.assertEqual(P("http://a/artifactory/b").root, "/")
 
-        self.assertEqual(P("http://a/artifactory/").root, "")
+        self.assertEqual(P("http://a/artifactory/").root, "/")
 
     def test_anchor(self):
         P = self.cls
         b = P("http://b/artifactory/c/d.xml")
-        self.assertEqual(b.anchor, "http://b/artifactory/c/")
+        self.assertEqual(b.anchor, "http://b/artifactory/")
 
     def test_with_suffix(self):
         P = self.cls
@@ -984,7 +984,9 @@ class ArtifactoryPathTest(ClassSetup):
                         f"{static_matrix_parameters};prop%3FB=a%0b;prop?C=see;propA=a?b"
                     )
 
-                item_constructed_url = f"{path}{test_file.name};{matrix_parameters}"
+                item_constructed_url = (
+                    f"{path.joinpath(test_file.name)};{matrix_parameters}"
+                )
                 responses.add(responses.PUT, item_constructed_url, status=200)
 
                 path.deploy_file(
@@ -1191,7 +1193,7 @@ class ArtifactoryPathTest(ClassSetup):
             test_file = pathlib.Path(file.name)
             file.write("I am a test file")
 
-            constructed_url = f"{path}{test_file.name};{matrix_parameters}"
+            constructed_url = f"{path.joinpath(test_file.name)};{matrix_parameters}"
             responses.add(responses.PUT, constructed_url, status=200)
 
             path.deploy_deb(
@@ -1245,15 +1247,17 @@ class ArtifactoryPathTest(ClassSetup):
         """
         https://github.com/devopshq/artifactory/issues/239
         """
-
         P = self.cls
-        artis = ["", "artifactory", "artifactory/"]
+        artis = ["artifactory", "artifactory/"]
         reponames = ["reponame", "/reponame", "reponame/", "/reponame/"]
 
-        for arti in artis:
-            for reponame in reponames:
+        for reponame in reponames:
+            c = P("http://b/").joinpath(reponame)
+            self.assertEqual(str(c), "http://b/reponame")
+
+            for arti in artis:
                 c = P("http://b/" + arti).joinpath(reponame)
-                self.assertEqual(c.root, "/reponame/")
+                self.assertEqual(str(c), "http://b/artifactory/reponame")
 
     @responses.activate
     def test_archive(self):
@@ -1426,7 +1430,7 @@ class TestArtifactoryAql(unittest.TestCase):
         artifact = self.aql.from_aql(result)
         assert artifact.drive == "http://b/artifactory"
         assert artifact.name == "name.nupkg"
-        assert artifact.root == "/reponame/"
+        assert artifact.root == "/"
 
 
 class TestArtifactoryPathGetAll(unittest.TestCase):

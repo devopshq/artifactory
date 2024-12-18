@@ -432,7 +432,7 @@ class _ArtifactoryFlavour(pathlib._Flavour):
     drive: in context of artifactory, it's the base URI like
       http://mysite/artifactory
 
-    root: repository, e.g. 'libs-snapshot-local' or 'ext-release-local'
+    root: like in unix, / when absolute, empty when relative
 
     path: relative artifact path within the repository
     """
@@ -458,13 +458,6 @@ class _ArtifactoryFlavour(pathlib._Flavour):
             drv, root, parts, drv2, root2, parts2
         )
 
-        if not root2 and len(parts2) > 1:
-            root2 = self.sep + parts2.pop(1) + self.sep
-
-        # quick hack for https://github.com/devopshq/artifactory/issues/29
-        # drive or repository must start with / , if not - add it
-        if not drv2.endswith("/") and not root2.startswith("/"):
-            drv2 = drv2 + self.sep
         return drv2, root2, parts2
 
     def splitroot(self, part, sep=sep):
@@ -501,7 +494,7 @@ class _ArtifactoryFlavour(pathlib._Flavour):
 
             if url.path is None or url.path == sep:
                 if url.scheme:
-                    return part.rstrip(sep), "", ""
+                    return part.rstrip(sep), "/", ""
                 return "", "", part
             elif url.path.lstrip("/").startswith("artifactory"):
                 mark = sep + "artifactory" + sep
@@ -510,8 +503,8 @@ class _ArtifactoryFlavour(pathlib._Flavour):
                 path = self._get_path(part)
                 drv = part.rpartition(path)[0]
                 path_parts = path.strip(sep).split(sep)
-                root = sep + path_parts[0] + sep
-                rest = sep.join(path_parts[1:])
+                root = sep
+                rest = sep.join(path_parts[0:])
                 return drv, root, rest
 
         if len(parts) >= 2:
@@ -524,14 +517,14 @@ class _ArtifactoryFlavour(pathlib._Flavour):
             rest = part
 
         if not rest:
-            return drv, "", ""
+            return drv, "/", ""
 
         if rest == sep:
-            return drv, "", ""
+            return drv, "/", ""
 
         if rest.startswith(sep):
-            root, _, part = rest[1:].partition(sep)
-            root = sep + root + sep
+            root = sep
+            part = rest.lstrip("/")
 
         return drv, root, part
 
@@ -877,7 +870,11 @@ class _ArtifactoryAccessor:
         )
         code = response.status_code
         text = response.text
-        if code == 404 and ("Unable to find item" in text or "Not Found" in text or "File not found" in text):
+        if code == 404 and (
+            "Unable to find item" in text
+            or "Not Found" in text
+            or "File not found" in text
+        ):
             raise OSError(2, f"No such file or directory: {url}")
 
         raise_for_status(response)
@@ -2367,12 +2364,12 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     @property
     def repo(self):
-        return self._root.replace("/", "")
+        return self.parts[1]
 
     @property
     def path_in_repo(self):
         parts = self.parts
-        path_in_repo = "/" + "/".join(parts[1:])
+        path_in_repo = "/" + "/".join(parts[2:])
         return path_in_repo
 
     def find_user(self, name):
