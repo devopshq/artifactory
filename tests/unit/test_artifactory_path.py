@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 import pathlib
+import sys
 import tempfile
 import unittest
 
@@ -66,16 +67,36 @@ class UtilTest(unittest.TestCase):
 class ArtifactoryFlavorTest(unittest.TestCase):
     flavour = artifactory._artifactory_flavour
 
-    def _check_parse_path(self, arg, expected):
-        # f = self.flavour.parse_path
-        f = ArtifactoryPath._parse_path
-        sep = self.flavour.sep
-        altsep = self.flavour.altsep
-        actual = f(arg.replace("/", sep))
-        self.assertEqual(actual, expected)
-        if altsep:
-            actual = f(arg.replace("/", altsep))
+    # We are not quite calling the same function to parse path,
+    # so some funkyness is needed to reuse the tests
+    if sys.version_info.major == 3 and sys.version_info.minor <= 11:
+
+        def _check_parse_path(self, arg, expected):
+            f = lambda x: self.flavour.parse_parts([x])
+
+            sep = self.flavour.sep
+            altsep = self.flavour.altsep
+            actual = f(arg.replace("/", sep))
+            if actual[0]:
+                actual = (actual[0], actual[1], actual[2][1:])
+
             self.assertEqual(actual, expected)
+            if altsep:
+                actual = f(arg.replace("/", altsep))
+                if actual[0]:
+                    actual = (actual[0], actual[1], actual[2][1:])
+                self.assertEqual(actual, expected)
+
+    else:
+
+        def _check_parse_path(self, arg, expected):
+            f = ArtifactoryPath._parse_path
+            sep = self.flavour.sep
+            altsep = self.flavour.altsep
+            actual = f(arg.replace("/", sep))
+            if altsep:
+                actual = f(arg.replace("/", altsep))
+                self.assertEqual(actual, expected)
 
     def setUp(self):
         artifactory.global_config = {"http://custom/root": {}}

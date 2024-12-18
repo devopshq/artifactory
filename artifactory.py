@@ -422,7 +422,13 @@ def quote_url(url):
     return quoted_url
 
 
-class _ArtifactoryFlavour:
+if sys.version_info.major == 3 and sys.version_info.minor <= 11:
+    parent_class = pathlib._Flavour
+else:
+    parent_class = object
+
+
+class _ArtifactoryFlavour(parent_class):
     """
     Implements Artifactory-specific pure path manipulations.
     I.e. what is 'drive', 'root' and 'path' and how to split full path into
@@ -449,40 +455,16 @@ class _ArtifactoryFlavour:
     def compile_pattern(self, pattern):
         return re.compile(fnmatch.translate(pattern), re.IGNORECASE).fullmatch
 
-    # PurePath _load_parts calls this function, typically provided
-    # by os.path under "normal" PurePath execution
-    def join(self, path, *paths):
-        drv, root, part = self.splitroot(path)
+    def parse_parts(self, parts):
+        drv, root, parsed = super(_ArtifactoryFlavour, self).parse_parts(parts)
+        return drv, root, parsed
 
-        for next_path in paths:
-            drv2, root2, part2 = self.splitroot(next_path)
-            if drv2 != "":
-                drv, root, part = drv2, root2, part2
-                continue
-            if root2 != "":
-                root, part = root2, part2
-                continue
-            part = part + self.sep + part2
+    def join_parsed_parts(self, drv, root, parts, drv2, root2, parts2):
+        drv2, root2, parts2 = super(_ArtifactoryFlavour, self).join_parsed_parts(
+            drv, root, parts, drv2, root2, parts2
+        )
 
-        return drv + root + part
-
-    # def parse_parts(self, parts):
-    #     drv, root, parsed = super(_ArtifactoryFlavour, self).parse_parts(parts)
-    #     return drv, root, parsed
-
-    # def join_parsed_parts(self, drv, root, parts, drv2, root2, parts2):
-    #     drv2, root2, parts2 = super(_ArtifactoryFlavour, self).join_parsed_parts(
-    #         drv, root, parts, drv2, root2, parts2
-    #     )
-
-    #     if not root2 and len(parts2) > 1:
-    #         root2 = self.sep + parts2.pop(1) + self.sep
-
-    #     # quick hack for https://github.com/devopshq/artifactory/issues/29
-    #     # drive or repository must start with / , if not - add it
-    #     if not drv2.endswith("/") and not root2.startswith("/"):
-    #         drv2 = drv2 + self.sep
-    #     return drv2, root2, parts2
+        return drv2, root2, parts2
 
     def splitroot(self, part, sep=sep):
         """
@@ -610,6 +592,22 @@ class _ArtifactoryFlavour:
     def splitdrive(self, path):
         drv, root, part = self.splitroot(path)
         return (drv + root, self.sep.join(part))
+
+    # This function is consumed by PurePath._load_parts() after python 3.12
+    def join(self, path, *paths):
+        drv, root, part = self.splitroot(path)
+
+        for next_path in paths:
+            drv2, root2, part2 = self.splitroot(next_path)
+            if drv2 != "":
+                drv, root, part = drv2, root2, part2
+                continue
+            if root2 != "":
+                root, part = root2, part2
+                continue
+            part = part + self.sep + part2
+
+        return drv + root + part
 
 
 class _ArtifactorySaaSFlavour(_ArtifactoryFlavour):
@@ -1507,8 +1505,8 @@ class PureArtifactoryPath(pathlib.PurePath):
     _flavour = _artifactory_flavour
     __slots__ = ()
 
-    def _init(self, *args, **kwargs):
-        super()._init(*args, **kwargs)
+    def _init(self, *args):
+        super()._init(*args)
 
     @classmethod
     def _split_root(cls, part):
@@ -1548,113 +1546,124 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         # in 3.9 and below Pathlib limits what members can be present in 'Path' class
         __slots__ = ("auth", "verify", "cert", "session", "timeout")
 
-    # def __new__(cls, *args, **kwargs):
-    #     """
-    #     pathlib.Path overrides __new__ in order to create objects
-    #     of different classes based on platform. This magic prevents
-    #     us from adding an 'auth' argument to the constructor.
-    #     So we have to first construct ArtifactoryPath by Pathlib and
-    #     only then add auth information.
-    #     """
-    #     obj = pathlib.Path.__new__(cls, *args, **kwargs)
+    if sys.version_info.major == 3 and sys.version_info.minor <= 11:
 
-    #     cfg_entry = get_global_config_entry(obj.drive)
+        def __new__(cls, *args, **kwargs):
+            """
+            In python3.12 this is no longer needed
 
-    #     # Auth section
-    #     apikey = kwargs.get("apikey")
-    #     token = kwargs.get("token")
-    #     auth_type = kwargs.get("auth_type")
+            pathlib.Path overrides __new__ in order to create objects
+            of different classes based on platform. This magic prevents
+            us from adding an 'auth' argument to the constructor.
+            So we have to first construct ArtifactoryPath by Pathlib and
+            only then add auth information.
+            """
 
-    #     if apikey:
-    #         logger.debug("Use XJFrogApiAuth apikey")
-    #         obj.auth = XJFrogArtApiAuth(apikey=apikey)
-    #     elif token:
-    #         logger.debug("Use XJFrogArtBearerAuth token")
-    #         obj.auth = XJFrogArtBearerAuth(token=token)
-    #     else:
-    #         auth = kwargs.get("auth")
-    #         obj.auth = auth if auth_type is None else auth_type(*auth)
+            obj = pathlib.Path.__new__(cls, *args, **kwargs)
 
-    #     if obj.auth is None and cfg_entry:
-    #         auth = (cfg_entry["username"], cfg_entry["password"])
-    #         obj.auth = auth if auth_type is None else auth_type(*auth)
+            cfg_entry = get_global_config_entry(obj.drive)
 
-    #     obj.cert = kwargs.get("cert")
-    #     obj.session = kwargs.get("session")
-    #     obj.timeout = kwargs.get("timeout")
+            # Auth section
+            apikey = kwargs.get("apikey")
+            token = kwargs.get("token")
+            auth_type = kwargs.get("auth_type")
 
-    #     if obj.cert is None and cfg_entry:
-    #         obj.cert = cfg_entry["cert"]
+            if apikey:
+                logger.debug("Use XJFrogApiAuth apikey")
+                obj.auth = XJFrogArtApiAuth(apikey=apikey)
+            elif token:
+                logger.debug("Use XJFrogArtBearerAuth token")
+                obj.auth = XJFrogArtBearerAuth(token=token)
+            else:
+                auth = kwargs.get("auth")
+                obj.auth = auth if auth_type is None else auth_type(*auth)
 
-    #     if "verify" in kwargs:
-    #         obj.verify = kwargs.get("verify")
-    #     elif cfg_entry:
-    #         obj.verify = cfg_entry["verify"]
-    #     else:
-    #         obj.verify = True
+            if obj.auth is None and cfg_entry:
+                auth = (cfg_entry["username"], cfg_entry["password"])
+                obj.auth = auth if auth_type is None else auth_type(*auth)
 
-    #     if obj.session is None:
-    #         obj.session = requests.Session()
-    #         obj.session.auth = obj.auth
-    #         obj.session.cert = obj.cert
-    #         obj.session.verify = obj.verify
-    #         obj.session.timeout = obj.timeout
+            obj.cert = kwargs.get("cert")
+            obj.session = kwargs.get("session")
+            obj.timeout = kwargs.get("timeout")
 
-    #     return obj
+            if obj.cert is None and cfg_entry:
+                obj.cert = cfg_entry["cert"]
 
-    def __init__(self, *args, **kwargs):
-        if "template" not in kwargs:
-            kwargs["template"] = _FakePathTemplate(_artifactory_accessor)
+            if "verify" in kwargs:
+                obj.verify = kwargs.get("verify")
+            elif cfg_entry:
+                obj.verify = cfg_entry["verify"]
+            else:
+                obj.verify = True
 
-        super().__init__(*args, **kwargs)
+            if obj.session is None:
+                obj.session = requests.Session()
+                obj.session.auth = obj.auth
+                obj.session.cert = obj.cert
+                obj.session.verify = obj.verify
+                obj.session.timeout = obj.timeout
 
-        cfg_entry = get_global_config_entry(self.drive)
+            return obj
 
-        # Auth section
-        apikey = kwargs.get("apikey")
-        token = kwargs.get("token")
-        auth_type = kwargs.get("auth_type")
+        def _init(self, *args, **kwargs):
+            if "template" not in kwargs:
+                kwargs["template"] = _FakePathTemplate(_artifactory_accessor)
 
-        if apikey:
-            logger.debug("Use XJFrogApiAuth apikey")
-            self.auth = XJFrogArtApiAuth(apikey=apikey)
-        elif token:
-            logger.debug("Use XJFrogArtBearerAuth token")
-            self.auth = XJFrogArtBearerAuth(token=token)
-        else:
-            auth = kwargs.get("auth")
-            self.auth = auth if auth_type is None else auth_type(*auth)
+            super(ArtifactoryPath, self)._init(*args, **kwargs)
 
-        if self.auth is None and cfg_entry:
-            auth = (cfg_entry["username"], cfg_entry["password"])
-            self.auth = auth if auth_type is None else auth_type(*auth)
+    if sys.version_info.major == 3 and sys.version_info.minor >= 12:
 
-        self.cert = kwargs.get("cert")
-        self.session = kwargs.get("session")
-        self.timeout = kwargs.get("timeout")
+        def __init__(self, *args, **kwargs):
+            if "template" not in kwargs:
+                kwargs["template"] = _FakePathTemplate(_artifactory_accessor)
 
-        if self.cert is None and cfg_entry:
-            self.cert = cfg_entry["cert"]
+            super().__init__(*args, **kwargs)
 
-        if "verify" in kwargs:
-            self.verify = kwargs.get("verify")
-        elif cfg_entry:
-            self.verify = cfg_entry["verify"]
-        else:
-            self.verify = True
+            if sys.version_info.major == 3 and sys.version_info.minor >= 12:
+                # This behavior is in __init__ under python3.12, and in __new__
+                # in <python3.11
 
-        if self.session is None:
-            self.session = requests.Session()
-            self.session.auth = self.auth
-            self.session.cert = self.cert
-            self.session.verify = self.verify
-            self.session.timeout = self.timeout
+                cfg_entry = get_global_config_entry(self.drive)
 
-    def _init(self, *args, **kwargs):
-        if "template" not in kwargs:
-            kwargs["template"] = _FakePathTemplate(_artifactory_accessor)
+                # Auth section
+                apikey = kwargs.get("apikey")
+                token = kwargs.get("token")
+                auth_type = kwargs.get("auth_type")
 
-        super(ArtifactoryPath, self)._init(*args, **kwargs)
+                if apikey:
+                    logger.debug("Use XJFrogApiAuth apikey")
+                    self.auth = XJFrogArtApiAuth(apikey=apikey)
+                elif token:
+                    logger.debug("Use XJFrogArtBearerAuth token")
+                    self.auth = XJFrogArtBearerAuth(token=token)
+                else:
+                    auth = kwargs.get("auth")
+                    self.auth = auth if auth_type is None else auth_type(*auth)
+
+                if self.auth is None and cfg_entry:
+                    auth = (cfg_entry["username"], cfg_entry["password"])
+                    self.auth = auth if auth_type is None else auth_type(*auth)
+
+                self.cert = kwargs.get("cert")
+                self.session = kwargs.get("session")
+                self.timeout = kwargs.get("timeout")
+
+                if self.cert is None and cfg_entry:
+                    self.cert = cfg_entry["cert"]
+
+                if "verify" in kwargs:
+                    self.verify = kwargs.get("verify")
+                elif cfg_entry:
+                    self.verify = cfg_entry["verify"]
+                else:
+                    self.verify = True
+
+                if self.session is None:
+                    self.session = requests.Session()
+                    self.session.auth = self.auth
+                    self.session.cert = self.cert
+                    self.session.verify = self.verify
+                    self.session.timeout = self.timeout
 
     def __reduce__(self):
         # pathlib.PurePath.__reduce__ doesn't include instance state, but we
@@ -1729,7 +1738,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
     def exists(self):
         try:
             self.stat()
-        except OSError as e:
+        except OSError:
             return False
         except ValueError:
             # Non-encodable path
