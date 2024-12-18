@@ -865,6 +865,7 @@ class RepositoryVirtual(GenericRepository):
         package_type=Repository.GENERIC,
         *,
         packageType=None,
+        default_deployment_repo_name=None
     ):
         super(RepositoryVirtual, self).__init__(artifactory)
         self.name = name
