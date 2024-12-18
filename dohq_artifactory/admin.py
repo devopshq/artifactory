@@ -469,7 +469,7 @@ class Group(AdminObject):
         }
 
         if isinstance(self.users, list):
-            data_json.update({"usersInGroup": self.users})
+            data_json.update({"userNames": self.users})
 
         return data_json
 
@@ -484,7 +484,7 @@ class Group(AdminObject):
         self.realm_attributes = response.get("realmAttributes")
         self.external = response.get("external")
         self.new_user_default = response.get("newUserDefault")
-        self.users = response.get("usersInGroup")
+        self.users = response.get("userNames")
 
     def delete(self):
         """
