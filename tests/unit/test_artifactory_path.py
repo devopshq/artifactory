@@ -66,14 +66,15 @@ class UtilTest(unittest.TestCase):
 class ArtifactoryFlavorTest(unittest.TestCase):
     flavour = artifactory._artifactory_flavour
 
-    def _check_parse_parts(self, arg, expected):
-        f = self.flavour.parse_parts
+    def _check_parse_path(self, arg, expected):
+        # f = self.flavour.parse_path
+        f = ArtifactoryPath._parse_path
         sep = self.flavour.sep
         altsep = self.flavour.altsep
-        actual = f([x.replace("/", sep) for x in arg])
+        actual = f(arg.replace("/", sep))
         self.assertEqual(actual, expected)
         if altsep:
-            actual = f([x.replace("/", altsep) for x in arg])
+            actual = f(arg.replace("/", altsep))
             self.assertEqual(actual, expected)
 
     def setUp(self):
@@ -275,49 +276,49 @@ class ArtifactoryFlavorTest(unittest.TestCase):
             ("https://custom/root", "/", "foo/with/artifactory/folder/baz"),
         )
 
-    def test_parse_parts(self):
-        check = self._check_parse_parts
+    def test_parse_path(self):
+        check = self._check_parse_path
 
-        check([".txt"], ("", "", [".txt"]))
+        check(".txt", ("", "", [".txt"]))
 
         check(
-            ["http://b/artifactory/c/d.xml"],
-            ("http://b/artifactory", "/", ["http://b/artifactory/", "c", "d.xml"]),
+            "http://b/artifactory/c/d.xml",
+            ("http://b/artifactory", "/", ["c", "d.xml"]),
         )
 
         check(
-            ["http://example.com/artifactory/foo"],
+            "http://example.com/artifactory/foo",
             (
                 "http://example.com/artifactory",
                 "/",
-                ["http://example.com/artifactory/", "foo"],
+                ["foo"],
             ),
         )
 
         check(
-            ["http://example.com/artifactory/foo/bar"],
+            "http://example.com/artifactory/foo/bar",
             (
                 "http://example.com/artifactory",
                 "/",
-                ["http://example.com/artifactory/", "foo", "bar"],
+                ["foo", "bar"],
             ),
         )
 
         check(
-            ["http://example.com/artifactory/foo/bar/artifactory"],
+            "http://example.com/artifactory/foo/bar/artifactory",
             (
                 "http://example.com/artifactory",
                 "/",
-                ["http://example.com/artifactory/", "foo", "bar", "artifactory"],
+                ["foo", "bar", "artifactory"],
             ),
         )
 
         check(
-            ["http://example.com/artifactory/foo/bar/artifactory/fi"],
+            "http://example.com/artifactory/foo/bar/artifactory/fi",
             (
                 "http://example.com/artifactory",
                 "/",
-                ["http://example.com/artifactory/", "foo", "bar", "artifactory", "fi"],
+                ["foo", "bar", "artifactory", "fi"],
             ),
         )
 
@@ -405,6 +406,23 @@ class PureArtifactoryPathTest(unittest.TestCase):
         self.assertEqual(
             str(c),
             "http://b/artifactory/reponame/path/with/multiple/subdir/and/artifactory/path.txt",
+        )
+
+    def test_join_full_path(self):
+        """
+        The method "archive" relies on this behavior, although I think the operation of joining two full
+        paths is not really well defined. Anyway, this is the behavior of pathlib.Path, so lets copy it.
+        """
+        P = self.cls
+
+        b = P("http://b/artifactory/reponame")
+        c = (
+            b
+            / "http://c/artifactory/repo2/path/with/multiple/subdir/and/artifactory/path.txt"
+        )
+        self.assertEqual(
+            str(c),
+            "http://c/artifactory/repo2/path/with/multiple/subdir/and/artifactory/path.txt",
         )
 
 
