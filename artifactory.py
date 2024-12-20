@@ -658,7 +658,6 @@ class _ScandirIter:
 
 
 class _ArtifactoryAccessor:
-
     """
     Implements operations with Artifactory REST API
     """
@@ -877,7 +876,11 @@ class _ArtifactoryAccessor:
         )
         code = response.status_code
         text = response.text
-        if code == 404 and ("Unable to find item" in text or "Not Found" in text or "File not found" in text):
+        if code == 404 and (
+            "Unable to find item" in text
+            or "Not Found" in text
+            or "File not found" in text
+        ):
             raise OSError(2, f"No such file or directory: {url}")
 
         raise_for_status(response)
