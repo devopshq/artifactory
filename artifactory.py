@@ -71,6 +71,11 @@ else:
     default_config_path = "~/.artifactory_python.cfg"
 global_config = None
 
+# Pathlib.Path changed significantly in 3.12, so we will not need several
+# parts of the code once python3.11 is no longer supported. This constant helps
+# identifying those.
+_IS_PYTHON_3_12_OR_NEWER = sys.version_info >= (3, 12)
+
 
 def read_config(config_path=default_config_path):
     """
@@ -422,7 +427,7 @@ def quote_url(url):
     return quoted_url
 
 
-class _ArtifactoryFlavour(pathlib._Flavour):
+class _ArtifactoryFlavour(object if _IS_PYTHON_3_12_OR_NEWER else pathlib._Flavour):
     """
     Implements Artifactory-specific pure path manipulations.
     I.e. what is 'drive', 'root' and 'path' and how to split full path into
@@ -432,7 +437,7 @@ class _ArtifactoryFlavour(pathlib._Flavour):
     drive: in context of artifactory, it's the base URI like
       http://mysite/artifactory
 
-    root: repository, e.g. 'libs-snapshot-local' or 'ext-release-local'
+    root: like in unix, / when absolute, empty when relative
 
     path: relative artifact path within the repository
     """
@@ -458,13 +463,6 @@ class _ArtifactoryFlavour(pathlib._Flavour):
             drv, root, parts, drv2, root2, parts2
         )
 
-        if not root2 and len(parts2) > 1:
-            root2 = self.sep + parts2.pop(1) + self.sep
-
-        # quick hack for https://github.com/devopshq/artifactory/issues/29
-        # drive or repository must start with / , if not - add it
-        if not drv2.endswith("/") and not root2.startswith("/"):
-            drv2 = drv2 + self.sep
         return drv2, root2, parts2
 
     def splitroot(self, part, sep=sep):
@@ -501,7 +499,7 @@ class _ArtifactoryFlavour(pathlib._Flavour):
 
             if url.path is None or url.path == sep:
                 if url.scheme:
-                    return part.rstrip(sep), "", ""
+                    return part.rstrip(sep), "/", ""
                 return "", "", part
             elif url.path.lstrip("/").startswith("artifactory"):
                 mark = sep + "artifactory" + sep
@@ -510,8 +508,8 @@ class _ArtifactoryFlavour(pathlib._Flavour):
                 path = self._get_path(part)
                 drv = part.rpartition(path)[0]
                 path_parts = path.strip(sep).split(sep)
-                root = sep + path_parts[0] + sep
-                rest = sep.join(path_parts[1:])
+                root = sep
+                rest = sep.join(path_parts[0:])
                 return drv, root, rest
 
         if len(parts) >= 2:
@@ -524,14 +522,14 @@ class _ArtifactoryFlavour(pathlib._Flavour):
             rest = part
 
         if not rest:
-            return drv, "", ""
+            return drv, "/", ""
 
         if rest == sep:
-            return drv, "", ""
+            return drv, "/", ""
 
         if rest.startswith(sep):
-            root, _, part = rest[1:].partition(sep)
-            root = sep + root + sep
+            root = sep
+            part = rest.lstrip("/")
 
         return drv, root, part
 
@@ -586,6 +584,29 @@ class _ArtifactoryFlavour(pathlib._Flavour):
         'path' unmodified.
         """
         return path
+
+    def normcase(self, path):
+        return path
+
+    def splitdrive(self, path):
+        drv, root, part = self.splitroot(path)
+        return (drv + root, self.sep.join(part))
+
+    # This function is consumed by PurePath._load_parts() after python 3.12
+    def join(self, path, *paths):
+        drv, root, part = self.splitroot(path)
+
+        for next_path in paths:
+            drv2, root2, part2 = self.splitroot(next_path)
+            if drv2 != "":
+                drv, root, part = drv2, root2, part2
+                continue
+            if root2 != "":
+                root, part = root2, part2
+                continue
+            part = part + self.sep + part2
+
+        return drv + root + part
 
 
 class _ArtifactorySaaSFlavour(_ArtifactoryFlavour):
@@ -877,7 +898,11 @@ class _ArtifactoryAccessor:
         )
         code = response.status_code
         text = response.text
-        if code == 404 and ("Unable to find item" in text or "Not Found" in text or "File not found" in text):
+        if code == 404 and (
+            "Unable to find item" in text
+            or "Not Found" in text
+            or "File not found" in text
+        ):
             raise OSError(2, f"No such file or directory: {url}")
 
         raise_for_status(response)
@@ -1479,6 +1504,21 @@ class PureArtifactoryPath(pathlib.PurePath):
     _flavour = _artifactory_flavour
     __slots__ = ()
 
+    def _init(self, *args):
+        super()._init(*args)
+
+    @classmethod
+    def _split_root(cls, part):
+        cls._flavour.splitroot(part)
+
+    @classmethod
+    def _parse_parts(cls, parts):
+        return super()._parse_parts(parts)
+
+    @classmethod
+    def _format_parsed_parts(cls, drv, root, tail):
+        return super()._format_parsed_parts(drv, root, tail)
+
 
 class _FakePathTemplate(object):
     def __init__(self, accessor):
@@ -1513,7 +1553,11 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         So we have to first construct ArtifactoryPath by Pathlib and
         only then add auth information.
         """
+
         obj = pathlib.Path.__new__(cls, *args, **kwargs)
+        if _IS_PYTHON_3_12_OR_NEWER:
+            # After python 3.12, all this logic can be moved to __init__
+            return obj
 
         cfg_entry = get_global_config_entry(obj.drive)
 
@@ -1564,6 +1608,56 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             kwargs["template"] = _FakePathTemplate(_artifactory_accessor)
 
         super(ArtifactoryPath, self)._init(*args, **kwargs)
+
+    def __init__(self, *args, **kwargs):
+        # Up until python3.12, pathlib.Path was not designed to be initialized
+        # through __init__, so all that logic is in the __new__ method.
+        if not _IS_PYTHON_3_12_OR_NEWER:
+            return
+
+        super().__init__(*args, **kwargs)
+
+        cfg_entry = get_global_config_entry(self.drive)
+
+        # Auth section
+        apikey = kwargs.get("apikey")
+        token = kwargs.get("token")
+        auth_type = kwargs.get("auth_type")
+
+        if apikey:
+            logger.debug("Use XJFrogApiAuth apikey")
+            self.auth = XJFrogArtApiAuth(apikey=apikey)
+        elif token:
+            logger.debug("Use XJFrogArtBearerAuth token")
+            self.auth = XJFrogArtBearerAuth(token=token)
+        else:
+            auth = kwargs.get("auth")
+            self.auth = auth if auth_type is None else auth_type(*auth)
+
+        if self.auth is None and cfg_entry:
+            auth = (cfg_entry["username"], cfg_entry["password"])
+            self.auth = auth if auth_type is None else auth_type(*auth)
+
+        self.cert = kwargs.get("cert")
+        self.session = kwargs.get("session")
+        self.timeout = kwargs.get("timeout")
+
+        if self.cert is None and cfg_entry:
+            self.cert = cfg_entry["cert"]
+
+        if "verify" in kwargs:
+            self.verify = kwargs.get("verify")
+        elif cfg_entry:
+            self.verify = cfg_entry["verify"]
+        else:
+            self.verify = True
+
+        if self.session is None:
+            self.session = requests.Session()
+            self.session.auth = self.auth
+            self.session.cert = self.cert
+            self.session.verify = self.verify
+            self.session.timeout = self.timeout
 
     def __reduce__(self):
         # pathlib.PurePath.__reduce__ doesn't include instance state, but we
@@ -1634,6 +1728,16 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         pathobj = pathobj or self
         return self._accessor.stat(pathobj=pathobj)
+
+    def exists(self):
+        try:
+            self.stat()
+        except OSError:
+            return False
+        except ValueError:
+            # Non-encodable path
+            return False
+        return True
 
     def mkdir(self, mode=0o777, parents=False, exist_ok=False):
         """
@@ -2367,12 +2471,12 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     @property
     def repo(self):
-        return self._root.replace("/", "")
+        return self.parts[1]
 
     @property
     def path_in_repo(self):
         parts = self.parts
-        path_in_repo = "/" + "/".join(parts[1:])
+        path_in_repo = "/" + "/".join(parts[2:])
         return path_in_repo
 
     def find_user(self, name):
