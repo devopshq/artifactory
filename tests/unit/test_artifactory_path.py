@@ -20,6 +20,11 @@ from dohq_artifactory.admin import Group
 from dohq_artifactory.admin import Project
 from dohq_artifactory.admin import User
 
+# Pathlib.Path changed significantly in 3.12, so we will not need several
+# parts of the code once python3.11 is no longer supported. This constant helps
+# identifying those.
+_IS_PYTHON_3_12_OR_NEWER = sys.version_info >= (3, 12)
+
 
 class UtilTest(unittest.TestCase):
     def test_matrix_encode(self):
@@ -67,36 +72,30 @@ class UtilTest(unittest.TestCase):
 class ArtifactoryFlavorTest(unittest.TestCase):
     flavour = artifactory._artifactory_flavour
 
-    # We are not quite calling the same function to parse path,
-    # so some funkyness is needed to reuse the tests
-    if sys.version_info.major == 3 and sys.version_info.minor <= 11:
+    def _check_parse_parts(self, arg, expected):
+        f = lambda x: self.flavour.parse_parts([x])
 
-        def _check_parse_path(self, arg, expected):
-            f = lambda x: self.flavour.parse_parts([x])
+        sep = self.flavour.sep
+        altsep = self.flavour.altsep
+        actual = f(arg.replace("/", sep))
+        if actual[0]:
+            actual = (actual[0], actual[1], actual[2][1:])
 
-            sep = self.flavour.sep
-            altsep = self.flavour.altsep
-            actual = f(arg.replace("/", sep))
+        self.assertEqual(actual, expected)
+        if altsep:
+            actual = f(arg.replace("/", altsep))
             if actual[0]:
                 actual = (actual[0], actual[1], actual[2][1:])
-
             self.assertEqual(actual, expected)
-            if altsep:
-                actual = f(arg.replace("/", altsep))
-                if actual[0]:
-                    actual = (actual[0], actual[1], actual[2][1:])
-                self.assertEqual(actual, expected)
 
-    else:
-
-        def _check_parse_path(self, arg, expected):
-            f = ArtifactoryPath._parse_path
-            sep = self.flavour.sep
-            altsep = self.flavour.altsep
-            actual = f(arg.replace("/", sep))
-            if altsep:
-                actual = f(arg.replace("/", altsep))
-                self.assertEqual(actual, expected)
+    def _check_parse_path(self, arg, expected):
+        f = ArtifactoryPath._parse_path
+        sep = self.flavour.sep
+        altsep = self.flavour.altsep
+        actual = f(arg.replace("/", sep))
+        if altsep:
+            actual = f(arg.replace("/", altsep))
+            self.assertEqual(actual, expected)
 
     def setUp(self):
         artifactory.global_config = {"http://custom/root": {}}
@@ -298,7 +297,11 @@ class ArtifactoryFlavorTest(unittest.TestCase):
         )
 
     def test_parse_path(self):
-        check = self._check_parse_path
+        check = (
+            self._check_parse_path
+            if _IS_PYTHON_3_12_OR_NEWER
+            else self._check_parse_parts
+        )
 
         check(".txt", ("", "", [".txt"]))
 
