@@ -23,6 +23,7 @@ to manipulate artifactory paths. See pathlib docs for details how
 pure paths can be used.
 """
 import collections
+import copy
 import datetime
 import errno
 import fnmatch
@@ -35,7 +36,7 @@ import platform
 import re
 import sys
 import urllib.parse
-from itertools import islice
+from itertools import islice, chain
 
 import dateutil.parser
 import requests
@@ -1570,6 +1571,33 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         # have state that needs to be included when pickling
         pathlib_reduce = super().__reduce__()
         return pathlib_reduce[0], pathlib_reduce[1], self.__dict__
+
+    def __deepcopy__(self, memo):
+        """
+        Adapted from https://gist.github.com/orbingol/5cbcee7cafcf4e26447d87fe36b6467a#file-copy_deepcopy-py-L65
+        """
+        # Create a new instance
+        result = self.__class__.__new__(self.__class__)
+
+        # Don't copy self reference
+        memo[id(self)] = result
+
+        # Don't copy the cache - if it exists
+        if hasattr(self, "_cache"):
+            memo[id(self._cache)] = self._cache.__new__(dict)
+
+        # Get all __slots__ of the derived class
+        slots = chain.from_iterable(getattr(s, "__slots__", []) for s in self.__class__.__mro__)
+
+        # Deep copy all other attributes
+        for var in slots:
+            # Since we process the whole inheritance chain from __mro__, there might be some attributes from parent
+            # classes missing in the current object. Marking these attributes as "undefined-attribute" to skip assigning
+            if getattr(self, var, "undefined-attribute") != "undefined-attribute":
+                setattr(result, var, copy.deepcopy(getattr(self, var), memo))
+
+        # Return updated instance
+        return result
 
     @property
     def top(self):
