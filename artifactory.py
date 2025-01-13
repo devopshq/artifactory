@@ -2463,7 +2463,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         "return: A list of found objects
         """
         if cls is Project:
-            request_url = self.drive.rstrip("/artifactory") + url
+            request_url = re.sub(r"/artifactory$", "", self.drive) + url
         else:
             request_url = self.drive + url
         response = self.session.get(request_url, auth=self.auth)
