@@ -5,12 +5,13 @@ import sys
 import pytest
 
 from artifactory import ArtifactoryPath
+from dohq_artifactory.compat import *  # noqa: this helper only contains version flags
 from dohq_artifactory import Group
 from dohq_artifactory import PermissionTarget
 from dohq_artifactory import RepositoryLocal
 from dohq_artifactory import User
 
-if sys.version_info[0] < 3:
+if IS_PYTHON_2:
     import ConfigParser as configparser
 else:
     import configparser

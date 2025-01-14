@@ -34,7 +34,6 @@ import os
 import pathlib
 import platform
 import re
-import sys
 import urllib.parse
 from itertools import islice, chain
 
@@ -51,6 +50,7 @@ from dohq_artifactory.admin import RepositoryVirtual
 from dohq_artifactory.admin import User
 from dohq_artifactory.auth import XJFrogArtApiAuth
 from dohq_artifactory.auth import XJFrogArtBearerAuth
+from dohq_artifactory.compat import *  # noqa: this helper only contains version flags
 from dohq_artifactory.exception import ArtifactoryException
 from dohq_artifactory.exception import raise_for_status
 from dohq_artifactory.logger import logger
@@ -1498,9 +1498,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
     on regular constructors, but rather on templates.
     """
 
-    if sys.version_info.major == 3 and sys.version_info.minor >= 10:
-        # see changes in pathlib.Path, slots are no more applied
-        # https://github.com/python/cpython/blob/ce121fd8755d4db9511ce4aab39d0577165e118e/Lib/pathlib.py#L952
+    if IS_PYTHON_3_10_OR_NEWER:
         _accessor = _artifactory_accessor
     else:
         # in 3.9 and below Pathlib limits what members can be present in 'Path' class
@@ -1806,7 +1804,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.timeout = self.timeout
         return obj
 
-    if sys.version_info < (3,):
+    if IS_PYTHON_2:
         __div__ = __truediv__
         __rdiv__ = __rtruediv__
 

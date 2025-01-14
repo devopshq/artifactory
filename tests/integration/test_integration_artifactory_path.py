@@ -8,8 +8,9 @@ import pytest
 import artifactory
 from artifactory import sha1sum
 from artifactory import sha256sum
+from dohq_artifactory.compat import *  # noqa: this helper only contains version flags
 
-if sys.version_info[0] < 3:
+if IS_PYTHON_2:
     import StringIO as io
 else:
     import io
