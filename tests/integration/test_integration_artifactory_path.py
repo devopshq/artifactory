@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import copy
 import sys
 import tempfile
 
@@ -282,3 +283,11 @@ def test_read_and_write(path):
     assert p.read_text() == "Some test string ensure length > 32"
 
     p.unlink()
+
+def test_deepcopy(path):
+    p = path("/integration-artifactory-path-repo/foo")
+    p2 = copy.deepcopy(p)
+
+    assert p2 == p
+    # different object, same value
+    assert not (p2 is p)
