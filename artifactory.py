@@ -35,7 +35,8 @@ import pathlib
 import platform
 import re
 import urllib.parse
-from itertools import islice, chain
+from itertools import chain
+from itertools import islice
 
 import dateutil.parser
 import requests
@@ -878,7 +879,11 @@ class _ArtifactoryAccessor:
         )
         code = response.status_code
         text = response.text
-        if code == 404 and ("Unable to find item" in text or "Not Found" in text or "File not found" in text):
+        if code == 404 and (
+            "Unable to find item" in text
+            or "Not Found" in text
+            or "File not found" in text
+        ):
             raise OSError(2, f"No such file or directory: {url}")
 
         raise_for_status(response)
@@ -1585,7 +1590,9 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             memo[id(self._cache)] = self._cache.__new__(dict)
 
         # Get all __slots__ of the derived class
-        slots = chain.from_iterable(getattr(s, "__slots__", []) for s in self.__class__.__mro__)
+        slots = chain.from_iterable(
+            getattr(s, "__slots__", []) for s in self.__class__.__mro__
+        )
 
         # Deep copy all other attributes
         for var in slots:

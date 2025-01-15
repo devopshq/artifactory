@@ -2,7 +2,6 @@ import json
 import random
 import re
 import string
-import sys
 import time
 import warnings
 
@@ -866,7 +865,7 @@ class RepositoryVirtual(GenericRepository):
         package_type=Repository.GENERIC,
         *,
         packageType=None,
-        default_deployment_repo_name=None
+        default_deployment_repo_name=None,
     ):
         super(RepositoryVirtual, self).__init__(artifactory)
         self.name = name
@@ -896,7 +895,7 @@ class RepositoryVirtual(GenericRepository):
             "packageType": self.package_type,
             "repositories": self._repositories,
             "notes": self.notes,
-            "defaultDeploymentRepo": self.default_deployment_repo_name
+            "defaultDeploymentRepo": self.default_deployment_repo_name,
         }
 
         return data_json

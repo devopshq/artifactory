@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import copy
-import sys
 import tempfile
 
 import pytest
@@ -283,6 +282,7 @@ def test_read_and_write(path):
     assert p.read_text() == "Some test string ensure length > 32"
 
     p.unlink()
+
 
 def test_deepcopy(path):
     p = path("/integration-artifactory-path-repo/foo")
