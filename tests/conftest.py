@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import os
-import sys
 
 import pytest
 
@@ -9,8 +8,9 @@ from dohq_artifactory import Group
 from dohq_artifactory import PermissionTarget
 from dohq_artifactory import RepositoryLocal
 from dohq_artifactory import User
+from dohq_artifactory.compat import *  # noqa: this helper only contains version flags
 
-if sys.version_info[0] < 3:
+if IS_PYTHON_2:
     import ConfigParser as configparser
 else:
     import configparser

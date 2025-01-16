@@ -2,13 +2,13 @@ import json
 import random
 import re
 import string
-import sys
 import time
 import warnings
 
 import jwt
 from dateutil.parser import isoparse
 
+from dohq_artifactory.compat import *  # noqa: this helper only contains version flags
 from dohq_artifactory.exception import ArtifactoryException
 from dohq_artifactory.exception import raise_for_status
 from dohq_artifactory.logger import logger
@@ -51,10 +51,10 @@ def _new_function_with_secret_module(pw_len=16):
     return "".join(secrets.choice(string.ascii_letters) for i in range(pw_len))
 
 
-if sys.version_info < (3, 6):
-    generate_password = _old_function_for_secret
-else:
+if IS_PYTHON_3_6_OR_NEWER:
     generate_password = _new_function_with_secret_module
+else:
+    generate_password = _old_function_for_secret
 
 
 def deprecation(message):
@@ -656,7 +656,7 @@ class GenericRepository(AdminObject):
     def __rtruediv__(self, key):
         return self.path.__truediv__(key)
 
-    if sys.version_info < (3,):
+    if IS_PYTHON_2:
         __div__ = __truediv__
         __rdiv__ = __rtruediv__
 
@@ -865,7 +865,7 @@ class RepositoryVirtual(GenericRepository):
         package_type=Repository.GENERIC,
         *,
         packageType=None,
-        default_deployment_repo_name=None
+        default_deployment_repo_name=None,
     ):
         super(RepositoryVirtual, self).__init__(artifactory)
         self.name = name
@@ -895,7 +895,7 @@ class RepositoryVirtual(GenericRepository):
             "packageType": self.package_type,
             "repositories": self._repositories,
             "notes": self.notes,
-            "defaultDeploymentRepo": self.default_deployment_repo_name
+            "defaultDeploymentRepo": self.default_deployment_repo_name,
         }
 
         return data_json

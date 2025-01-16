@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import sys
+import copy
 import tempfile
 
 import pytest
@@ -8,8 +8,9 @@ import pytest
 import artifactory
 from artifactory import sha1sum
 from artifactory import sha256sum
+from dohq_artifactory.compat import *  # noqa: this helper only contains version flags
 
-if sys.version_info[0] < 3:
+if IS_PYTHON_2:
     import StringIO as io
 else:
     import io
@@ -281,3 +282,12 @@ def test_read_and_write(path):
     assert p.read_text() == "Some test string ensure length > 32"
 
     p.unlink()
+
+
+def test_deepcopy(path):
+    p = path("/integration-artifactory-path-repo/foo")
+    p2 = copy.deepcopy(p)
+
+    assert p2 == p
+    # different object, same value
+    assert not (p2 is p)
