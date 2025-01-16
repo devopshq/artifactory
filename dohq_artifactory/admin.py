@@ -8,7 +8,8 @@ import warnings
 import jwt
 from dateutil.parser import isoparse
 
-from dohq_artifactory.compat import *  # noqa: this helper only contains version flags
+from dohq_artifactory.compat import IS_PYTHON_2
+from dohq_artifactory.compat import IS_PYTHON_3_6_OR_NEWER
 from dohq_artifactory.exception import ArtifactoryException
 from dohq_artifactory.exception import raise_for_status
 from dohq_artifactory.logger import logger

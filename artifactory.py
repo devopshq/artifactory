@@ -51,7 +51,9 @@ from dohq_artifactory.admin import RepositoryVirtual
 from dohq_artifactory.admin import User
 from dohq_artifactory.auth import XJFrogArtApiAuth
 from dohq_artifactory.auth import XJFrogArtBearerAuth
-from dohq_artifactory.compat import *  # noqa: this helper only contains version flags
+from dohq_artifactory.compat import IS_PYTHON_2
+from dohq_artifactory.compat import IS_PYTHON_3_10_OR_NEWER
+from dohq_artifactory.compat import IS_PYTHON_3_12_OR_NEWER
 from dohq_artifactory.exception import ArtifactoryException
 from dohq_artifactory.exception import raise_for_status
 from dohq_artifactory.logger import logger
@@ -72,11 +74,6 @@ elif platform.system() == "Windows":
 else:
     default_config_path = "~/.artifactory_python.cfg"
 global_config = None
-
-# Pathlib.Path changed significantly in 3.12, so we will not need several
-# parts of the code once python3.11 is no longer supported. This constant helps
-# identifying those.
-_IS_PYTHON_3_12_OR_NEWER = sys.version_info >= (3, 12)
 
 
 def read_config(config_path=default_config_path):
@@ -429,7 +426,7 @@ def quote_url(url):
     return quoted_url
 
 
-class _ArtifactoryFlavour(object if _IS_PYTHON_3_12_OR_NEWER else pathlib._Flavour):
+class _ArtifactoryFlavour(object if IS_PYTHON_3_12_OR_NEWER else pathlib._Flavour):
     """
     Implements Artifactory-specific pure path manipulations.
     I.e. what is 'drive', 'root' and 'path' and how to split full path into
@@ -1554,7 +1551,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
 
         obj = pathlib.Path.__new__(cls, *args, **kwargs)
-        if _IS_PYTHON_3_12_OR_NEWER:
+        if IS_PYTHON_3_12_OR_NEWER:
             # After python 3.12, all this logic can be moved to __init__
             return obj
 
@@ -1611,7 +1608,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
     def __init__(self, *args, **kwargs):
         # Up until python3.12, pathlib.Path was not designed to be initialized
         # through __init__, so all that logic is in the __new__ method.
-        if not _IS_PYTHON_3_12_OR_NEWER:
+        if not IS_PYTHON_3_12_OR_NEWER:
             return
 
         super().__init__(*args, **kwargs)
