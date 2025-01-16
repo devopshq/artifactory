@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 import pathlib
+import sys
 import tempfile
 import unittest
 
@@ -18,6 +19,11 @@ from dohq_artifactory import ArtifactoryException
 from dohq_artifactory.admin import Group
 from dohq_artifactory.admin import Project
 from dohq_artifactory.admin import User
+
+# Pathlib.Path changed significantly in 3.12, so we will not need several
+# parts of the code once python3.11 is no longer supported. This constant helps
+# identifying those.
+_IS_PYTHON_3_12_OR_NEWER = sys.version_info >= (3, 12)
 
 
 class UtilTest(unittest.TestCase):
@@ -67,13 +73,28 @@ class ArtifactoryFlavorTest(unittest.TestCase):
     flavour = artifactory._artifactory_flavour
 
     def _check_parse_parts(self, arg, expected):
-        f = self.flavour.parse_parts
+        f = lambda x: self.flavour.parse_parts([x])
+
         sep = self.flavour.sep
         altsep = self.flavour.altsep
-        actual = f([x.replace("/", sep) for x in arg])
+        actual = f(arg.replace("/", sep))
+        if actual[0]:
+            actual = (actual[0], actual[1], actual[2][1:])
+
         self.assertEqual(actual, expected)
         if altsep:
-            actual = f([x.replace("/", altsep) for x in arg])
+            actual = f(arg.replace("/", altsep))
+            if actual[0]:
+                actual = (actual[0], actual[1], actual[2][1:])
+            self.assertEqual(actual, expected)
+
+    def _check_parse_path(self, arg, expected):
+        f = ArtifactoryPath._parse_path
+        sep = self.flavour.sep
+        altsep = self.flavour.altsep
+        actual = f(arg.replace("/", sep))
+        if altsep:
+            actual = f(arg.replace("/", altsep))
             self.assertEqual(actual, expected)
 
     def setUp(self):
@@ -140,28 +161,28 @@ class ArtifactoryFlavorTest(unittest.TestCase):
 
         check(".com", ("", "", ".com"))
         check("example1.com", ("", "", "example1.com"))
-        check("example2.com/artifactory", ("example2.com/artifactory", "", ""))
-        check("example2.com/artifactory/", ("example2.com/artifactory", "", ""))
-        check("example3.com/artifactory/foo", ("example3.com/artifactory", "/foo/", ""))
+        check("example2.com/artifactory", ("example2.com/artifactory", "/", ""))
+        check("example2.com/artifactory/", ("example2.com/artifactory", "/", ""))
+        check("example3.com/artifactory/foo", ("example3.com/artifactory", "/", "foo"))
         check(
             "example3.com/artifactory/foo/bar",
-            ("example3.com/artifactory", "/foo/", "bar"),
+            ("example3.com/artifactory", "/", "foo/bar"),
         )
         check(
             "artifactory.local/artifactory/foo/bar",
-            ("artifactory.local/artifactory", "/foo/", "bar"),
+            ("artifactory.local/artifactory", "/", "foo/bar"),
         )
         check(
             "http://artifactory.local/artifactory/foo/bar",
-            ("http://artifactory.local/artifactory", "/foo/", "bar"),
+            ("http://artifactory.local/artifactory", "/", "foo/bar"),
         )
         check(
             "https://artifactory.a.b.c.d/artifactory/foo/bar",
-            ("https://artifactory.a.b.c.d/artifactory", "/foo/", "bar"),
+            ("https://artifactory.a.b.c.d/artifactory", "/", "foo/bar"),
         )
         check(
             "https://artifactory.a.b.c.d/artifactory/foo/artifactory/bar",
-            ("https://artifactory.a.b.c.d/artifactory", "/foo/", "artifactory/bar"),
+            ("https://artifactory.a.b.c.d/artifactory", "/", "foo/artifactory/bar"),
         )
 
     def test_special_characters(self):
@@ -169,32 +190,32 @@ class ArtifactoryFlavorTest(unittest.TestCase):
         https://github.com/devopshq/artifactory/issues/90
         """
         check = self._check_splitroot
-        check("https://a/b/`", ("https://a", "/b/", "`"))
-        check("https://a/b/~", ("https://a", "/b/", "~"))
-        check("https://a/b/!", ("https://a", "/b/", "!"))
-        check("https://a/b/@", ("https://a", "/b/", "@"))
-        check("https://a/b/#", ("https://a", "/b/", "#"))
-        check("https://a/b/$", ("https://a", "/b/", "$"))
-        check("https://a/b/%", ("https://a", "/b/", "%"))
-        check("https://a/b/^", ("https://a", "/b/", "^"))
-        check("https://a/b/&", ("https://a", "/b/", "&"))
-        check("https://a/b/*", ("https://a", "/b/", "*"))
-        check("https://a/b/(", ("https://a", "/b/", "("))
-        check("https://a/b/)", ("https://a", "/b/", ")"))
-        check("https://a/b/[", ("https://a", "/b/", "["))
-        check("https://a/b/]", ("https://a", "/b/", "]"))
-        check("https://a/b/{", ("https://a", "/b/", "{"))
-        check("https://a/b/}", ("https://a", "/b/", "}"))
-        check("https://a/b/|", ("https://a", "/b/", "|"))
-        check("https://a/b/\\", ("https://a", "/b/", "\\"))
-        check("https://a/b/:", ("https://a", "/b/", ":"))
-        check("https://a/b/;", ("https://a", "/b/", ";"))
-        check("https://a/b/'", ("https://a", "/b/", "'"))
-        check('https://a/b/"', ("https://a", "/b/", '"'))
-        check("https://a/b/,", ("https://a", "/b/", ","))
-        check("https://a/b/<", ("https://a", "/b/", "<"))
-        check("https://a/b/>", ("https://a", "/b/", ">"))
-        check("https://a/b/?", ("https://a", "/b/", "?"))
+        check("https://a/b/`", ("https://a", "/", "b/`"))
+        check("https://a/b/~", ("https://a", "/", "b/~"))
+        check("https://a/b/!", ("https://a", "/", "b/!"))
+        check("https://a/b/@", ("https://a", "/", "b/@"))
+        check("https://a/b/#", ("https://a", "/", "b/#"))
+        check("https://a/b/$", ("https://a", "/", "b/$"))
+        check("https://a/b/%", ("https://a", "/", "b/%"))
+        check("https://a/b/^", ("https://a", "/", "b/^"))
+        check("https://a/b/&", ("https://a", "/", "b/&"))
+        check("https://a/b/*", ("https://a", "/", "b/*"))
+        check("https://a/b/(", ("https://a", "/", "b/("))
+        check("https://a/b/)", ("https://a", "/", "b/)"))
+        check("https://a/b/[", ("https://a", "/", "b/["))
+        check("https://a/b/]", ("https://a", "/", "b/]"))
+        check("https://a/b/{", ("https://a", "/", "b/{"))
+        check("https://a/b/}", ("https://a", "/", "b/}"))
+        check("https://a/b/|", ("https://a", "/", "b/|"))
+        check("https://a/b/\\", ("https://a", "/", "b/\\"))
+        check("https://a/b/:", ("https://a", "/", "b/:"))
+        check("https://a/b/;", ("https://a", "/", "b/;"))
+        check("https://a/b/'", ("https://a", "/", "b/'"))
+        check('https://a/b/"', ("https://a", "/", 'b/"'))
+        check("https://a/b/,", ("https://a", "/", "b/,"))
+        check("https://a/b/<", ("https://a", "/", "b/<"))
+        check("https://a/b/>", ("https://a", "/", "b/>"))
+        check("https://a/b/?", ("https://a", "/", "b/?"))
 
     def test_splitroot_custom_drv(self):
         """https://github.com/devopshq/artifactory/issues/31 and
@@ -204,120 +225,124 @@ class ArtifactoryFlavorTest(unittest.TestCase):
 
         check(
             "https://artifactory.example.com",
-            ("https://artifactory.example.com", "", ""),
+            ("https://artifactory.example.com", "/", ""),
         )
         check(
             "https://artifactory.example.com/",
-            ("https://artifactory.example.com", "", ""),
+            ("https://artifactory.example.com", "/", ""),
         )
         check(
             "https://artifactory.example.com/root",
-            ("https://artifactory.example.com", "/root/", ""),
+            ("https://artifactory.example.com", "/", "root"),
         )
         check(
             "https://artifactory.example.com/root/",
-            ("https://artifactory.example.com", "/root/", ""),
+            ("https://artifactory.example.com", "/", "root"),
         )
         check(
             "https://artifactory.example.com/root/parts",
-            ("https://artifactory.example.com", "/root/", "parts"),
+            ("https://artifactory.example.com", "/", "root/parts"),
         )
         check(
             "https://artifactory.example.com/root/parts/",
-            ("https://artifactory.example.com", "/root/", "parts"),
+            ("https://artifactory.example.com", "/", "root/parts"),
         )
         check(
-            "https://artifacts.example.com", ("https://artifacts.example.com", "", "")
+            "https://artifacts.example.com", ("https://artifacts.example.com", "/", "")
         )
         check(
-            "https://artifacts.example.com/", ("https://artifacts.example.com", "", "")
+            "https://artifacts.example.com/", ("https://artifacts.example.com", "/", "")
         )
         check(
             "https://artifacts.example.com/root",
-            ("https://artifacts.example.com", "/root/", ""),
+            ("https://artifacts.example.com", "/", "root"),
         )
         check(
             "https://artifacts.example.com/root/",
-            ("https://artifacts.example.com", "/root/", ""),
+            ("https://artifacts.example.com", "/", "root"),
         )
         check(
             "https://artifacts.example.com/root/parts",
-            ("https://artifacts.example.com", "/root/", "parts"),
+            ("https://artifacts.example.com", "/", "root/parts"),
         )
         check(
             "https://artifacts.example.com/root/parts/",
-            ("https://artifacts.example.com", "/root/", "parts"),
+            ("https://artifacts.example.com", "/", "root/parts"),
         )
         check(
             "https://artifacts.example.com/root/artifactory/parts/",
-            ("https://artifacts.example.com", "/root/", "artifactory/parts"),
+            ("https://artifacts.example.com", "/", "root/artifactory/parts"),
         )
         check(
             "https://artifacts.example.com/artifacts",
-            ("https://artifacts.example.com", "/artifacts/", ""),
+            ("https://artifacts.example.com", "/", "artifacts"),
         )
 
     def test_splitroot_custom_root(self):
         check = self._check_splitroot
 
-        check("http://custom/root", ("http://custom/root", "", ""))
-        check("custom/root", ("custom/root", "", ""))
-        check("https://custom/root", ("https://custom/root", "", ""))
-        check("http://custom/root/", ("http://custom/root", "", ""))
+        check("http://custom/root", ("http://custom/root", "/", ""))
+        check("custom/root", ("custom/root", "/", ""))
+        check("https://custom/root", ("https://custom/root", "/", ""))
+        check("http://custom/root/", ("http://custom/root", "/", ""))
         check(
             "http://custom/root/artifactory",
-            ("http://custom/root", "/artifactory/", ""),
+            ("http://custom/root", "/", "artifactory"),
         )
-        check("http://custom/root/foo/bar", ("http://custom/root", "/foo/", "bar"))
-        check("https://custom/root/foo/baz", ("https://custom/root", "/foo/", "baz"))
+        check("http://custom/root/foo/bar", ("http://custom/root", "/", "foo/bar"))
+        check("https://custom/root/foo/baz", ("https://custom/root", "/", "foo/baz"))
         check(
             "https://custom/root/foo/with/artifactory/folder/baz",
-            ("https://custom/root", "/foo/", "with/artifactory/folder/baz"),
+            ("https://custom/root", "/", "foo/with/artifactory/folder/baz"),
         )
 
-    def test_parse_parts(self):
-        check = self._check_parse_parts
+    def test_parse_path(self):
+        check = (
+            self._check_parse_path
+            if _IS_PYTHON_3_12_OR_NEWER
+            else self._check_parse_parts
+        )
 
-        check([".txt"], ("", "", [".txt"]))
+        check(".txt", ("", "", [".txt"]))
 
         check(
-            ["http://b/artifactory/c/d.xml"],
-            ("http://b/artifactory", "/c/", ["http://b/artifactory/c/", "d.xml"]),
+            "http://b/artifactory/c/d.xml",
+            ("http://b/artifactory", "/", ["c", "d.xml"]),
         )
 
         check(
-            ["http://example.com/artifactory/foo"],
+            "http://example.com/artifactory/foo",
             (
                 "http://example.com/artifactory",
-                "/foo/",
-                ["http://example.com/artifactory/foo/"],
+                "/",
+                ["foo"],
             ),
         )
 
         check(
-            ["http://example.com/artifactory/foo/bar"],
+            "http://example.com/artifactory/foo/bar",
             (
                 "http://example.com/artifactory",
-                "/foo/",
-                ["http://example.com/artifactory/foo/", "bar"],
+                "/",
+                ["foo", "bar"],
             ),
         )
 
         check(
-            ["http://example.com/artifactory/foo/bar/artifactory"],
+            "http://example.com/artifactory/foo/bar/artifactory",
             (
                 "http://example.com/artifactory",
-                "/foo/",
-                ["http://example.com/artifactory/foo/", "bar", "artifactory"],
+                "/",
+                ["foo", "bar", "artifactory"],
             ),
         )
 
         check(
-            ["http://example.com/artifactory/foo/bar/artifactory/fi"],
+            "http://example.com/artifactory/foo/bar/artifactory/fi",
             (
                 "http://example.com/artifactory",
-                "/foo/",
-                ["http://example.com/artifactory/foo/", "bar", "artifactory", "fi"],
+                "/",
+                ["foo", "bar", "artifactory", "fi"],
             ),
         )
 
@@ -328,14 +353,14 @@ class PureArtifactoryPathTest(unittest.TestCase):
     def test_root(self):
         P = self.cls
 
-        self.assertEqual(P("http://a/artifactory/b").root, "/b/")
+        self.assertEqual(P("http://a/artifactory/b").root, "/")
 
-        self.assertEqual(P("http://a/artifactory/").root, "")
+        self.assertEqual(P("http://a/artifactory/").root, "/")
 
     def test_anchor(self):
         P = self.cls
         b = P("http://b/artifactory/c/d.xml")
-        self.assertEqual(b.anchor, "http://b/artifactory/c/")
+        self.assertEqual(b.anchor, "http://b/artifactory/")
 
     def test_with_suffix(self):
         P = self.cls
@@ -405,6 +430,23 @@ class PureArtifactoryPathTest(unittest.TestCase):
         self.assertEqual(
             str(c),
             "http://b/artifactory/reponame/path/with/multiple/subdir/and/artifactory/path.txt",
+        )
+
+    def test_join_full_path(self):
+        """
+        The method "archive" relies on this behavior, although I think the operation of joining two full
+        paths is not really well defined. Anyway, this is the behavior of pathlib.Path, so lets copy it.
+        """
+        P = self.cls
+
+        b = P("http://b/artifactory/reponame")
+        c = (
+            b
+            / "http://c/artifactory/repo2/path/with/multiple/subdir/and/artifactory/path.txt"
+        )
+        self.assertEqual(
+            str(c),
+            "http://c/artifactory/repo2/path/with/multiple/subdir/and/artifactory/path.txt",
         )
 
 
@@ -984,7 +1026,9 @@ class ArtifactoryPathTest(ClassSetup):
                         f"{static_matrix_parameters};prop%3FB=a%0b;prop?C=see;propA=a?b"
                     )
 
-                item_constructed_url = f"{path}{test_file.name};{matrix_parameters}"
+                item_constructed_url = (
+                    f"{path.joinpath(test_file.name)};{matrix_parameters}"
+                )
                 responses.add(responses.PUT, item_constructed_url, status=200)
 
                 path.deploy_file(
@@ -1191,7 +1235,7 @@ class ArtifactoryPathTest(ClassSetup):
             test_file = pathlib.Path(file.name)
             file.write("I am a test file")
 
-            constructed_url = f"{path}{test_file.name};{matrix_parameters}"
+            constructed_url = f"{path.joinpath(test_file.name)};{matrix_parameters}"
             responses.add(responses.PUT, constructed_url, status=200)
 
             path.deploy_deb(
@@ -1245,15 +1289,17 @@ class ArtifactoryPathTest(ClassSetup):
         """
         https://github.com/devopshq/artifactory/issues/239
         """
-
         P = self.cls
-        artis = ["", "artifactory", "artifactory/"]
+        artis = ["artifactory", "artifactory/"]
         reponames = ["reponame", "/reponame", "reponame/", "/reponame/"]
 
-        for arti in artis:
-            for reponame in reponames:
+        for reponame in reponames:
+            c = P("http://b/").joinpath(reponame)
+            self.assertEqual(str(c), "http://b/reponame")
+
+            for arti in artis:
                 c = P("http://b/" + arti).joinpath(reponame)
-                self.assertEqual(c.root, "/reponame/")
+                self.assertEqual(str(c), "http://b/artifactory/reponame")
 
     @responses.activate
     def test_archive(self):
@@ -1426,7 +1472,7 @@ class TestArtifactoryAql(unittest.TestCase):
         artifact = self.aql.from_aql(result)
         assert artifact.drive == "http://b/artifactory"
         assert artifact.name == "name.nupkg"
-        assert artifact.root == "/reponame/"
+        assert artifact.root == "/"
 
 
 class TestArtifactoryPathGetAll(unittest.TestCase):
