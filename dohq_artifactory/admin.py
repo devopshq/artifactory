@@ -2,13 +2,13 @@ import json
 import random
 import re
 import string
-import sys
 import time
 import warnings
 
 import jwt
 from dateutil.parser import isoparse
 
+from dohq_artifactory.compat import *  # noqa: this helper only contains version flags
 from dohq_artifactory.exception import ArtifactoryException
 from dohq_artifactory.exception import raise_for_status
 from dohq_artifactory.logger import logger
@@ -51,10 +51,10 @@ def _new_function_with_secret_module(pw_len=16):
     return "".join(secrets.choice(string.ascii_letters) for i in range(pw_len))
 
 
-if sys.version_info < (3, 6):
-    generate_password = _old_function_for_secret
-else:
+if IS_PYTHON_3_6_OR_NEWER:
     generate_password = _new_function_with_secret_module
+else:
+    generate_password = _old_function_for_secret
 
 
 def deprecation(message):
@@ -469,7 +469,7 @@ class Group(AdminObject):
         }
 
         if isinstance(self.users, list):
-            data_json.update({"usersInGroup": self.users})
+            data_json.update({"userNames": self.users})
 
         return data_json
 
@@ -484,7 +484,7 @@ class Group(AdminObject):
         self.realm_attributes = response.get("realmAttributes")
         self.external = response.get("external")
         self.new_user_default = response.get("newUserDefault")
-        self.users = response.get("usersInGroup")
+        self.users = response.get("userNames")
 
     def delete(self):
         """
@@ -656,9 +656,15 @@ class GenericRepository(AdminObject):
     def __rtruediv__(self, key):
         return self.path.__truediv__(key)
 
-    if sys.version_info < (3,):
+    if IS_PYTHON_2:
         __div__ = __truediv__
         __rdiv__ = __rtruediv__
+
+    def __setstate__(self, state):
+        self.__dict__ = state
+
+    def __getstate__(self):
+        return self.__dict__
 
 
 class Repository(GenericRepository):
@@ -859,6 +865,7 @@ class RepositoryVirtual(GenericRepository):
         package_type=Repository.GENERIC,
         *,
         packageType=None,
+        default_deployment_repo_name=None,
     ):
         super(RepositoryVirtual, self).__init__(artifactory)
         self.name = name
@@ -866,6 +873,7 @@ class RepositoryVirtual(GenericRepository):
         self.notes = ""
         self.package_type = packageType or package_type
         self.repositories = repositories or []
+        self.default_deployment_repo_name = default_deployment_repo_name
 
         if packageType:
             msg = "packageType is deprecated, use package_type"
@@ -887,6 +895,7 @@ class RepositoryVirtual(GenericRepository):
             "packageType": self.package_type,
             "repositories": self._repositories,
             "notes": self.notes,
+            "defaultDeploymentRepo": self.default_deployment_repo_name,
         }
 
         return data_json
@@ -902,6 +911,7 @@ class RepositoryVirtual(GenericRepository):
         self.package_type = response.get("packageType")
         self._repositories = response.get("repositories")
         self.docker_api_version = response.get("dockerApiVersion", None)
+        self.default_deployment_repo_name = response.get("defaultDeploymentRepo")
 
     def add_repository(self, *repos):
         for value in repos:
