@@ -454,7 +454,7 @@ class _ArtifactoryFlavour(object if _IS_PYTHON_3_12_OR_NEWER else pathlib._Flavo
         return get_global_base_url(url)
 
     def compile_pattern(self, pattern):
-        return re.compile(fnmatch.translate(pattern), re.IGNORECASE).fullmatch
+        return re.compile(fnmatch.translate(pattern)).fullmatch
 
     def parse_parts(self, parts):
         drv, root, parsed = super(_ArtifactoryFlavour, self).parse_parts(parts)
