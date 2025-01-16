@@ -681,7 +681,6 @@ class _ScandirIter:
 
 
 class _ArtifactoryAccessor:
-
     """
     Implements operations with Artifactory REST API
     """
