@@ -1173,6 +1173,18 @@ And for more modular control:
 from dohq_artifactory import PermissionTarget
 
 permission = artifactory_.find_permission_target("rule")
+if permission is None:
+    # Permission target does not exist
+    permission = PermissionTarget(
+        artifactory_,
+        "rule",
+        repositories=Object, # <RepositiryLocal repo1>, <RepositiryLocal repo2>
+        users=Object, # <User user1>, <User user2>
+        groups=Object, # <Group group1>, <Group group2>
+        includes_pattern="com.mycompany.myproject1.**,com.othercompany.**"
+        excludes_pattern="com.othercompany.projectX.**,com.othercompany.projectY.**"
+    )
+    permission.create()
 
 # See repositories, users or groups
 permission.repositories
