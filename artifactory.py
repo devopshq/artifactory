@@ -1923,7 +1923,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         return obj
 
     def _make_child_relpath(self, args):
-        obj = super(ArtifactoryPath, self)._make_child_relpath(args)
+        obj = super(ArtifactoryPath, self).joinpath(args)
         obj.auth = self.auth
         obj.verify = self.verify
         obj.cert = self.cert
