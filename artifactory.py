@@ -33,6 +33,7 @@ import json
 import os
 import pathlib
 import platform
+import posixpath
 import re
 import urllib.parse
 from itertools import chain
@@ -444,7 +445,7 @@ class _ArtifactoryFlavour(object if IS_PYTHON_3_12_OR_NEWER else pathlib._Flavou
     sep = "/"
     altsep = "/"
     has_drv = True
-    pathmod = pathlib.posixpath
+    pathmod = posixpath
     is_supported = True
 
     def _get_base_url(self, url):
@@ -1499,7 +1500,8 @@ class PureArtifactoryPath(pathlib.PurePath):
     operations.
     """
 
-    _flavour = _artifactory_flavour
+    parser = _artifactory_flavour
+    _flavour = parser  # Compatibility shim for Python < 3.13
     __slots__ = ()
 
     def _init(self, *args):
@@ -1507,7 +1509,7 @@ class PureArtifactoryPath(pathlib.PurePath):
 
     @classmethod
     def _split_root(cls, part):
-        cls._flavour.splitroot(part)
+        cls.parser.splitroot(part)
 
     @classmethod
     def _parse_parts(cls, parts):
@@ -2661,7 +2663,8 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 class ArtifactorySaaSPath(ArtifactoryPath):
     """Class for SaaS Artifactory"""
 
-    _flavour = _saas_artifactory_flavour
+    parser = _saas_artifactory_flavour
+    _flavour = parser  # Compatibility shim for Python < 3.13
 
 
 class ArtifactoryBuild:
