@@ -55,6 +55,7 @@ from dohq_artifactory.auth import XJFrogArtBearerAuth
 from dohq_artifactory.compat import IS_PYTHON_2
 from dohq_artifactory.compat import IS_PYTHON_3_10_OR_NEWER
 from dohq_artifactory.compat import IS_PYTHON_3_12_OR_NEWER
+from dohq_artifactory.compat import IS_PYTHON_3_13_OR_NEWER
 from dohq_artifactory.exception import ArtifactoryException
 from dohq_artifactory.exception import raise_for_status
 from dohq_artifactory.logger import logger
@@ -587,6 +588,9 @@ class _ArtifactoryFlavour(object if IS_PYTHON_3_12_OR_NEWER else pathlib._Flavou
 
     def normcase(self, path):
         return path
+
+    def split(self, path):
+        return posixpath.split(path)
 
     def splitdrive(self, path):
         drv, root, part = self.splitroot(path)
@@ -1502,6 +1506,10 @@ class PureArtifactoryPath(pathlib.PurePath):
 
     parser = _artifactory_flavour
     _flavour = parser  # Compatibility shim for Python < 3.13
+    if IS_PYTHON_3_13_OR_NEWER:
+        import glob
+
+        _globber = glob._Globber
     __slots__ = ()
 
     def _init(self, *args):
@@ -1794,6 +1802,16 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         Override Path._scandir. Only required on Python >= 3.11
         """
         return self._accessor.scandir(self)
+
+    def glob(self, *args, **kwargs):
+        # In Python 3.13, the implementation of Path.glob() changed such that it assumes that it
+        # works only with real filesystem paths and will try to call real filesystem operations like
+        # os.scandir(). In Python 3.13, we explicitly intercept this and call PathBase's glob()
+        # implementation, which only depends on methods defined on the Path subclass.
+        if IS_PYTHON_3_13_OR_NEWER:
+            return pathlib._abc.PathBase.glob(self, *args, **kwargs)
+        else:
+            return super().glob(*args, **kwargs)
 
     def download_stats(self, pathobj=None):
         """
