@@ -9,3 +9,7 @@ IS_PYTHON_3_10_OR_NEWER = sys.version_info >= (3, 10)
 # parts of the code once python3.11 is no longer supported. This constant helps
 # identifying those.
 IS_PYTHON_3_12_OR_NEWER = sys.version_info >= (3, 12)
+# Pathlib.Path and glob changed significantly in 3.13, so we will not need several
+# parts of the code once python3.12 is no longer supported. This constant helps
+# identifying those.
+IS_PYTHON_3_13_OR_NEWER = sys.version_info >= (3, 13)
