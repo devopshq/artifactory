@@ -27,6 +27,7 @@ import copy
 import datetime
 import errno
 import fnmatch
+import glob
 import hashlib
 import io
 import json
@@ -1497,6 +1498,93 @@ class ArtifactoryOpensourceAccessor(_ArtifactoryAccessor):
     """
 
 
+# In Python 3.13, pathlib now reuses code from the glob package in order to implement
+# the Path.glob() method. There are two related classes in the glob package, _Globber
+# and _StringGlobber, where the former will delegate operations to the Path object while
+# the latter directly calls os.path functions, performing actual file system calls. The
+# private abstract base class of PurePath, PurePathBase, sets the _globber class
+# attribute to _Globber, while PurePath overrides it to be _StringGlobber.
+#
+# We create a custom subclass that explicitly subclasses _Globber and not
+# _StringGlobber, since we want the version that delegates file system operations to the
+# Path objects.
+#
+# In addition, we override _Globber.recursive_selector() with a copy of the original
+# code but with one modification. Inside the definition of the nested select_recursive()
+# function, we # add 1 to the original value of match_pos. The reason for this is that
+# the add_slash() method will not actually add a slash when the path object is an
+# instance of a Path subclass, since it will normally get normalized away. The match
+# position therefore needs to be incremented by 1 in order to account for the actual
+# slash character that appears when inspecting children of the current directory. This
+# isn't an issue in the actaul use of _Globber in Python, since it converts all paths to
+# strings, and the add_slash() will literally append a slash character to the string
+# path.
+class _ArtifactoryGlobber(glob._Globber if IS_PYTHON_3_13_OR_NEWER else object):
+    def recursive_selector(self, part, parts):
+        """Returns a function that selects a given path and all its children,
+        recursively, filtering by pattern.
+        """
+        # Optimization: consume following '**' parts, which have no effect.
+        while parts and parts[-1] == "**":
+            parts.pop()
+
+        # Optimization: consume and join any following non-special parts here,
+        # rather than leaving them for the next selector. They're used to
+        # build a regular expression, which we use to filter the results of
+        # the recursive walk. As a result, non-special pattern segments
+        # following a '**' wildcard don't require additional filesystem access
+        # to expand.
+        follow_symlinks = self.recursive is not glob._no_recurse_symlinks
+        if follow_symlinks:
+            while parts and parts[-1] not in glob._special_parts:
+                part += self.sep + parts.pop()
+
+        match = None if part == "**" else self.compile(part)
+        dir_only = bool(parts)
+        select_next = self.selector(parts)
+
+        def select_recursive(path, exists=False):
+            path = self.add_slash(path)
+            match_pos = len(str(path)) + 1
+            if match is None or match(str(path), match_pos):
+                yield from select_next(path, exists)
+            stack = [path]
+            while stack:
+                yield from select_recursive_step(stack, match_pos)
+
+        def select_recursive_step(stack, match_pos):
+            path = stack.pop()
+            try:
+                # We must close the scandir() object before proceeding to
+                # avoid exhausting file descriptors when globbing deep trees.
+                with self.scandir(path) as scandir_it:
+                    entries = list(scandir_it)
+            except OSError:
+                pass
+            else:
+                for entry in entries:
+                    is_dir = False
+                    try:
+                        if entry.is_dir(follow_symlinks=follow_symlinks):
+                            is_dir = True
+                    except OSError:
+                        pass
+
+                    if is_dir or not dir_only:
+                        entry_path = self.parse_entry(entry)
+                        if match is None or match(str(entry_path), match_pos):
+                            if dir_only:
+                                yield from select_next(entry_path, exists=True)
+                            else:
+                                # Optimization: directly yield the path if this is
+                                # last pattern part.
+                                yield entry_path
+                        if is_dir:
+                            stack.append(entry_path)
+
+        return select_recursive
+
+
 class PureArtifactoryPath(pathlib.PurePath):
     """
     A class to work with Artifactory paths that doesn't connect
@@ -1506,10 +1594,12 @@ class PureArtifactoryPath(pathlib.PurePath):
 
     parser = _artifactory_flavour
     _flavour = parser  # Compatibility shim for Python < 3.13
-    if IS_PYTHON_3_13_OR_NEWER:
-        import glob
 
-        _globber = glob._Globber
+    # In Python 3.13, this attribute is accessed by PurePath.glob(), and we need to
+    # override it to behave properly for ArtifactoryPaths with a custom subclass of
+    # glob._Globber.
+    _globber = _ArtifactoryGlobber
+
     __slots__ = ()
 
     def _init(self, *args):
