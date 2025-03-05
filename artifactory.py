@@ -1516,9 +1516,10 @@ class ArtifactoryOpensourceAccessor(_ArtifactoryAccessor):
 # instance of a Path subclass, since it will normally get normalized away. The match
 # position therefore needs to be incremented by 1 in order to account for the actual
 # slash character that appears when inspecting children of the current directory. This
-# isn't an issue in the actaul use of _Globber in Python, since it converts all paths to
+# isn't an issue in the actual use of _Globber in Python, since it converts all paths to
 # strings, and the add_slash() will literally append a slash character to the string
-# path.
+# path. See the original code in
+# https://github.com/python/cpython/blob/v3.13.2/Lib/glob.py#L448-L510
 class _ArtifactoryGlobber(glob._Globber if IS_PYTHON_3_13_OR_NEWER else object):
     def recursive_selector(self, part, parts):
         """Returns a function that selects a given path and all its children,
