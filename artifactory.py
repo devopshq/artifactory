@@ -1598,7 +1598,8 @@ class PureArtifactoryPath(pathlib.PurePath):
     # In Python 3.13, this attribute is accessed by PurePath.glob(), and we need to
     # override it to behave properly for ArtifactoryPaths with a custom subclass of
     # glob._Globber.
-    _globber = _ArtifactoryGlobber
+    if IS_PYTHON_3_13_OR_NEWER:
+        _globber = _ArtifactoryGlobber
 
     __slots__ = ()
 
