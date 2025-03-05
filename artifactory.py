@@ -1895,14 +1895,13 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         return self._accessor.scandir(self)
 
     def glob(self, *args, **kwargs):
-        # In Python 3.13, the implementation of Path.glob() changed such that it assumes that it
-        # works only with real filesystem paths and will try to call real filesystem operations like
-        # os.scandir(). In Python 3.13, we explicitly intercept this and call PathBase's glob()
-        # implementation, which only depends on methods defined on the Path subclass.
         if IS_PYTHON_3_13_OR_NEWER:
+            # In Python 3.13, the implementation of Path.glob() changed such that it assumes that it
+            # works only with real filesystem paths and will try to call real filesystem operations like
+            # os.scandir(). In Python 3.13, we explicitly intercept this and call PathBase's glob()
+            # implementation, which only depends on methods defined on the Path subclass.
             return pathlib._abc.PathBase.glob(self, *args, **kwargs)
-        else:
-            return super().glob(*args, **kwargs)
+        return super().glob(*args, **kwargs)
 
     def download_stats(self, pathobj=None):
         """
