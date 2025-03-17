@@ -2796,7 +2796,7 @@ class ArtifactoryBuildManager(ArtifactoryPath):
         if "builds" in resp:
             for build in resp["builds"]:
                 arti_build = ArtifactoryBuild(
-                    name=build["uri"][1:],
+                    name=urllib.parse.unquote(build["uri"][1:]),
                     last_started=build["lastStarted"],
                     build_manager=self,
                 )
