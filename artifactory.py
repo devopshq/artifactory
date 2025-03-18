@@ -416,14 +416,14 @@ def quote_url(url):
     logger.debug(f"Raw URL passed for encoding: {url}")
     parsed_url = urllib3.util.parse_url(url)
     if parsed_url.port:
-        quoted_path = requests.utils.quote(
+        quoted_path = urllib.parse.quote(
             url.partition(f"{parsed_url.host}:{parsed_url.port}")[2]
         )
         quoted_url = (
             f"{parsed_url.scheme}://{parsed_url.host}:{parsed_url.port}{quoted_path}"
         )
     else:
-        quoted_path = requests.utils.quote(url.partition(parsed_url.host)[2])
+        quoted_path = urllib.parse.quote(url.partition(parsed_url.host)[2])
         quoted_url = f"{parsed_url.scheme}://{parsed_url.host}{quoted_path}"
 
     return quoted_url
@@ -2908,7 +2908,7 @@ class ArtifactoryBuildManager(ArtifactoryPath):
         if "builds" in resp:
             for build in resp["builds"]:
                 arti_build = ArtifactoryBuild(
-                    name=build["uri"][1:],
+                    name=urllib.parse.unquote(build["uri"][1:]),
                     last_started=build["lastStarted"],
                     build_manager=self,
                 )
@@ -2951,7 +2951,7 @@ class ArtifactoryBuildManager(ArtifactoryPath):
         # If a build name contains slash "/" it must be encoded,
         # otherwise the part after the slash will be treated as a build number
         # maven-demo/1-build-snapshot => maven-demo%2F1-build-snapshot
-        url = requests.utils.quote(build_name, safe="")
+        url = urllib.parse.quote(build_name, safe="")
         if build_number:
             url += f"/{build_number}"
         return self._get_build_api_response(url)
