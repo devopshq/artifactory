@@ -1349,6 +1349,91 @@ class ArtifactoryPathTest(ClassSetup):
         archive_obj = folder.archive(check_sum=True)
         return archive_obj
 
+    @responses.activate
+    def test_glob(self):
+        """
+        Test that glob works
+        :return:
+        """
+
+        # Build up a fake directory tree that looks like the following:
+        #
+        # .index/
+        # com/
+        #     foo
+        #     bar
+
+        com_dir_stat = {
+            "repo": "libs-release-local",
+            "path": "/com",
+            "created": "2014-02-18T15:35:29.361+04:00",
+            "lastModified": "2014-02-18T15:35:29.361+04:00",
+            "lastUpdated": "2014-02-18T15:35:29.361+04:00",
+            "children": [
+                {"uri": "/foo"},
+                {"uri": "/bar"},
+            ],
+            "uri": "http://artifactory.local/artifactory/api/storage/libs-release-local/com",
+        }
+        index_dir_stat = {
+            "repo": "libs-release-local",
+            "path": "/.index",
+            "created": "2014-02-18T15:35:29.361+04:00",
+            "lastModified": "2014-02-18T15:35:29.361+04:00",
+            "lastUpdated": "2014-02-18T15:35:29.361+04:00",
+            "children": [],
+            "uri": "http://artifactory.local/artifactory/api/storage/libs-release-local/.index",
+        }
+        ArtifactoryPath = self.cls
+        root_path = ArtifactoryPath(
+            "http://artifactory.local/artifactory/libs-release-local"
+        )
+        constructed_url = (
+            "http://artifactory.local/artifactory/api/storage/libs-release-local"
+        )
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=200,
+            json=self.dir_stat,
+        )
+        responses.add(
+            responses.GET,
+            f"{constructed_url}/com",
+            status=200,
+            json=com_dir_stat,
+        )
+        responses.add(
+            responses.GET,
+            f"{constructed_url}/.index",
+            status=200,
+            json=index_dir_stat,
+        )
+        responses.add(
+            responses.GET,
+            f"{constructed_url}/com/foo",
+            status=200,
+            json=self.file_stat,
+        )
+        responses.add(
+            responses.GET,
+            f"{constructed_url}/com/bar",
+            status=200,
+            json=self.file_stat,
+        )
+
+        results = list(root_path.glob("**/*"))
+
+        self.assertEqual(
+            [str(r) for r in results],
+            [
+                "http://artifactory.local/artifactory/libs-release-local/.index",
+                "http://artifactory.local/artifactory/libs-release-local/com",
+                "http://artifactory.local/artifactory/libs-release-local/com/foo",
+                "http://artifactory.local/artifactory/libs-release-local/com/bar",
+            ],
+        )
+
 
 class ArtifactorySaaSPathTest(unittest.TestCase):
     cls = artifactory.ArtifactorySaaSPath
