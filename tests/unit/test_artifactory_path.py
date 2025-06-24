@@ -967,6 +967,11 @@ class ArtifactoryPathTest(ClassSetup):
         P = self.cls
         a = P("http://a/artifactory/")
 
+    def test_uri(self):
+        P = self.cls
+        a = P("http://a/artifactory/")
+        self.assertEqual(a.as_uri(), "http://a/artifactory/")
+
     def test_auth(self):
         P = self.cls
         a = P("http://a/artifactory/", auth=("foo", "bar"))
