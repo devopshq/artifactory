@@ -2104,7 +2104,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         HTTPResponse, as if it was a regular filesystem object.
         The only difference is that this object doesn't support seek()
         """
-        if mode not in ["r", "rb"] or buffering != -1 or encoding or errors or newline:
+        if mode not in {"r", "rb"} or buffering != -1 or encoding or errors or newline:
             raise NotImplementedError("Only the default open() arguments are supported")
 
         return self._accessor.open(self)
