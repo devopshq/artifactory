@@ -2953,6 +2953,7 @@ class ArtifactoryBuildManager(ArtifactoryPath):
         # maven-demo/1-build-snapshot => maven-demo%2F1-build-snapshot
         url = urllib.parse.quote(build_name, safe="")
         if build_number:
+            build_number = urllib.parse.quote(str(build_number), safe="")
             url += f"/{build_number}"
         return self._get_build_api_response(url)
 
@@ -2970,6 +2971,9 @@ class ArtifactoryBuildManager(ArtifactoryPath):
         :param build_number2: number of second build to compare
         :return: (dict) json response with difference
         """
+        build_name = urllib.parse.quote(build_name, safe="")
+        build_number1 = urllib.parse.quote(str(build_number1), safe="")
+        build_number2 = urllib.parse.quote(str(build_number2), safe="")
         url = f"{build_name}/{build_number1}?diff={build_number2}"
         return self._get_build_api_response(url)
 
@@ -3011,6 +3015,8 @@ class ArtifactoryBuildManager(ArtifactoryPath):
         :param fail_fast: fail and abort the operation upon receiving an error. Default: true
         :return:
         """
+        build_name = urllib.parse.quote(build_name, safe="")
+        build_number = urllib.parse.quote(str(build_number), safe="")
         url = f"{self.drive}/api/build/promote/{build_name}/{build_number}"
 
         if not isinstance(properties, dict):
