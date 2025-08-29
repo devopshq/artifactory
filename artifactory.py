@@ -2975,7 +2975,7 @@ class ArtifactoryBuildManager(ArtifactoryPath):
         all_builds = []
         url = ""
         if self.project:
-            url = f"?project='{self.project}'"
+            url = f"?project={self.project}"
 
         resp = self._get_build_api_response(url)
         if "builds" in resp:
@@ -3028,6 +3028,8 @@ class ArtifactoryBuildManager(ArtifactoryPath):
         if build_number:
             build_number = urllib.parse.quote(str(build_number), safe="")
             url += f"/{build_number}"
+        if self.project:
+            url += f'?project={self.project}'
         return self._get_build_api_response(url)
 
     def _get_build_api_response(self, url):
@@ -3110,6 +3112,10 @@ class ArtifactoryBuildManager(ArtifactoryPath):
             "properties": properties,
             "failFast": fail_fast,
         }
+
+        if self.project:
+            json_data["prjoect"] = self.project
+
         if source_repo:
             json_data["sourceRepo"] = source_repo
 
