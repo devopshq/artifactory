@@ -2,7 +2,7 @@
 
 
 [![docs](https://img.shields.io/readthedocs/pip.svg)][1]
-[![dohq-artifactory build Status](https://github.com/devopshq/artifactory/workflows/CI/badge.svg?branch=master)][2]
+[![dohq-artifactory build Status](https://github.com/devopshq/artifactory/actions/workflows/ci.yml/badge.svg)][2]
 [![dohq-artifactory on PyPI](https://img.shields.io/pypi/v/dohq-artifactory.svg)][3] 
 [![dohq-artifactory license](https://img.shields.io/pypi/l/dohq-artifactory.svg)][4]
 
