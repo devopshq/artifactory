@@ -57,6 +57,7 @@ from dohq_artifactory.compat import IS_PYTHON_2
 from dohq_artifactory.compat import IS_PYTHON_3_10_OR_NEWER
 from dohq_artifactory.compat import IS_PYTHON_3_12_OR_NEWER
 from dohq_artifactory.compat import IS_PYTHON_3_13_OR_NEWER
+from dohq_artifactory.compat import IS_PYTHON_3_14_OR_NEWER
 from dohq_artifactory.exception import ArtifactoryException
 from dohq_artifactory.exception import raise_for_status
 from dohq_artifactory.logger import logger
@@ -1499,28 +1500,28 @@ class ArtifactoryOpensourceAccessor(_ArtifactoryAccessor):
 
 
 # In Python 3.13, pathlib now reuses code from the glob package in order to implement
-# the Path.glob() method. There are two related classes in the glob package, _Globber
+# the Path.glob() method. There are two related classes in the glob package, _GlobberBase
 # and _StringGlobber, where the former will delegate operations to the Path object while
 # the latter directly calls os.path functions, performing actual file system calls. The
 # private abstract base class of PurePath, PurePathBase, sets the _globber class
-# attribute to _Globber, while PurePath overrides it to be _StringGlobber.
+# attribute to _GlobberBase, while PurePath overrides it to be _StringGlobber.
 #
-# We create a custom subclass that explicitly subclasses _Globber and not
+# We create a custom subclass that explicitly subclasses _GlobberBase and not
 # _StringGlobber, since we want the version that delegates file system operations to the
 # Path objects.
 #
-# In addition, we override _Globber.recursive_selector() with a copy of the original
+# In addition, we override _GlobberBase.recursive_selector() with a copy of the original
 # code but with one modification. Inside the definition of the nested select_recursive()
 # function, we # add 1 to the original value of match_pos. The reason for this is that
 # the add_slash() method will not actually add a slash when the path object is an
 # instance of a Path subclass, since it will normally get normalized away. The match
 # position therefore needs to be incremented by 1 in order to account for the actual
 # slash character that appears when inspecting children of the current directory. This
-# isn't an issue in the actual use of _Globber in Python, since it converts all paths to
+# isn't an issue in the actual use of _GlobberBase in Python, since it converts all paths to
 # strings, and the add_slash() will literally append a slash character to the string
 # path. See the original code in
-# https://github.com/python/cpython/blob/v3.13.2/Lib/glob.py#L448-L510
-class _ArtifactoryGlobber(glob._Globber if IS_PYTHON_3_13_OR_NEWER else object):
+# https://github.com/python/cpython/blob/v3.14.0/Lib/glob.py#L445-L505
+class _ArtifactoryGlobber(glob._GlobberBase if IS_PYTHON_3_14_OR_NEWER else glob._Globber if IS_PYTHON_3_13_OR_NEWER else object):
     def recursive_selector(self, part, parts):
         """Returns a function that selects a given path and all its children,
         recursively, filtering by pattern.
@@ -1713,7 +1714,12 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         if not IS_PYTHON_3_12_OR_NEWER:
             return
 
-        super().__init__(*args, **kwargs)
+        # Supplying keyword arguments to pathlib.PurePath is deprecated
+        # since Python 3.12 and has been removed in Python 3.14
+        if IS_PYTHON_3_14_OR_NEWER:
+            super().__init__(*args)
+        else:
+            super().__init__(*args, **kwargs)
 
         cfg_entry = get_global_config_entry(self.drive)
 
