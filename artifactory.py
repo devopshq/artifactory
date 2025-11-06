@@ -2902,7 +2902,7 @@ class ArtifactoryBuildManager(ArtifactoryPath):
         all_builds = []
         url = ""
         if self.project:
-            url = f"?project='{self.project}'"
+            url = f"?project={self.project}"
 
         resp = self._get_build_api_response(url)
         if "builds" in resp:
