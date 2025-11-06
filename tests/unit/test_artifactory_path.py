@@ -1784,5 +1784,91 @@ class TestArtifactoryPathGetAll(unittest.TestCase):
             self.assertEqual(rsps.calls[0].request.url, self.projects_request_url)
 
 
+class TestArtifactoryBuildManager(unittest.TestCase):
+    """Test ArtifactoryBuildManager with project parameter"""
+
+    def setUp(self):
+        self.base_url = "http://artifactory.local/artifactory"
+        self.build_manager_with_project = artifactory.ArtifactoryBuildManager(
+            self.base_url, auth=("user", "password"), project="test-project"
+        )
+
+    @responses.activate
+    def test_builds_property_with_project(self):
+        """
+        Test that builds property correctly adds project query parameter
+        without quotes when project is set on the build manager
+        """
+        expected_url = f"{self.base_url}/api/build/?project=test-project"
+
+        responses.add(
+            responses.GET,
+            expected_url,
+            json={
+                "builds": [
+                    {
+                        "uri": "/project-build-1",
+                        "lastStarted": "2025-01-01T00:00:00.000Z",
+                    },
+                ]
+            },
+            status=200,
+        )
+
+        builds = self.build_manager_with_project.builds
+
+        self.assertEqual(len(builds), 1)
+        self.assertEqual(builds[0].name, "project-build-1")
+
+        # Verify the project parameter is in the URL without quotes
+        request_url = responses.calls[0].request.url
+        self.assertIn("?project=test-project", request_url)
+        self.assertNotIn("'test-project'", request_url)
+
+    @responses.activate
+    def test_get_info_with_project(self):
+        """
+        Test _get_info adds project query parameter when project is set
+        """
+        build_name = "my-build"
+        expected_url = f"{self.base_url}/api/build/my-build?project=test-project"
+
+        responses.add(
+            responses.GET,
+            expected_url,
+            json={"buildsNumbers": []},
+            status=200,
+        )
+
+        self.build_manager_with_project._get_info(build_name)
+
+        request_url = responses.calls[0].request.url
+        self.assertEqual(request_url, expected_url)
+        self.assertIn("?project=test-project", request_url)
+
+    @responses.activate
+    def test_get_info_with_build_number_and_project(self):
+        """
+        Test _get_info adds project query parameter when both
+        build_number and project are provided
+        """
+        build_name = "my-build"
+        build_number = "456"
+        expected_url = f"{self.base_url}/api/build/my-build/456?project=test-project"
+
+        responses.add(
+            responses.GET,
+            expected_url,
+            json={"buildInfo": {}},
+            status=200,
+        )
+
+        self.build_manager_with_project._get_info(build_name, build_number)
+
+        request_url = responses.calls[0].request.url
+        self.assertEqual(request_url, expected_url)
+        self.assertIn("?project=test-project", request_url)
+
+
 if __name__ == "__main__":
     unittest.main()
