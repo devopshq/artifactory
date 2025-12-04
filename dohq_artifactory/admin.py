@@ -4,6 +4,7 @@ import re
 import string
 import time
 import warnings
+from typing import Any, Dict, List, Optional, Union, Callable, Iterator
 
 import jwt
 from dateutil.parser import isoparse
@@ -15,11 +16,11 @@ from dohq_artifactory.exception import raise_for_status
 from dohq_artifactory.logger import logger
 
 
-def rest_delay():
+def rest_delay() -> None:
     time.sleep(0.5)
 
 
-def _old_function_for_secret(pw_len=16):
+def _old_function_for_secret(pw_len: int = 16) -> str:
     alphabet_lower = "abcdefghijklmnopqrstuvwxyz"
     alphabet_upper = alphabet_lower.upper()
     alphabet_len = len(alphabet_lower)
@@ -46,7 +47,7 @@ def _old_function_for_secret(pw_len=16):
     return result
 
 
-def _new_function_with_secret_module(pw_len=16):
+def _new_function_with_secret_module(pw_len: int = 16) -> str:
     import secrets
 
     return "".join(secrets.choice(string.ascii_letters) for i in range(pw_len))
@@ -58,7 +59,7 @@ else:
     generate_password = _old_function_for_secret
 
 
-def deprecation(message):
+def deprecation(message: str) -> None:
     warnings.warn(message, DeprecationWarning, stacklevel=2)
 
 
@@ -210,14 +211,14 @@ class User(AdminObject):
 
     def __init__(
         self,
-        artifactory,
-        name,
-        email=None,
-        password=None,
-        disable_ui=False,
-        profile_updatable=True,
-        admin=False,
-    ):
+        artifactory: Any,
+        name: str,
+        email: Optional[str] = None,
+        password: Optional[str] = None,
+        disable_ui: bool = False,
+        profile_updatable: bool = True,
+        admin: bool = False,
+    ) -> None:
         super(User, self).__init__(artifactory)
 
         self.name = name
@@ -288,7 +289,7 @@ class User(AdminObject):
 
         return encrypted_password
 
-    def _authenticated_user_request(self, api_url, request_type):
+    def _authenticated_user_request(self, api_url: str, request_type: Callable) -> str:
         """
         Send API request to artifactory to get user security parameters. auth should be provided
         :param api_url: querying API url
@@ -323,13 +324,13 @@ class User(AdminObject):
     def realm(self):
         return self._realm
 
-    def add_to_group(self, *groups):
+    def add_to_group(self, *groups: Union[str, 'Group']) -> None:
         for value in groups:
             if isinstance(value, Group):
                 value = value.name
             self._groups.append(value)
 
-    def remove_from_group(self, *groups):
+    def remove_from_group(self, *groups: Union[str, 'Group']) -> None:
         for value in groups:
             if isinstance(value, Group):
                 value = value.name
@@ -355,7 +356,7 @@ class User(AdminObject):
         return self._ApiKeyManager(self)
 
     class _ApiKeyManager:
-        def __init__(self, user):
+        def __init__(self, user: 'User') -> None:
             """
             :param user: User instance
             """
@@ -368,7 +369,7 @@ class User(AdminObject):
         def __str__(self):
             return self.get() or ""
 
-        def get(self):
+        def get(self) -> str:
             """
             Get an API key for the current user
             :return: (str) API key
@@ -381,7 +382,7 @@ class User(AdminObject):
 
             return api_key
 
-        def create(self):
+        def create(self) -> str:
             """
             Create an API key for the current user.
             Returns an error if API key already exists - use api_key_regenerate to regenerate API key instead.
@@ -396,7 +397,7 @@ class User(AdminObject):
 
             return api_key
 
-        def regenerate(self):
+        def regenerate(self) -> str:
             """
             Regenerate an API key for the current user
             :return: (str) API key
@@ -416,7 +417,7 @@ class User(AdminObject):
 
             return api_key
 
-        def revoke(self):
+        def revoke(self) -> None:
             """
             Revokes the current user's API key
             :return: None
@@ -425,7 +426,7 @@ class User(AdminObject):
                 api_url=self.url, request_type=self._user._session.delete
             )
 
-        def revoke_for_all_users(self):
+        def revoke_for_all_users(self) -> None:
             """
             Revokes all API keys currently defined in the system
             Requires a privileged user (Admin only)
@@ -441,7 +442,7 @@ class Group(AdminObject):
     _uri = "security/groups"
     _uri_deletion = "security/groups"
 
-    def __init__(self, artifactory, name):
+    def __init__(self, artifactory: Any, name: str) -> None:
         super(Group, self).__init__(artifactory)
 
         self.name = name
@@ -525,7 +526,7 @@ class Group(AdminObject):
 
 
 class GroupLDAP(Group):
-    def __init__(self, artifactory, name, realm_attributes=None):
+    def __init__(self, artifactory: Any, name: str, realm_attributes: Optional[str] = None) -> None:
         # Must be lower case: https://www.jfrog.com/confluence/display/RTF/LDAP+Groups#LDAPGroups-UsingtheRESTAPI
         name = name.lower()
         super(GroupLDAP, self).__init__(artifactory, name)
@@ -546,7 +547,7 @@ class GenericRepository(AdminObject):
     def path(self):
         return self._artifactory.joinpath(self.name)
 
-    def _generate_query(self, package):
+    def _generate_query(self, package: str) -> Dict[str, Any]:
         if self.package_type == Repository.DOCKER:
             parts = package.split(":")
 
@@ -605,8 +606,8 @@ class GenericRepository(AdminObject):
         }
 
     def _build_query(
-        self, terms=None, sort=None, include=None, limit=None, offset=None
-    ):
+        self, terms: Optional[Dict[str, Any]] = None, sort: Optional[Dict[str, Any]] = None, include: Optional[List[str]] = None, limit: Optional[int] = None, offset: Optional[int] = None
+    ) -> List[Any]:
         terms = terms or {}
         terms["repo"] = {"$eq": self.name}
 
@@ -622,18 +623,18 @@ class GenericRepository(AdminObject):
             query.extend([".limit", limit])
         return query
 
-    def _validate_type(self, rclass: str, expected_type: str):
+    def _validate_type(self, rclass: str, expected_type: str) -> None:
         if rclass.lower() != expected_type:
             raise ArtifactoryException(
                 f"Repository '{self.name}' have '{rclass}', but expected '{expected_type}'"
             )
 
-    def search_raw(self, *args, **kwargs):
+    def search_raw(self, *args: Any, **kwargs: Any) -> List[Dict[str, Any]]:
         query = self._build_query(*args, **kwargs)
 
         return self.path.aql(*query)
 
-    def search(self, *args, **kwargs):
+    def search(self, *args: Any, **kwargs: Any) -> Iterator[Any]:
         for item in self.search_raw(*args, **kwargs):
             yield self.path.from_aql(item)
 
@@ -700,7 +701,7 @@ class Repository(GenericRepository):
     V2 = "V2"
 
     @staticmethod
-    def create_by_type(repo_type="LOCAL", artifactory=None, name=None, *, type=None):
+    def create_by_type(repo_type: str = "LOCAL", artifactory: Optional[Any] = None, name: Optional[str] = None, *, type: Optional[str] = None) -> 'Repository':
         if type is not None:
             deprecation("'type' argument is deprecated, use 'repo_type'")
             repo_type = type
@@ -748,17 +749,17 @@ class RepositoryLocal(Repository):
 
     def __init__(
         self,
-        artifactory,
-        name,
-        package_type=Repository.GENERIC,
-        docker_api_version=Repository.V1,
-        repo_layout_ref="maven-2-default",
-        max_unique_tags=0,
+        artifactory: Any,
+        name: str,
+        package_type: str = Repository.GENERIC,
+        docker_api_version: str = Repository.V1,
+        repo_layout_ref: str = "maven-2-default",
+        max_unique_tags: int = 0,
         *,
-        packageType=None,
-        dockerApiVersion=None,
-        repoLayoutRef=None,
-    ):
+        packageType: Optional[str] = None,
+        dockerApiVersion: Optional[str] = None,
+        repoLayoutRef: Optional[str] = None,
+    ) -> None:
         super(RepositoryLocal, self).__init__(artifactory)
         self.name = name
         self.description = ""
@@ -815,7 +816,7 @@ class RepositoryLocal(Repository):
         self._validate_type(response["rclass"], "local")
         self._extract_params(response)
 
-    def _extract_params(self, response: dict):
+    def _extract_params(self, response: Dict[str, Any]) -> None:
         self.name = response["key"]
         self.description = response.get("description")
         self.package_type = response.get("packageType")
@@ -860,14 +861,14 @@ class RepositoryVirtual(GenericRepository):
 
     def __init__(
         self,
-        artifactory,
-        name,
-        repositories=None,
-        package_type=Repository.GENERIC,
+        artifactory: Any,
+        name: str,
+        repositories: Optional[List[str]] = None,
+        package_type: str = Repository.GENERIC,
         *,
-        packageType=None,
-        default_deployment_repo_name=None,
-    ):
+        packageType: Optional[str] = None,
+        default_deployment_repo_name: Optional[str] = None,
+    ) -> None:
         super(RepositoryVirtual, self).__init__(artifactory)
         self.name = name
         self.description = ""
@@ -951,17 +952,17 @@ class RepositoryRemote(Repository):
 
     def __init__(
         self,
-        artifactory,
-        name,
-        url=None,
-        package_type=Repository.GENERIC,
-        docker_api_version=Repository.V1,
-        repo_layout_ref="maven-2-default",
+        artifactory: Any,
+        name: str,
+        url: Optional[str] = None,
+        package_type: str = Repository.GENERIC,
+        docker_api_version: str = Repository.V1,
+        repo_layout_ref: str = "maven-2-default",
         *,
-        packageType=None,
-        dockerApiVersion=None,
-        repoLayoutRef=None,
-    ):
+        packageType: Optional[str] = None,
+        dockerApiVersion: Optional[str] = None,
+        repoLayoutRef: Optional[str] = None,
+    ) -> None:
         super(RepositoryRemote, self).__init__(artifactory)
         self.name = name
         self.description = ""
@@ -1048,15 +1049,15 @@ class PermissionTarget(AdminObject):
 
     def __init__(
         self,
-        artifactory,
-        name,
-        repositories=None,
-        users=None,
-        groups=None,
+        artifactory: Any,
+        name: str,
+        repositories: Optional[List[str]] = None,
+        users: Optional[Dict[str, List[str]]] = None,
+        groups: Optional[Dict[str, List[str]]] = None,
         *,
-        includes_pattern="**",
-        excludes_pattern="",
-    ):
+        includes_pattern: str = "**",
+        excludes_pattern: str = "",
+    ) -> None:
         super(PermissionTarget, self).__init__(artifactory)
         self.name = name
         self.includesPattern = includes_pattern
@@ -1130,11 +1131,11 @@ class PermissionTarget(AdminObject):
                 raise ValueError("Unknown permission {name}".format(name=permission))
         return permissions
 
-    def add_user(self, name, permissions):
+    def add_user(self, name: Union[str, 'User'], permissions: Union[str, List[str]]) -> None:
         name, permissions = self._principal_parse(name, permissions)
         self._users[name] = permissions
 
-    def remove_user(self, *users):
+    def remove_user(self, *users: Union[str, 'User']) -> None:
         for value in users:
             if isinstance(value, User):
                 value = value.name
@@ -1157,11 +1158,11 @@ class PermissionTarget(AdminObject):
     def users(self):
         self._users = {}
 
-    def add_group(self, name, permissions):
+    def add_group(self, name: Union[str, 'Group'], permissions: Union[str, List[str]]) -> None:
         name, permissions = self._principal_parse(name, permissions)
         self._groups[name] = permissions
 
-    def remove_group(self, *groups):
+    def remove_group(self, *groups: Union[str, 'Group']) -> None:
         for value in groups:
             if isinstance(value, Group):
                 value = value.name
@@ -1221,16 +1222,16 @@ class Token(AdminObject):
 
     def __init__(
         self,
-        artifactory,
-        username=None,
-        scope=None,
-        expires_in=None,
-        refreshable=None,
-        audience=None,
-        grant_type=None,
-        jwt_token=None,
-        token_id=None,
-    ):
+        artifactory: Any,
+        username: Optional[str] = None,
+        scope: Optional[str] = None,
+        expires_in: Optional[int] = None,
+        refreshable: Optional[bool] = None,
+        audience: Optional[str] = None,
+        grant_type: Optional[str] = None,
+        jwt_token: Optional[str] = None,
+        token_id: Optional[str] = None,
+    ) -> None:
         from collections import defaultdict
 
         super(Token, self).__init__(artifactory)
@@ -1414,19 +1415,19 @@ class Project(AdminObject):
 
     def __init__(
         self,
-        artifactory,
-        project_key,
-        display_name=None,
-        description="",
-        manage_members=True,
-        manage_resources=True,
-        manage_security_assets=True,
-        index_resources=True,
-        allow_ignore_rules=True,
-        storage_quota_bytes=-1,
-        soft_limit=False,
-        storage_quota_email_notification=True,
-    ):
+        artifactory: Any,
+        project_key: str,
+        display_name: Optional[str] = None,
+        description: str = "",
+        manage_members: bool = True,
+        manage_resources: bool = True,
+        manage_security_assets: bool = True,
+        index_resources: bool = True,
+        allow_ignore_rules: bool = True,
+        storage_quota_bytes: int = -1,
+        soft_limit: bool = False,
+        storage_quota_email_notification: bool = True,
+    ) -> None:
         self._artifactory = artifactory.top
         # TODO: What if 'artifactory' is not in 'drive'
         self.base_url = self._artifactory.drive.rpartition("/artifactory")[0]

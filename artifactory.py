@@ -39,6 +39,7 @@ import re
 import urllib.parse
 from itertools import chain
 from itertools import islice
+from typing import Any, Dict, List, Optional, Union, Tuple, Iterator, IO, Callable
 
 import dateutil.parser
 import requests
@@ -79,7 +80,7 @@ else:
 global_config = None
 
 
-def read_config(config_path=default_config_path):
+def read_config(config_path: str = default_config_path) -> Dict[str, Dict[str, Any]]:
     """
     Read configuration file and produce a dictionary of the following structure:
 
@@ -136,7 +137,7 @@ def read_config(config_path=default_config_path):
     return result
 
 
-def read_global_config(config_path=default_config_path):
+def read_global_config(config_path: str = default_config_path) -> None:
     """
     Attempt to read global configuration file and store the result in
     'global_config' variable.
@@ -152,7 +153,7 @@ def read_global_config(config_path=default_config_path):
             pass
 
 
-def without_http_prefix(url):
+def without_http_prefix(url: str) -> str:
     """
     Returns a URL without the http:// or https:// prefixes
     """
@@ -163,7 +164,7 @@ def without_http_prefix(url):
     return url
 
 
-def get_base_url(config, url):
+def get_base_url(config: Optional[Dict[str, Any]], url: str) -> Optional[str]:
     """
     Look through config and try to find best matching base for 'url'
 
@@ -184,7 +185,7 @@ def get_base_url(config, url):
             return item
 
 
-def get_config_entry(config, url):
+def get_config_entry(config: Optional[Dict[str, Any]], url: str) -> Optional[Dict[str, Any]]:
     """
     Look through config and try to find best matching entry for 'url'
 
@@ -205,7 +206,7 @@ def get_config_entry(config, url):
     return None
 
 
-def get_global_config_entry(url):
+def get_global_config_entry(url: str) -> Optional[Dict[str, Any]]:
     """
     Look through global config and try to find best matching entry for 'url'
 
@@ -215,7 +216,7 @@ def get_global_config_entry(url):
     return get_config_entry(global_config, url)
 
 
-def get_global_base_url(url):
+def get_global_base_url(url: str) -> Optional[str]:
     """
     Look through global config and try to find best matching base for 'url'
 
@@ -225,7 +226,7 @@ def get_global_base_url(url):
     return get_base_url(global_config, url)
 
 
-def md5sum(filename):
+def md5sum(filename: str) -> str:
     """
     Calculates md5 hash of a file
     """
@@ -236,7 +237,7 @@ def md5sum(filename):
     return md5.hexdigest()
 
 
-def sha1sum(filename):
+def sha1sum(filename: str) -> str:
     """
     Calculates sha1 hash of a file
     """
@@ -247,7 +248,7 @@ def sha1sum(filename):
     return sha1.hexdigest()
 
 
-def sha256sum(filename):
+def sha256sum(filename: str) -> str:
     """
     Calculates sha256 hash of a file
     """
@@ -258,7 +259,7 @@ def sha256sum(filename):
     return sha256.hexdigest()
 
 
-def chunks(data, size):
+def chunks(data: Dict[Any, Any], size: int) -> Iterator[Dict[Any, Any]]:
     """
     Get chink for dict, copy as-is from https://stackoverflow.com/a/8290508/6753144
     """
@@ -267,7 +268,7 @@ def chunks(data, size):
         yield {k: data[k] for k in islice(it, size)}
 
 
-def log_download_progress(bytes_now, total_size):
+def log_download_progress(bytes_now: int, total_size: int) -> None:
     """
     Function to log download progress
     :param bytes_now: current number of bytes
@@ -303,7 +304,7 @@ class HTTPResponseWrapper(object):
     actual content, there is nothing left in the stream.
     """
 
-    def __init__(self, obj):
+    def __init__(self, obj: Any) -> None:
         self.obj = obj
 
     def __getattr__(self, attr):
@@ -325,7 +326,7 @@ class HTTPResponseWrapper(object):
         return int(self.getheader("content-length"))
 
 
-def encode_matrix_parameters(parameters, quote_parameters):
+def encode_matrix_parameters(parameters: Dict[str, Any], quote_parameters: bool) -> str:
     """
     Performs encoding of url matrix parameters from dictionary to
     a string.
@@ -354,14 +355,14 @@ def encode_matrix_parameters(parameters, quote_parameters):
     return ";".join(result)
 
 
-def escape_chars(s):
+def escape_chars(s: str) -> str:
     """
     Performs character escaping of comma, pipe and equals characters
     """
     return "".join(["\\" + ch if ch in "=|," else ch for ch in s])
 
 
-def encode_properties(parameters):
+def encode_properties(parameters: Dict[str, Any]) -> str:
     """
     Performs encoding of url parameters from dictionary to a string. It does
     not escape backslash because it is not needed.
@@ -394,7 +395,7 @@ class nullcontext:
         # Perform operation, using optional_cm if condition is True
     """
 
-    def __init__(self, enter_result=None):
+    def __init__(self, enter_result: Any = None) -> None:
         self.enter_result = enter_result
 
     def __enter__(self):
@@ -404,7 +405,7 @@ class nullcontext:
         pass
 
 
-def quote_url(url):
+def quote_url(url: str) -> str:
     """
     Quote URL to allow URL fragment identifier as artifact folder or file names.
     See https://en.wikipedia.org/wiki/Percent-encoding#Reserved_characters
@@ -453,7 +454,7 @@ class _ArtifactoryFlavour(object if IS_PYTHON_3_12_OR_NEWER else pathlib._Flavou
     def _get_base_url(self, url):
         return get_global_base_url(url)
 
-    def compile_pattern(self, pattern):
+    def compile_pattern(self, pattern: str) -> Callable[[str], bool]:
         return re.compile(fnmatch.translate(pattern)).fullmatch
 
     def parse_parts(self, parts):
@@ -467,7 +468,7 @@ class _ArtifactoryFlavour(object if IS_PYTHON_3_12_OR_NEWER else pathlib._Flavou
 
         return drv2, root2, parts2
 
-    def splitroot(self, part, sep=sep):
+    def splitroot(self, part: str, sep: str = sep) -> Tuple[str, str, str]:
         """
         Splits path string into drive, root and relative path
 
@@ -535,7 +536,7 @@ class _ArtifactoryFlavour(object if IS_PYTHON_3_12_OR_NEWER else pathlib._Flavou
 
         return drv, root, part
 
-    def _get_path(self, url):
+    def _get_path(self, url: str) -> str:
         """
         Get path of a url and return without percent-encoding
 
@@ -553,34 +554,34 @@ class _ArtifactoryFlavour(object if IS_PYTHON_3_12_OR_NEWER else pathlib._Flavou
 
         return url.rpartition(parsed_url.host)[2]
 
-    def casefold(self, string):
+    def casefold(self, string: str) -> str:
         """
         Convert path string to default FS case if it's not
         case-sensitive. Do nothing otherwise.
         """
         return string
 
-    def casefold_parts(self, parts):
+    def casefold_parts(self, parts: List[str]) -> List[str]:
         """
         Convert path parts to default FS case if it's not
         case sensitive. Do nothing otherwise.
         """
         return parts
 
-    def resolve(self, path):
+    def resolve(self, path: str) -> str:
         """
         Resolve all symlinks and relative paths in 'path'
         """
         return path
 
-    def is_reserved(self, _):
+    def is_reserved(self, _: str) -> bool:
         """
         Returns True if the file is 'reserved', e.g. device node or socket
         For Artifactory there are no reserved files.
         """
         return False
 
-    def make_uri(self, path):
+    def make_uri(self, path: str) -> str:
         """
         Return path as URI. For Artifactory this is the same as returning
         'path' unmodified.
@@ -615,7 +616,7 @@ class _ArtifactoryFlavour(object if IS_PYTHON_3_12_OR_NEWER else pathlib._Flavou
 
 
 class _ArtifactorySaaSFlavour(_ArtifactoryFlavour):
-    def _get_base_url(self, url):
+    def _get_base_url(self, url: str) -> Optional[str]:
         split_url = pathlib.PurePosixPath(url)
         if len(split_url.parts) < 3:
             return None
@@ -670,7 +671,7 @@ class _ScandirIter:
     - 3.8 - Use it as an context manager
     """
 
-    def __init__(self, iterator):
+    def __init__(self, iterator: Iterator) -> None:
         self.iterator = iterator
 
     def __enter__(self):
@@ -690,14 +691,14 @@ class _ArtifactoryAccessor:
 
     @staticmethod
     def rest_get(
-        url,
-        params=None,
-        headers=None,
-        session=None,
-        verify=True,
-        cert=None,
-        timeout=None,
-    ):
+        url: str,
+        params: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+        session: Optional[requests.Session] = None,
+        verify: Union[bool, str] = True,
+        cert: Optional[str] = None,
+        timeout: Optional[int] = None,
+    ) -> requests.Response:
         """
         Perform a GET request to url with requests.session
         :param url:
@@ -722,14 +723,14 @@ class _ArtifactoryAccessor:
 
     @staticmethod
     def rest_put(
-        url,
-        params=None,
-        headers=None,
-        session=None,
-        verify=True,
-        cert=None,
-        timeout=None,
-    ):
+        url: str,
+        params: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+        session: Optional[requests.Session] = None,
+        verify: Union[bool, str] = True,
+        cert: Optional[str] = None,
+        timeout: Optional[int] = None,
+    ) -> requests.Response:
         """
         Perform a PUT request to url with requests.session
         """
@@ -746,15 +747,15 @@ class _ArtifactoryAccessor:
 
     @staticmethod
     def rest_post(
-        url,
-        params=None,
-        headers=None,
-        session=None,
-        verify=True,
-        cert=None,
-        timeout=None,
-        json_data=None,
-    ):
+        url: str,
+        params: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+        session: Optional[requests.Session] = None,
+        verify: Union[bool, str] = True,
+        cert: Optional[str] = None,
+        timeout: Optional[int] = None,
+        json_data: Optional[Dict[str, Any]] = None,
+    ) -> requests.Response:
         """
         Perform a POST request to url with requests.session
         """
@@ -773,7 +774,7 @@ class _ArtifactoryAccessor:
         return response
 
     @staticmethod
-    def rest_del(url, params=None, session=None, verify=True, cert=None, timeout=None):
+    def rest_del(url: str, params: Optional[Dict[str, Any]] = None, session: Optional[requests.Session] = None, verify: Union[bool, str] = True, cert: Optional[str] = None, timeout: Optional[int] = None) -> requests.Response:
         """
         Perform a DELETE request to url with requests.session
         :param url: url
@@ -872,7 +873,7 @@ class _ArtifactoryAccessor:
         raise_for_status(response)
         return response
 
-    def get_stat_json(self, pathobj, key=None):
+    def get_stat_json(self, pathobj: 'ArtifactoryPath', key: Optional[str] = None) -> Dict[str, Any]:
         """
         Request remote file/directory status info
         Returns a json object as specified by Artifactory REST API
@@ -913,7 +914,7 @@ class _ArtifactoryAccessor:
 
         return response.json()
 
-    def stat(self, pathobj):
+    def stat(self, pathobj: 'ArtifactoryPath') -> ArtifactoryFileStat:
         """
         Request remote file/directory status info
         Returns an object of class ArtifactoryFileStat.
@@ -953,7 +954,7 @@ class _ArtifactoryAccessor:
 
         return stat
 
-    def download_stats(self, pathobj):
+    def download_stats(self, pathobj: 'ArtifactoryPath') -> ArtifactoryDownloadStat:
         jsn = self.get_stat_json(pathobj, key="stats")
 
         # divide timestamp by 1000 since it is provided in ms
@@ -971,7 +972,7 @@ class _ArtifactoryAccessor:
 
         return stat
 
-    def is_dir(self, pathobj):
+    def is_dir(self, pathobj: 'ArtifactoryPath') -> bool:
         """
         Returns True if given path is a directory
         """
@@ -984,7 +985,7 @@ class _ArtifactoryAccessor:
                 raise
             return False
 
-    def is_file(self, pathobj):
+    def is_file(self, pathobj: 'ArtifactoryPath') -> bool:
         """
         Returns True if given path is a regular file
         """
@@ -997,7 +998,7 @@ class _ArtifactoryAccessor:
                 raise
             return False
 
-    def listdir(self, pathobj):
+    def listdir(self, pathobj: 'ArtifactoryPath') -> List[str]:
         """
         Returns a list of immediate sub-directories and files in path
         """
@@ -1008,7 +1009,7 @@ class _ArtifactoryAccessor:
 
         return stat.children
 
-    def mkdir(self, pathobj, _):
+    def mkdir(self, pathobj: 'ArtifactoryPath', _: int) -> None:
         """
         Creates remote directory
         Note that this operation is not recursive
@@ -1030,7 +1031,7 @@ class _ArtifactoryAccessor:
 
         raise_for_status(response)
 
-    def rmdir(self, pathobj):
+    def rmdir(self, pathobj: 'ArtifactoryPath') -> None:
         """
         Removes a directory
         """
@@ -1045,7 +1046,7 @@ class _ArtifactoryAccessor:
             url, session=pathobj.session, verify=pathobj.verify, cert=pathobj.cert
         )
 
-    def unlink(self, pathobj):
+    def unlink(self, pathobj: 'ArtifactoryPath') -> None:
         """
         Removes a file or folder
         """
@@ -1083,7 +1084,7 @@ class _ArtifactoryAccessor:
                 )
                 raise ArtifactoryException(message) from err
 
-    def touch(self, pathobj):
+    def touch(self, pathobj: 'ArtifactoryPath') -> None:
         """
         Create an empty file
         """
@@ -1104,7 +1105,7 @@ class _ArtifactoryAccessor:
 
         raise_for_status(response)
 
-    def owner(self, pathobj):
+    def owner(self, pathobj: 'ArtifactoryPath') -> str:
         """
         Returns file owner
         This makes little sense for Artifactory, but to be consistent
@@ -1117,7 +1118,7 @@ class _ArtifactoryAccessor:
         else:
             return "nobody"
 
-    def creator(self, pathobj):
+    def creator(self, pathobj: 'ArtifactoryPath') -> str:
         """
         Returns file creator
         This makes little sense for Artifactory, but to be consistent
@@ -1130,7 +1131,7 @@ class _ArtifactoryAccessor:
         else:
             return "nobody"
 
-    def open(self, pathobj):
+    def open(self, pathobj: 'ArtifactoryPath') -> IO[bytes]:
         """
         Opens the remote file and returns a file-like object HTTPResponse
         Given the nature of HTTP streaming, this object doesn't support
@@ -1139,7 +1140,7 @@ class _ArtifactoryAccessor:
         response = self.get_response(pathobj)
         return response.raw
 
-    def get_response(self, pathobj, quote=True):
+    def get_response(self, pathobj: 'ArtifactoryPath', quote: bool = True) -> requests.Response:
         """
         :param pathobj: ArtifactoryPath object
         :return: request response
@@ -1165,18 +1166,18 @@ class _ArtifactoryAccessor:
 
     def deploy(
         self,
-        pathobj,
-        fobj,
-        md5=None,
-        sha1=None,
-        sha256=None,
-        parameters=None,
-        explode_archive=None,
-        explode_archive_atomic=None,
-        checksum=None,
-        by_checksum=False,
-        quote_parameters=True,
-    ):
+        pathobj: 'ArtifactoryPath',
+        fobj: Optional[IO[bytes]],
+        md5: Optional[str] = None,
+        sha1: Optional[str] = None,
+        sha256: Optional[str] = None,
+        parameters: Optional[Dict[str, Any]] = None,
+        explode_archive: Optional[bool] = None,
+        explode_archive_atomic: Optional[bool] = None,
+        checksum: Optional[str] = None,
+        by_checksum: bool = False,
+        quote_parameters: bool = True,
+    ) -> None:
         """
         Uploads a given file-like object
         HTTP chunked encoding will be attempted
@@ -1238,7 +1239,7 @@ class _ArtifactoryAccessor:
             matrix_parameters=matrix_parameters,
         )
 
-    def copy(self, src, dst, suppress_layouts=False, fail_fast=False, dry_run=False):
+    def copy(self, src: 'ArtifactoryPath', dst: 'ArtifactoryPath', suppress_layouts: bool = False, fail_fast: bool = False, dry_run: bool = False) -> Optional[Dict[str, Any]]:
         """
         Copy artifact from src to dst
         Args:
@@ -1278,7 +1279,7 @@ class _ArtifactoryAccessor:
             logger.debug(response.text)
             return response.json()
 
-    def move(self, src, dst, suppress_layouts=False, fail_fast=False, dry_run=False):
+    def move(self, src: 'ArtifactoryPath', dst: 'ArtifactoryPath', suppress_layouts: bool = False, fail_fast: bool = False, dry_run: bool = False) -> Optional[Dict[str, Any]]:
         """
         Move artifact from src to dst
         Args:
@@ -1318,7 +1319,7 @@ class _ArtifactoryAccessor:
             logger.debug(response.text)
             return response.json()
 
-    def get_properties(self, pathobj):
+    def get_properties(self, pathobj: 'ArtifactoryPath') -> Dict[str, List[str]]:
         """
         Get artifact properties and return them as a dictionary.
         """
@@ -1351,7 +1352,7 @@ class _ArtifactoryAccessor:
 
         return response.json()["properties"]
 
-    def set_properties(self, pathobj, props, recursive):
+    def set_properties(self, pathobj: 'ArtifactoryPath', props: Dict[str, Any], recursive: bool) -> None:
         """
         Set artifact properties
         """
@@ -1384,7 +1385,7 @@ class _ArtifactoryAccessor:
 
         raise_for_status(response)
 
-    def del_properties(self, pathobj, props, recursive):
+    def del_properties(self, pathobj: 'ArtifactoryPath', props: Union[str, Tuple[str, ...]], recursive: bool) -> None:
         """
         Delete artifact properties
         """
@@ -1413,7 +1414,7 @@ class _ArtifactoryAccessor:
             timeout=pathobj.timeout,
         )
 
-    def update_properties(self, pathobj, properties, recursive=False):
+    def update_properties(self, pathobj: 'ArtifactoryPath', properties: Dict[str, Any], recursive: bool = False) -> None:
         """
         Update item properties
 
@@ -1451,10 +1452,10 @@ class _ArtifactoryAccessor:
         )
         raise_for_status(response)
 
-    def scandir(self, pathobj):
+    def scandir(self, pathobj: 'ArtifactoryPath') -> '_ScandirIter':
         return _ScandirIter((pathobj.joinpath(x) for x in self.listdir(pathobj)))
 
-    def writeto(self, pathobj, file, chunk_size, progress_func):
+    def writeto(self, pathobj: 'ArtifactoryPath', file: IO[bytes], chunk_size: int, progress_func: Optional[Callable[[int, int], None]]) -> None:
         """
         Downloads large file in chunks and prints progress
         :param pathobj: path like object
@@ -1830,7 +1831,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         return resp
 
-    def stat(self, pathobj=None):
+    def stat(self, pathobj: Optional['ArtifactoryPath'] = None) -> ArtifactoryFileStat:
         """
         Request remote file/directory status info
         Returns an object of class ArtifactoryFileStat.
@@ -1856,7 +1857,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         pathobj = pathobj or self
         return self._accessor.stat(pathobj=pathobj)
 
-    def exists(self):
+    def exists(self) -> bool:
         try:
             self.stat()
         except OSError:
@@ -1866,7 +1867,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             return False
         return True
 
-    def mkdir(self, mode=0o777, parents=False, exist_ok=False):
+    def mkdir(self, mode: int = 0o777, parents: bool = False, exist_ok: bool = False) -> None:
         """
         Create a new directory at this given path.
         """
@@ -1904,7 +1905,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             return pathlib._abc.PathBase.glob(self, *args, **kwargs)
         return super().glob(*args, **kwargs)
 
-    def download_stats(self, pathobj=None):
+    def download_stats(self, pathobj: Optional['ArtifactoryPath'] = None) -> ArtifactoryDownloadStat:
         """
          Item statistics record the number of times an item was downloaded, last download date and last downloader.
         Args:
@@ -1940,7 +1941,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.timeout = self.timeout
         return obj
 
-    def archive(self, archive_type="zip", check_sum=False):
+    def archive(self, archive_type: str = "zip", check_sum: bool = False) -> 'ArtifactoryPath':
         """
         Convert URL to the new link to download specified folder as archive according to REST API.
         Requires Enable Folder Download to be set in artifactory.
@@ -2052,7 +2053,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     iterdir = __iter__
 
-    def read_text(self, encoding=None, errors=None):
+    def read_text(self, encoding: Optional[str] = None, errors: Optional[str] = None) -> str:
         """
         Read file content
         :param encoding: file encoding, by default Requests makes educated guesses about the encoding of
@@ -2069,7 +2070,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         return response.text
 
-    def read_bytes(self):
+    def read_bytes(self) -> bytes:
         """
         Read file content as bytes
         :return: (bytes) file content in bytes format
@@ -2077,7 +2078,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         response = self._accessor.get_response(self)
         return response.content
 
-    def write_bytes(self, data):
+    def write_bytes(self, data: bytes) -> int:
         """
         Write file content as bytes
         :param data (bytes): Data to be written to file
@@ -2090,7 +2091,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         self.deploy(fobj, md5=md5, sha1=sha1, sha256=sha256)
         return len(data)
 
-    def write_text(self, data, encoding="utf-8", errors="strict"):
+    def write_text(self, data: str, encoding: str = "utf-8", errors: str = "strict") -> int:
         """
         Write file content as text
         :param data (str): Text to be written to file
@@ -2098,7 +2099,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         raw_data = data.encode(encoding, errors)
         return self.write_bytes(raw_data)
 
-    def open(self, mode="r", buffering=-1, encoding=None, errors=None, newline=None):
+    def open(self, mode: str = "r", buffering: int = -1, encoding: Optional[str] = None, errors: Optional[str] = None, newline: Optional[str] = None) -> IO[bytes]:
         """
         Open the given Artifactory URI and return a file-like object
         HTTPResponse, as if it was a regular filesystem object.
@@ -2109,7 +2110,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         return self._accessor.open(self)
 
-    def download_folder_archive(self, archive_type="zip", check_sum=False):
+    def download_folder_archive(self, archive_type: str = "zip", check_sum: bool = False) -> IO[bytes]:
         """
         Convert URL to the new link to download specified folder as archive according to REST API.
         Requires Enable Folder Download to be set in artifactory.
@@ -2119,7 +2120,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         return self._accessor.open(self.archive(archive_type, check_sum))
 
-    def owner(self):
+    def owner(self) -> str:
         """
         Returns file owner.
         This makes little sense for Artifactory, but to be consistent
@@ -2127,7 +2128,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         return self._accessor.owner(self)
 
-    def creator(self):
+    def creator(self) -> str:
         """
         Returns file creator.
         This makes little sense for Artifactory, but to be consistent
@@ -2135,54 +2136,54 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         return self._accessor.creator(self)
 
-    def is_dir(self, *, follow_symlinks=True):
+    def is_dir(self, *, follow_symlinks: bool = True) -> bool:
         """
         Whether this path is a directory.
         """
         return self._accessor.is_dir(self)
 
-    def is_file(self):
+    def is_file(self) -> bool:
         """
         Whether this path is a regular file.
         """
         return self._accessor.is_file(self)
 
-    def is_symlink(self):
+    def is_symlink(self) -> bool:
         """
         Whether this path is a symlink.
         Since Artifactory doen't have special files, returns False.
         """
         return False
 
-    def is_socket(self):
+    def is_socket(self) -> bool:
         """
         Whether this path is a socket.
         Since Artifactory doen't have special files, returns False.
         """
         return False
 
-    def is_fifo(self):
+    def is_fifo(self) -> bool:
         """
         Whether this path is a fifo.
         Since Artifactory doen't have special files, returns False.
         """
         return False
 
-    def is_block_device(self):
+    def is_block_device(self) -> bool:
         """
         Whether this path is a block device.
         Since Artifactory doen't have special files, returns False.
         """
         return False
 
-    def is_char_device(self):
+    def is_char_device(self) -> bool:
         """
         Whether this path is a character device.
         Since Artifactory doen't have special files, returns False.
         """
         return False
 
-    def touch(self, mode=0o666, exist_ok=True):
+    def touch(self, mode: int = 0o666, exist_ok: bool = True) -> None:
         """
         Create a file if it doesn't exist.
         Mode is ignored by Artifactory.
@@ -2192,21 +2193,21 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         self._accessor.touch(self)
 
-    def chmod(self, mode):
+    def chmod(self, mode: int) -> None:
         """
         Throw NotImplementedError
         Changing access rights makes no sense for Artifactory.
         """
         raise NotImplementedError()
 
-    def lchmod(self, mode):
+    def lchmod(self, mode: int) -> None:
         """
         Throw NotImplementedError
         Changing access rights makes no sense for Artifactory.
         """
         raise NotImplementedError()
 
-    def unlink(self, missing_ok=False):
+    def unlink(self, missing_ok: bool = False) -> None:
         """
         Removes a file or folder
         """
@@ -2216,7 +2217,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             if not missing_ok:
                 raise
 
-    def symlink_to(self, target, target_is_directory=False):
+    def symlink_to(self, target: str, target_is_directory: bool = False) -> None:
         """
         Throw NotImplementedError
         Artifactory doesn't have symlinks
@@ -2225,15 +2226,15 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     def deploy(
         self,
-        fobj,
-        md5=None,
-        sha1=None,
-        sha256=None,
-        parameters={},
-        explode_archive=None,
-        explode_archive_atomic=None,
-        quote_parameters=None,
-    ):
+        fobj: IO[bytes],
+        md5: Optional[str] = None,
+        sha1: Optional[str] = None,
+        sha256: Optional[str] = None,
+        parameters: Dict[str, Any] = {},
+        explode_archive: Optional[bool] = None,
+        explode_archive_atomic: Optional[bool] = None,
+        quote_parameters: Optional[bool] = None,
+    ) -> None:
         """
         Upload the given file object to this path
         """
@@ -2251,15 +2252,15 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     def deploy_file(
         self,
-        file_name,
-        calc_md5=True,
-        calc_sha1=True,
-        calc_sha256=True,
-        parameters={},
-        explode_archive=False,
-        explode_archive_atomic=False,
-        quote_parameters=None,
-    ):
+        file_name: str,
+        calc_md5: bool = True,
+        calc_sha1: bool = True,
+        calc_sha256: bool = True,
+        parameters: Dict[str, Any] = {},
+        explode_archive: bool = False,
+        explode_archive_atomic: bool = False,
+        quote_parameters: Optional[bool] = None,
+    ) -> None:
         """
         Upload the given file to this path
         """
@@ -2286,12 +2287,12 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     def deploy_by_checksum(
         self,
-        sha1=None,
-        sha256=None,
-        checksum=None,
-        parameters={},
-        quote_parameters=None,
-    ):
+        sha1: Optional[str] = None,
+        sha256: Optional[str] = None,
+        checksum: Optional[str] = None,
+        parameters: Dict[str, Any] = {},
+        quote_parameters: Optional[bool] = None,
+    ) -> None:
         """
         Deploy an artifact to the specified destination by checking if the
         artifact content already exists in Artifactory.
@@ -2314,13 +2315,13 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     def deploy_deb(
         self,
-        file_name,
-        distribution,
-        component,
-        architecture,
-        parameters={},
-        quote_parameters=None,
-    ):
+        file_name: str,
+        distribution: Union[str, List[str]],
+        component: str,
+        architecture: Union[str, List[str]],
+        parameters: Dict[str, Any] = {},
+        quote_parameters: Optional[bool] = None,
+    ) -> None:
         """
         Convenience method to deploy .deb packages
 
@@ -2343,7 +2344,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             file_name, parameters=params, quote_parameters=quote_parameters
         )
 
-    def copy(self, dst, suppress_layouts=False, fail_fast=False, dry_run=False):
+    def copy(self, dst: 'ArtifactoryPath', suppress_layouts: bool = False, fail_fast: bool = False, dry_run: bool = False) -> Optional[Dict[str, Any]]:
         """
         Copy artifact from this path to destination.
         If files are on the same instance of artifactory, lightweight (local)
@@ -2426,7 +2427,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                     sha256=stat.sha256,
                 )
 
-    def move(self, dst, suppress_layouts=False, fail_fast=False, dry_run=False):
+    def move(self, dst: 'ArtifactoryPath', suppress_layouts: bool = False, fail_fast: bool = False, dry_run: bool = False) -> Optional[Dict[str, Any]]:
         """
         Move artifact from this path to destination.
 
@@ -2455,14 +2456,14 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         return output
 
     @property
-    def properties(self):
+    def properties(self) -> Dict[str, Any]:
         """
         Fetch artifact properties
         """
         return self._accessor.get_properties(self)
 
     @properties.setter
-    def properties(self, properties):
+    def properties(self, properties: Dict[str, Any]) -> None:
         properties_to_remove = set(self.properties) - set(properties)
         for prop in properties_to_remove:
             properties[prop] = None
@@ -2475,7 +2476,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         self.del_properties(self.properties, recursive=False)
 
-    def set_properties(self, properties, recursive=True):
+    def set_properties(self, properties: Dict[str, Any], recursive: bool = True) -> None:
         """
         Adds new or modifies existing properties listed in properties
 
@@ -2491,7 +2492,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         # Uses update properties since it can consume JSON as input and removes URL limit
         self.update_properties(properties, recursive=recursive)
 
-    def del_properties(self, properties, recursive=False):
+    def del_properties(self, properties: Union[List[str], Tuple[str, ...], str], recursive: bool = False) -> None:
         """
         Delete properties listed in properties
 
@@ -2504,7 +2505,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         # Uses update properties since it can consume JSON as input and removes URL limit
         self.update_properties(properties_to_remove, recursive=recursive)
 
-    def update_properties(self, properties, recursive=False):
+    def update_properties(self, properties: Dict[str, Any], recursive: bool = False) -> None:
         """
         Update properties, set/update/remove item or folder properties
         Args:
@@ -2515,7 +2516,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         return self._accessor.update_properties(self, properties, recursive)
 
-    def aql(self, *args):
+    def aql(self, *args: Any) -> List[Dict[str, Any]]:
         """
         Send AQL query to Artifactory
         :param args:
@@ -2530,7 +2531,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         return content["results"]
 
     @staticmethod
-    def create_aql_text(*args):
+    def create_aql_text(*args: Any) -> str:
         """
         Create AQL query from string or list or dict arguments
         """
@@ -2546,7 +2547,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         return aql_query_text
 
-    def from_aql(self, result):
+    def from_aql(self, result: Dict[str, Any]) -> 'ArtifactoryPath':
         """
         Convert raw AQL result to pathlib object
         :param result: ONE raw result
@@ -2571,15 +2572,15 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
     def promote_docker_image(
         self,
-        source_repo,
-        target_repo,
-        docker_repo,
-        tag,
-        copy=False,
+        source_repo: str,
+        target_repo: str,
+        docker_repo: str,
+        tag: str,
+        copy: bool = False,
         *,
-        target_docker_repo=None,
-        target_tag=None,
-    ):
+        target_docker_repo: Optional[str] = None,
+        target_tag: Optional[str] = None,
+    ) -> None:
         """
         Promote Docker image from source repo to target repo
         :param source_repo: source repository
@@ -2606,46 +2607,46 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         raise_for_status(response)
 
     @property
-    def repo(self):
+    def repo(self) -> str:
         return self.parts[1]
 
     @property
-    def path_in_repo(self):
+    def path_in_repo(self) -> str:
         parts = self.parts
         path_in_repo = "/" + "/".join(parts[2:])
         return path_in_repo
 
-    def find_user(self, name):
+    def find_user(self, name: str) -> Optional[User]:
         obj = User(self, name, email="", password=None)
         if obj.read():
             return obj
         return None
 
-    def find_group(self, name):
+    def find_group(self, name: str) -> Optional[Group]:
         obj = Group(self, name)
         if obj.read():
             return obj
         return None
 
-    def find_repository_local(self, name):
+    def find_repository_local(self, name: str) -> Optional[RepositoryLocal]:
         obj = RepositoryLocal(self, name)
         if obj.read():
             return obj
         return None
 
-    def find_repository_virtual(self, name):
+    def find_repository_virtual(self, name: str) -> Optional[RepositoryVirtual]:
         obj = RepositoryVirtual(self, name)
         if obj.read():
             return obj
         return None
 
-    def find_repository_remote(self, name):
+    def find_repository_remote(self, name: str) -> Optional[RepositoryRemote]:
         obj = RepositoryRemote(self, name)
         if obj.read():
             return obj
         return None
 
-    def find_repository(self, name):
+    def find_repository(self, name: str) -> Optional[Repository]:
         try:
             return self.find_repository_local(name)
         except ArtifactoryException:
@@ -2663,19 +2664,19 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         return None
 
-    def find_permission_target(self, name):
+    def find_permission_target(self, name: str) -> Optional[PermissionTarget]:
         obj = PermissionTarget(self, name)
         if obj.read():
             return obj
         return None
 
-    def find_project(self, project_key):
+    def find_project(self, project_key: str) -> Optional[Project]:
         obj = Project(self, project_key)
         if obj.read():
             return obj
         return None
 
-    def writeto(self, out, chunk_size=1024, progress_func=log_download_progress):
+    def writeto(self, out: Union[str, pathlib.Path, IO[bytes]], chunk_size: int = 1024, progress_func: Optional[Callable[[int, int], None]] = log_download_progress) -> None:
         """
         Downloads large file in chunks and and call a progress function.
 
@@ -2692,7 +2693,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         with context as file:
             self._accessor.writeto(self, file, chunk_size, progress_func)
 
-    def _get_all(self, lazy: bool, url=None, key="name", cls=None):
+    def _get_all(self, lazy: bool, url: Optional[str] = None, key: str = "name", cls: Optional[type] = None) -> List[Any]:
         """
         Create a list of objects from the given endpoint
 
@@ -2720,7 +2721,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             results.append(item)
         return results
 
-    def get_users(self, lazy=False):
+    def get_users(self, lazy: bool = False) -> List[User]:
         """
         Get all users
 
@@ -2728,7 +2729,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         return self._get_all(url="/api/security/users", key="name", cls=User, lazy=lazy)
 
-    def get_groups(self, lazy=False):
+    def get_groups(self, lazy: bool = False) -> List[Group]:
         """
         Get all groups
 
@@ -2738,7 +2739,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             url="/api/security/groups", key="name", cls=Group, lazy=lazy
         )
 
-    def get_repositories(self, lazy=False):
+    def get_repositories(self, lazy: bool = False) -> List[Repository]:
         """
         Get all repositories
 
@@ -2748,7 +2749,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             url="/api/repositories", key="key", cls=Repository, lazy=lazy
         )
 
-    def get_permissions(self, lazy=False):
+    def get_permissions(self, lazy: bool = False) -> List[PermissionTarget]:
         """
         Get all permissions
 
@@ -2758,7 +2759,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             url="/api/security/permissions", key="name", cls=PermissionTarget, lazy=lazy
         )
 
-    def get_projects(self, lazy=False):
+    def get_projects(self, lazy: bool = False) -> List[Project]:
         """
         Get all projects
 
@@ -2779,7 +2780,7 @@ class ArtifactorySaaSPath(ArtifactoryPath):
 class ArtifactoryBuild:
     __slots__ = ("name", "last_started", "build_manager")
 
-    def __init__(self, name, last_started, build_manager):
+    def __init__(self, name: str, last_started: str, build_manager: 'ArtifactoryBuildManager') -> None:
         self.name = name
         self.last_started = last_started
         self.build_manager = build_manager
@@ -2791,7 +2792,7 @@ class ArtifactoryBuild:
         return self.name
 
     @property
-    def runs(self):
+    def runs(self) -> List['ArtifactoryBuildRun']:
         """
         Get information about build runs
         :return: List[ArtifactoryBuildRun]
@@ -2802,7 +2803,7 @@ class ArtifactoryBuild:
 class ArtifactoryBuildRun:
     __slots__ = ("run_number", "started", "build_name", "build_manager")
 
-    def __init__(self, run_number, started, build_name, build_manager):
+    def __init__(self, run_number: str, started: str, build_name: str, build_manager: 'ArtifactoryBuildManager') -> None:
         self.run_number = run_number
         self.started = started
         self.build_name = build_name
@@ -2815,14 +2816,14 @@ class ArtifactoryBuildRun:
         return self.run_number
 
     @property
-    def info(self):
+    def info(self) -> Dict[str, Any]:
         """
         Get information about specified build run
         :return: (dict) json response with build run info
         """
         return self.build_manager.get_build_info(self.build_name, self.run_number)
 
-    def diff(self, build_num_to_compare):
+    def diff(self, build_num_to_compare: str) -> Dict[str, Any]:
         """
         Compares build with build_number1 to build_number2
         :param build_num_to_compare: number of second build to compare
@@ -2894,7 +2895,7 @@ class ArtifactoryBuildManager(ArtifactoryPath):
         return obj
 
     @property
-    def builds(self):
+    def builds(self) -> List[ArtifactoryBuild]:
         """
         Get all available builds on Artifactory
         :return: (list) list of available build names
@@ -2916,7 +2917,7 @@ class ArtifactoryBuildManager(ArtifactoryPath):
 
         return all_builds
 
-    def get_build_runs(self, build_name):
+    def get_build_runs(self, build_name: str) -> List[ArtifactoryBuildRun]:
         """
         Get information about build runs
         :param build_name: name of the build
@@ -2938,7 +2939,7 @@ class ArtifactoryBuildManager(ArtifactoryPath):
 
         return all_runs
 
-    def get_build_info(self, build_name, build_number):
+    def get_build_info(self, build_name: str, build_number: str) -> Dict[str, Any]:
         """
         Get information about specified build run
         :param build_name: name of the build
@@ -3064,7 +3065,7 @@ class ArtifactoryBuildManager(ArtifactoryPath):
         )
 
 
-def walk(pathobj, topdown=True):
+def walk(pathobj: 'ArtifactoryPath', topdown: bool = True) -> Iterator[Tuple['ArtifactoryPath', List[str], List[str]]]:
     """
     os.walk like function to traverse the URI like a file system.
 
