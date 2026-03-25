@@ -47,6 +47,7 @@ from dohq_artifactory.admin import Group
 from dohq_artifactory.admin import PermissionTarget
 from dohq_artifactory.admin import Project
 from dohq_artifactory.admin import Repository
+from dohq_artifactory.admin import RepositoryFederated
 from dohq_artifactory.admin import RepositoryLocal
 from dohq_artifactory.admin import RepositoryRemote
 from dohq_artifactory.admin import RepositoryVirtual
@@ -2694,6 +2695,12 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             return obj
         return None
 
+    def find_repository_federated(self, name):
+        obj = RepositoryFederated(self, name)
+        if obj.read():
+            return obj
+        return None
+
     def find_repository_virtual(self, name):
         obj = RepositoryVirtual(self, name)
         if obj.read():
@@ -2709,6 +2716,11 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
     def find_repository(self, name):
         try:
             return self.find_repository_local(name)
+        except ArtifactoryException:
+            pass
+
+        try:
+            return self.find_repository_federated(name)
         except ArtifactoryException:
             pass
 
