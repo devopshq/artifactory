@@ -1520,7 +1520,11 @@ class ArtifactoryOpensourceAccessor(_ArtifactoryAccessor):
 # strings, and the add_slash() will literally append a slash character to the string
 # path. See the original code in
 # https://github.com/python/cpython/blob/v3.13.2/Lib/glob.py#L448-L510
-class _ArtifactoryGlobber(glob._Globber if IS_PYTHON_3_13_OR_NEWER else object):
+# In Python 3.14+, glob._Globber was removed, so we need to check if it exists
+_HAS_GLOB_GLOBBER = IS_PYTHON_3_13_OR_NEWER and hasattr(glob, "_Globber")
+
+
+class _ArtifactoryGlobber(glob._Globber if _HAS_GLOB_GLOBBER else object):
     def recursive_selector(self, part, parts):
         """Returns a function that selects a given path and all its children,
         recursively, filtering by pattern.
@@ -1599,7 +1603,7 @@ class PureArtifactoryPath(pathlib.PurePath):
     # In Python 3.13, this attribute is accessed by PurePath.glob(), and we need to
     # override it to behave properly for ArtifactoryPaths with a custom subclass of
     # glob._Globber.
-    if IS_PYTHON_3_13_OR_NEWER:
+    if _HAS_GLOB_GLOBBER:
         _globber = _ArtifactoryGlobber
 
     __slots__ = ()
@@ -1713,14 +1717,31 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         if not IS_PYTHON_3_12_OR_NEWER:
             return
 
+        # Extract custom kwargs that are not part of pathlib.Path.__init__
+        # These are ArtifactoryPath-specific parameters
+        custom_kwargs = {}
+        artifactory_params = {
+            "apikey",
+            "token",
+            "auth",
+            "auth_type",
+            "cert",
+            "session",
+            "timeout",
+            "verify",
+        }
+        for key in artifactory_params:
+            if key in kwargs:
+                custom_kwargs[key] = kwargs.pop(key)
+
         super().__init__(*args, **kwargs)
 
         cfg_entry = get_global_config_entry(self.drive)
 
         # Auth section
-        apikey = kwargs.get("apikey")
-        token = kwargs.get("token")
-        auth_type = kwargs.get("auth_type")
+        apikey = custom_kwargs.get("apikey")
+        token = custom_kwargs.get("token")
+        auth_type = custom_kwargs.get("auth_type")
 
         if apikey:
             logger.debug("Use XJFrogApiAuth apikey")
@@ -1729,22 +1750,22 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             logger.debug("Use XJFrogArtBearerAuth token")
             self.auth = XJFrogArtBearerAuth(token=token)
         else:
-            auth = kwargs.get("auth")
+            auth = custom_kwargs.get("auth")
             self.auth = auth if auth_type is None else auth_type(*auth)
 
         if self.auth is None and cfg_entry:
             auth = (cfg_entry["username"], cfg_entry["password"])
             self.auth = auth if auth_type is None else auth_type(*auth)
 
-        self.cert = kwargs.get("cert")
-        self.session = kwargs.get("session")
-        self.timeout = kwargs.get("timeout")
+        self.cert = custom_kwargs.get("cert")
+        self.session = custom_kwargs.get("session")
+        self.timeout = custom_kwargs.get("timeout")
 
         if self.cert is None and cfg_entry:
             self.cert = cfg_entry["cert"]
 
-        if "verify" in kwargs:
-            self.verify = kwargs.get("verify")
+        if "verify" in custom_kwargs:
+            self.verify = custom_kwargs.get("verify")
         elif cfg_entry:
             self.verify = cfg_entry["verify"]
         else:
@@ -1896,12 +1917,32 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         return self._accessor.scandir(self)
 
     def glob(self, *args, **kwargs):
-        if IS_PYTHON_3_13_OR_NEWER:
+        if _HAS_GLOB_GLOBBER:
             # In Python 3.13, the implementation of Path.glob() changed such that it assumes that it
             # works only with real filesystem paths and will try to call real filesystem operations like
             # os.scandir(). In Python 3.13, we explicitly intercept this and call PathBase's glob()
             # implementation, which only depends on methods defined on the Path subclass.
             return pathlib._abc.PathBase.glob(self, *args, **kwargs)
+        elif IS_PYTHON_3_12_OR_NEWER:
+            # In Python 3.14+, glob._Globber was removed but we still need custom glob behavior
+            # that doesn't rely on filesystem operations. We'll use a simplified implementation.
+            # For now, fall back to iterdir-based globbing for basic patterns.
+            pattern = args[0] if args else kwargs.get("pattern", "*")
+            if pattern == "**/*":
+                # Recursive glob - walk the tree
+                def _recursive_glob(path):
+                    try:
+                        for item in path.iterdir():
+                            yield item
+                            if item.is_dir():
+                                yield from _recursive_glob(item)
+                    except (OSError, PermissionError):
+                        pass
+
+                return _recursive_glob(self)
+            else:
+                # Simple pattern matching - use parent's implementation
+                return super().glob(*args, **kwargs)
         return super().glob(*args, **kwargs)
 
     def download_stats(self, pathobj=None):
