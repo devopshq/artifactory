@@ -1925,24 +1925,39 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             return pathlib._abc.PathBase.glob(self, *args, **kwargs)
         elif IS_PYTHON_3_12_OR_NEWER:
             # In Python 3.14+, glob._Globber was removed but we still need custom glob behavior
-            # that doesn't rely on filesystem operations. We'll use a simplified implementation.
-            # For now, fall back to iterdir-based globbing for basic patterns.
+            # that doesn't rely on filesystem operations. We'll use a simplified implementation
+            # based on iterdir() and fnmatch that works with Artifactory's REST API.
             pattern = args[0] if args else kwargs.get("pattern", "*")
-            if pattern == "**/*":
-                # Recursive glob - walk the tree
-                def _recursive_glob(path):
+            parts = pattern.split("/")
+
+            def _glob_select(pat_parts, path):
+                if not pat_parts:
+                    yield path
+                    return
+                part = pat_parts[0]
+                rest = pat_parts[1:]
+
+                if part == "**":
+                    yield from _glob_select(rest, path)
                     try:
-                        for item in path.iterdir():
-                            yield item
-                            if item.is_dir():
-                                yield from _recursive_glob(item)
+                        for child in path.iterdir():
+                            if child.is_dir():
+                                yield from _glob_select(pat_parts, child)
+                    except (OSError, PermissionError):
+                        pass
+                else:
+                    try:
+                        for child in path.iterdir():
+                            if fnmatch.fnmatch(child.name, part):
+                                if rest:
+                                    if child.is_dir():
+                                        yield from _glob_select(rest, child)
+                                else:
+                                    yield child
                     except (OSError, PermissionError):
                         pass
 
-                return _recursive_glob(self)
-            else:
-                # Simple pattern matching - use parent's implementation
-                return super().glob(*args, **kwargs)
+            return _glob_select(parts, self)
         return super().glob(*args, **kwargs)
 
     def download_stats(self, pathobj=None):
