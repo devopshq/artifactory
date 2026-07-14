@@ -1734,7 +1734,10 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             if key in kwargs:
                 custom_kwargs[key] = kwargs.pop(key)
 
-        super().__init__(*args, **kwargs)
+        # pathlib.PurePath.__init__ takes only positional arguments. Subclasses
+        # add their own kwargs (e.g. 'project'), which were ignored until 3.13
+        # and are rejected since 3.14
+        super().__init__(*args)
 
         cfg_entry = get_global_config_entry(self.drive)
 
