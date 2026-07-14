@@ -6,6 +6,7 @@ import tempfile
 import unittest
 
 import dateutil
+import requests
 import responses
 from responses.matchers import json_params_matcher
 from responses.matchers import query_param_matcher
@@ -971,6 +972,40 @@ class ArtifactoryPathTest(ClassSetup):
         P = self.cls
         a = P("http://a/artifactory/", auth=("foo", "bar"))
         self.assertEqual(a.auth, ("foo", "bar"))
+
+    def test_verify_from_session(self):
+        """
+        Test that the verify of the given session is used when verify is not passed,
+        otherwise the default one would override it when the request is made
+        """
+        P = self.cls
+        session = requests.Session()
+        session.verify = False
+
+        a = P("http://a/artifactory/", session=session)
+
+        self.assertEqual(a.verify, False)
+
+    def test_verify_overrides_session(self):
+        """
+        Test that an explicit verify wins over the one of the given session
+        """
+        P = self.cls
+        session = requests.Session()
+        session.verify = False
+
+        a = P("http://a/artifactory/", session=session, verify=True)
+
+        self.assertEqual(a.verify, True)
+
+    def test_verify_default(self):
+        """
+        Test that verify is enabled when neither a session nor verify is given
+        """
+        P = self.cls
+        a = P("http://a/artifactory/")
+
+        self.assertEqual(a.verify, True)
 
     @responses.activate
     def test_deploy_file(self):

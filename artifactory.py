@@ -1704,6 +1704,10 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             obj.verify = kwargs.get("verify")
         elif cfg_entry:
             obj.verify = cfg_entry["verify"]
+        elif obj.session is not None:
+            # the session is passed to requests along with verify, and the explicit
+            # verify wins over the one of the session, so take it from the session
+            obj.verify = obj.session.verify
         else:
             obj.verify = True
 
@@ -1782,6 +1786,10 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             self.verify = custom_kwargs.get("verify")
         elif cfg_entry:
             self.verify = cfg_entry["verify"]
+        elif self.session is not None:
+            # the session is passed to requests along with verify, and the explicit
+            # verify wins over the one of the session, so take it from the session
+            self.verify = self.session.verify
         else:
             self.verify = True
 
