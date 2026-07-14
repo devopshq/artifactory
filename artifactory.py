@@ -590,10 +590,13 @@ class _ArtifactoryFlavour(object if IS_PYTHON_3_12_OR_NEWER else pathlib._Flavou
 
     def isabs(self, path):
         """
-        Returns True if the path is absolute. For Artifactory paths, this
-        means checking the URL scheme.
+        Returns True if the path is absolute.
+
+        A path is absolute when splitroot() finds both a drive (the base
+        Artifactory URI) and a root, the same way pathlib treats '/' on posix.
         """
-        return urllib.parse.urlparse(str(path)).scheme != ""
+        drv, root, _ = self.splitroot(str(path))
+        return bool(drv and root)
 
     def normcase(self, path):
         return path

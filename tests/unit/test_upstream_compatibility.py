@@ -82,3 +82,49 @@ class ArtifactoryBuildManagerRegressionTest(unittest.TestCase):
             project="my-project",
         )
         self.assertEqual(manager.project, "my-project")
+
+
+class IsAbsRegressionTest(unittest.TestCase):
+    """The flavour must provide isabs().
+
+    Since Python 3.12 pathlib delegates PurePath.is_absolute() to
+    ``self.parser.isabs()``, so a flavour without it raises AttributeError.
+    """
+
+    def test_is_absolute(self):
+        self.assertTrue(ArtifactoryPath("https://artifactory.local").is_absolute())
+        self.assertTrue(ArtifactoryPath(_ROOT_URL).is_absolute())
+
+    def test_as_uri_does_not_raise(self):
+        """as_uri() calls is_absolute() internally, which is how #480 surfaced."""
+        ArtifactoryPath("https://artifactory.local").as_uri()
+
+    def test_isabs_relative_paths(self):
+        flavour = artifactory._artifactory_flavour
+        self.assertFalse(flavour.isabs("repo/path/file.txt"))
+        self.assertFalse(flavour.isabs("file.txt"))
+        self.assertFalse(flavour.isabs(""))
+
+    def test_isabs_agrees_with_splitroot(self):
+        """isabs() must be True exactly when splitroot() finds a drive and a root.
+
+        Otherwise a path can report a drive and a root while claiming to be
+        relative, which is what a scheme-only check would do for a URL written
+        without 'http://'.
+        """
+        flavour = artifactory._artifactory_flavour
+        for path in [
+            "https://artifactory.local",
+            _ROOT_URL,
+            f"{_ROOT_URL}/path/file.txt",
+            "artifactory.local/artifactory/repo",
+            "repo/path/file.txt",
+            "file.txt",
+        ]:
+            drv, root, _ = flavour.splitroot(path)
+            self.assertEqual(flavour.isabs(path), bool(drv and root), path)
+
+    def test_saas_flavour_has_isabs(self):
+        flavour = artifactory._saas_artifactory_flavour
+        self.assertTrue(flavour.isabs("https://mycompany.jfrog.io/artifactory/repo"))
+        self.assertFalse(flavour.isabs("repo/path/file.txt"))
