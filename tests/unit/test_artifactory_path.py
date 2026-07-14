@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import json
 import os
 import pathlib
 import sys
@@ -1877,6 +1878,157 @@ class TestArtifactoryPathGetAll(unittest.TestCase):
 
             self.assertEqual(len(rsps.calls), 1)
             self.assertEqual(rsps.calls[0].request.url, self.projects_request_url)
+
+
+class ArtifactoryBuildManagerTest(unittest.TestCase):
+    """Test that the project of the build manager is sent to the build API"""
+
+    def setUp(self):
+        self.base_url = "http://artifactory.local/artifactory"
+        self.build_manager = artifactory.ArtifactoryBuildManager(
+            self.base_url, project="test-project", auth=("admin", "admin")
+        )
+        self.build_manager_without_project = artifactory.ArtifactoryBuildManager(
+            self.base_url, auth=("admin", "admin")
+        )
+
+    @responses.activate
+    def test_builds(self):
+        responses.add(
+            responses.GET,
+            f"{self.base_url}/api/build/",
+            json={
+                "builds": [
+                    {"uri": "/my-build", "lastStarted": "2025-01-01T00:00:00.000Z"},
+                ]
+            },
+            status=200,
+        )
+
+        builds = self.build_manager.builds
+
+        self.assertEqual(len(builds), 1)
+        self.assertEqual(builds[0].name, "my-build")
+        # the project is sent as a bare key, the API rejects quoted ones
+        self.assertEqual(
+            responses.calls[0].request.url,
+            f"{self.base_url}/api/build/?project=test-project",
+        )
+
+    @responses.activate
+    def test_builds_without_project(self):
+        responses.add(
+            responses.GET,
+            f"{self.base_url}/api/build",
+            json={"builds": []},
+            status=200,
+        )
+
+        self.build_manager_without_project.builds
+
+        self.assertEqual(responses.calls[0].request.url, f"{self.base_url}/api/build")
+
+    @responses.activate
+    def test_get_build_runs(self):
+        responses.add(
+            responses.GET,
+            f"{self.base_url}/api/build/my-build",
+            json={"buildsNumbers": [{"uri": "/1", "started": "2025-01-01"}]},
+            status=200,
+        )
+
+        runs = self.build_manager.get_build_runs("my-build")
+
+        self.assertEqual(len(runs), 1)
+        self.assertEqual(
+            responses.calls[0].request.url,
+            f"{self.base_url}/api/build/my-build?project=test-project",
+        )
+
+    @responses.activate
+    def test_get_build_info(self):
+        responses.add(
+            responses.GET,
+            f"{self.base_url}/api/build/my-build/456",
+            json={"buildInfo": {}},
+            status=200,
+        )
+
+        self.build_manager.get_build_info("my-build", "456")
+
+        self.assertEqual(
+            responses.calls[0].request.url,
+            f"{self.base_url}/api/build/my-build/456?project=test-project",
+        )
+
+    @responses.activate
+    def test_get_build_info_without_project(self):
+        responses.add(
+            responses.GET,
+            f"{self.base_url}/api/build/my-build/456",
+            json={"buildInfo": {}},
+            status=200,
+        )
+
+        self.build_manager_without_project.get_build_info("my-build", "456")
+
+        self.assertEqual(
+            responses.calls[0].request.url,
+            f"{self.base_url}/api/build/my-build/456",
+        )
+
+    @responses.activate
+    def test_get_build_diff(self):
+        responses.add(
+            responses.GET,
+            f"{self.base_url}/api/build/my-build/456",
+            json={"artifacts": {}},
+            status=200,
+        )
+
+        self.build_manager.get_build_diff("my-build", "456", "123")
+
+        self.assertEqual(
+            responses.calls[0].request.url,
+            f"{self.base_url}/api/build/my-build/456?diff=123&project=test-project",
+        )
+
+    @responses.activate
+    def test_promote_build(self):
+        responses.add(
+            responses.POST,
+            f"{self.base_url}/api/build/promote/my-build/456",
+            status=200,
+        )
+
+        self.build_manager.promote_build(
+            "my-build", "456", ci_user="admin", properties={"release": ["1.0"]}
+        )
+
+        request = responses.calls[0].request
+        self.assertEqual(
+            request.url,
+            f"{self.base_url}/api/build/promote/my-build/456?project=test-project",
+        )
+        # the promotion API takes the project as a query parameter, not in the body
+        self.assertNotIn("project", json.loads(request.body))
+
+    @responses.activate
+    def test_promote_build_without_project(self):
+        responses.add(
+            responses.POST,
+            f"{self.base_url}/api/build/promote/my-build/456",
+            status=200,
+        )
+
+        self.build_manager_without_project.promote_build(
+            "my-build", "456", ci_user="admin", properties={"release": ["1.0"]}
+        )
+
+        self.assertEqual(
+            responses.calls[0].request.url,
+            f"{self.base_url}/api/build/promote/my-build/456",
+        )
 
 
 if __name__ == "__main__":

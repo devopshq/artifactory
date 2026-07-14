@@ -2983,11 +2983,7 @@ class ArtifactoryBuildManager(ArtifactoryPath):
         :return: (list) list of available build names
         """
         all_builds = []
-        url = ""
-        if self.project:
-            url = f"?project='{self.project}'"
-
-        resp = self._get_build_api_response(url)
+        resp = self._get_build_api_response(self._add_project(""))
         if "builds" in resp:
             for build in resp["builds"]:
                 arti_build = ArtifactoryBuild(
@@ -3030,6 +3026,17 @@ class ArtifactoryBuildManager(ArtifactoryPath):
         """
         return self._get_info(build_name, build_number)
 
+    def _add_project(self, url):
+        """
+        Add the project of this build manager as a query parameter to the build API url
+        :param url: (str) build API url, may already contain a query string
+        :return: (str) url with the project query parameter
+        """
+        if not self.project:
+            return url
+        separator = "&" if "?" in url else "?"
+        return f"{url}{separator}project={self.project}"
+
     def _get_info(self, build_name, build_number=""):
         # If a build name contains slash "/" it must be encoded,
         # otherwise the part after the slash will be treated as a build number
@@ -3038,7 +3045,7 @@ class ArtifactoryBuildManager(ArtifactoryPath):
         if build_number:
             build_number = urllib.parse.quote(str(build_number), safe="")
             url += f"/{build_number}"
-        return self._get_build_api_response(url)
+        return self._get_build_api_response(self._add_project(url))
 
     def _get_build_api_response(self, url):
         url = f"{self.drive}/api/build/{url}"
@@ -3058,7 +3065,7 @@ class ArtifactoryBuildManager(ArtifactoryPath):
         build_number1 = urllib.parse.quote(str(build_number1), safe="")
         build_number2 = urllib.parse.quote(str(build_number2), safe="")
         url = f"{build_name}/{build_number1}?diff={build_number2}"
-        return self._get_build_api_response(url)
+        return self._get_build_api_response(self._add_project(url))
 
     def promote_build(
         self,
@@ -3137,8 +3144,13 @@ class ArtifactoryBuildManager(ArtifactoryPath):
 
             json_data["scopes"] = scopes
 
+        # the url is percent-encoded by rest_post, so the project has to be passed
+        # as a request parameter instead of being appended to the url
+        params = {"project": self.project} if self.project else None
+
         self._accessor.rest_post(
             url,
+            params=params,
             json_data=json_data,
             session=self.session,
             verify=self.verify,
