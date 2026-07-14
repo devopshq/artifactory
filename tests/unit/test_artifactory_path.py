@@ -973,6 +973,54 @@ class ArtifactoryPathTest(ClassSetup):
         self.assertEqual(a.auth, ("foo", "bar"))
 
     @responses.activate
+    def test_stat_json(self):
+        """
+        Test that stat_json returns the file info as provided by Artifactory,
+        including the fields that stat() does not expose
+        """
+        path = self.cls(self.artifact_url)
+
+        constructed_url = (
+            "http://artifactory.local/artifactory"
+            "/api/storage"
+            "/ext-release-local/org/company/tool/1.0/tool-1.0.tar.gz"
+        )
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=200,
+            json=self.file_stat,
+        )
+
+        stats = path.stat_json()
+
+        self.assertEqual(stats, self.file_stat)
+        self.assertEqual(stats["path"], "/org/company/tool/1.0/tool-1.0.tar.gz")
+        self.assertEqual(stats["downloadUri"], self.artifact_url)
+
+    @responses.activate
+    def test_stat_json_folder(self):
+        """
+        Test that stat_json works for a folder, which has no downloadUri
+        """
+        path = self.cls("http://artifactory.local/artifactory/libs-release-local")
+
+        constructed_url = (
+            "http://artifactory.local/artifactory" "/api/storage" "/libs-release-local"
+        )
+        responses.add(
+            responses.GET,
+            constructed_url,
+            status=200,
+            json=self.dir_stat,
+        )
+
+        stats = path.stat_json()
+
+        self.assertEqual(stats, self.dir_stat)
+        self.assertNotIn("downloadUri", stats)
+
+    @responses.activate
     def test_deploy_file(self):
         """
         Test that file uploads to the path
