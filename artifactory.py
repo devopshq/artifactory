@@ -3029,7 +3029,7 @@ class ArtifactoryBuildManager(ArtifactoryPath):
             build_number = urllib.parse.quote(str(build_number), safe="")
             url += f"/{build_number}"
         if self.project:
-            url += f'?project={self.project}'
+            url += f"?project={self.project}"
         return self._get_build_api_response(url)
 
     def _get_build_api_response(self, url):
