@@ -1,6 +1,6 @@
 import json
-import random
 import re
+import secrets
 import string
 import time
 import warnings
@@ -8,8 +8,6 @@ import warnings
 import jwt
 from dateutil.parser import isoparse
 
-from dohq_artifactory.compat import IS_PYTHON_2
-from dohq_artifactory.compat import IS_PYTHON_3_6_OR_NEWER
 from dohq_artifactory.exception import ArtifactoryException
 from dohq_artifactory.exception import raise_for_status
 from dohq_artifactory.logger import logger
@@ -19,43 +17,8 @@ def rest_delay():
     time.sleep(0.5)
 
 
-def _old_function_for_secret(pw_len=16):
-    alphabet_lower = "abcdefghijklmnopqrstuvwxyz"
-    alphabet_upper = alphabet_lower.upper()
-    alphabet_len = len(alphabet_lower)
-    pwlist = []
-
-    for i in range(pw_len // 3):
-        r_0 = random.randrange(alphabet_len)
-        r_1 = random.randrange(alphabet_len)
-        r_2 = random.randrange(10)
-
-        pwlist.append(alphabet_lower[r_0])
-        pwlist.append(alphabet_upper[r_1])
-        pwlist.append(str(r_2))
-
-    for i in range(pw_len - len(pwlist)):
-        r_0 = random.randrange(alphabet_len)
-
-        pwlist.append(alphabet_lower[r_0])
-
-    random.shuffle(pwlist)
-
-    result = "".join(pwlist)
-
-    return result
-
-
-def _new_function_with_secret_module(pw_len=16):
-    import secrets
-
+def generate_password(pw_len=16):
     return "".join(secrets.choice(string.ascii_letters) for i in range(pw_len))
-
-
-if IS_PYTHON_3_6_OR_NEWER:
-    generate_password = _new_function_with_secret_module
-else:
-    generate_password = _old_function_for_secret
 
 
 def deprecation(message):
@@ -656,10 +619,6 @@ class GenericRepository(AdminObject):
 
     def __rtruediv__(self, key):
         return self.path.__truediv__(key)
-
-    if IS_PYTHON_2:
-        __div__ = __truediv__
-        __rdiv__ = __rtruediv__
 
     def __setstate__(self, state):
         self.__dict__ = state

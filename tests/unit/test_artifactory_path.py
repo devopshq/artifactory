@@ -1434,6 +1434,101 @@ class ArtifactoryPathTest(ClassSetup):
             ],
         )
 
+    @responses.activate
+    def test_glob_recursive_pattern(self):
+        """
+        Test that recursive glob with a pattern like **/*.gz works.
+        This is the default code example from the README.
+        """
+        com_dir_stat = {
+            "repo": "libs-release-local",
+            "path": "/com",
+            "created": "2014-02-18T15:35:29.361+04:00",
+            "lastModified": "2014-02-18T15:35:29.361+04:00",
+            "lastUpdated": "2014-02-18T15:35:29.361+04:00",
+            "children": [
+                {"uri": "/foo.gz"},
+                {"uri": "/bar.txt"},
+            ],
+            "uri": "http://artifactory.local/artifactory/api/storage/libs-release-local/com",
+        }
+        index_dir_stat = {
+            "repo": "libs-release-local",
+            "path": "/.index",
+            "created": "2014-02-18T15:35:29.361+04:00",
+            "lastModified": "2014-02-18T15:35:29.361+04:00",
+            "lastUpdated": "2014-02-18T15:35:29.361+04:00",
+            "children": [],
+            "uri": "http://artifactory.local/artifactory/api/storage/libs-release-local/.index",
+        }
+        ArtifactoryPath = self.cls
+        root_path = ArtifactoryPath(
+            "http://artifactory.local/artifactory/libs-release-local"
+        )
+        constructed_url = (
+            "http://artifactory.local/artifactory/api/storage/libs-release-local"
+        )
+
+        responses.add(responses.GET, constructed_url, status=200, json=self.dir_stat)
+        responses.add(responses.GET, constructed_url, status=200, json=self.dir_stat)
+        responses.add(
+            responses.GET,
+            f"{constructed_url}/.index",
+            status=200,
+            json=index_dir_stat,
+        )
+        responses.add(
+            responses.GET,
+            f"{constructed_url}/.index",
+            status=200,
+            json=index_dir_stat,
+        )
+        responses.add(
+            responses.GET,
+            f"{constructed_url}/.index",
+            status=200,
+            json=index_dir_stat,
+        )
+        responses.add(
+            responses.GET,
+            f"{constructed_url}/com",
+            status=200,
+            json=com_dir_stat,
+        )
+        responses.add(
+            responses.GET,
+            f"{constructed_url}/com",
+            status=200,
+            json=com_dir_stat,
+        )
+        responses.add(
+            responses.GET,
+            f"{constructed_url}/com",
+            status=200,
+            json=com_dir_stat,
+        )
+        responses.add(
+            responses.GET,
+            f"{constructed_url}/com/foo.gz",
+            status=200,
+            json=self.file_stat,
+        )
+        responses.add(
+            responses.GET,
+            f"{constructed_url}/com/bar.txt",
+            status=200,
+            json=self.file_stat,
+        )
+
+        results = list(root_path.glob("**/*.gz"))
+
+        self.assertEqual(
+            [str(r) for r in results],
+            [
+                "http://artifactory.local/artifactory/libs-release-local/com/foo.gz",
+            ],
+        )
+
 
 class ArtifactorySaaSPathTest(unittest.TestCase):
     cls = artifactory.ArtifactorySaaSPath

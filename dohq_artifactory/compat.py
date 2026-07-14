@@ -1,7 +1,5 @@
 import sys
 
-IS_PYTHON_2 = sys.version_info < (3,)
-IS_PYTHON_3_6_OR_NEWER = sys.version_info >= (3, 6)
 # see changes in pathlib.Path, slots are no more applied
 # https://github.com/python/cpython/blob/ce121fd8755d4db9511ce4aab39d0577165e118e/Lib/pathlib.py#L952
 IS_PYTHON_3_10_OR_NEWER = sys.version_info >= (3, 10)
@@ -13,3 +11,6 @@ IS_PYTHON_3_12_OR_NEWER = sys.version_info >= (3, 12)
 # parts of the code once python3.12 is no longer supported. This constant helps
 # identifying those.
 IS_PYTHON_3_13_OR_NEWER = sys.version_info >= (3, 13)
+# glob._Globber was removed in 3.14, so Path.glob() has to be reimplemented
+# on top of iterdir(). This constant helps identifying those parts.
+IS_PYTHON_3_14_OR_NEWER = sys.version_info >= (3, 14)
