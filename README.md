@@ -616,6 +616,21 @@ print(stat.children)
 print(stat.repo)
 ```
 
+`stat()` exposes a fixed set of fields. To get the file info exactly as Artifactory returns it,
+including fields like `downloadUri` and `path`, use `stat_json()`:
+
+```python
+from artifactory import ArtifactoryPath
+
+path = ArtifactoryPath(
+    "http://repo.jfrog.org/artifactory/distributions/org/apache/tomcat/apache-tomcat-7.0.11.tar.gz"
+)
+
+stat = path.stat_json()
+print(stat["downloadUri"])
+print(stat["path"])
+```
+
 ### Get Download Statistics
 Information about number of downloads, user that last downloaded and date of last download
 ```python
