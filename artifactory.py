@@ -56,6 +56,7 @@ from dohq_artifactory.auth import XJFrogArtBearerAuth
 from dohq_artifactory.compat import IS_PYTHON_3_10_OR_NEWER
 from dohq_artifactory.compat import IS_PYTHON_3_12_OR_NEWER
 from dohq_artifactory.compat import IS_PYTHON_3_13_OR_NEWER
+from dohq_artifactory.compat import IS_PYTHON_3_14_OR_NEWER
 from dohq_artifactory.exception import ArtifactoryException
 from dohq_artifactory.exception import raise_for_status
 from dohq_artifactory.logger import logger
@@ -1922,7 +1923,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             # os.scandir(). In Python 3.13, we explicitly intercept this and call PathBase's glob()
             # implementation, which only depends on methods defined on the Path subclass.
             return pathlib._abc.PathBase.glob(self, *args, **kwargs)
-        elif IS_PYTHON_3_12_OR_NEWER:
+        elif IS_PYTHON_3_14_OR_NEWER:
             # In Python 3.14+, glob._Globber was removed but we still need custom glob behavior
             # that doesn't rely on filesystem operations. We'll use a simplified implementation
             # based on iterdir() and fnmatch that works with Artifactory's REST API.
