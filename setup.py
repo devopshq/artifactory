@@ -42,7 +42,6 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
@@ -54,6 +53,7 @@ setup(
     ],
     url="https://devopshq.github.io/artifactory/",
     download_url="https://github.com/devopshq/artifactory",
+    python_requires=">=3.9",
     install_requires=[
         "requests>=2.30.0",
         "python-dateutil",

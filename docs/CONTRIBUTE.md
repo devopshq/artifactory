@@ -20,7 +20,7 @@ Development takes place on GitHub, where the git-flow branch structure is used:
 
 ### Prepare development environment
 It is recommended to use Unix systems. You can use free Oracle Virtualbox and Ubuntu.  
-Setup script for Ubuntu system (python version must be 3.8+):
+Setup script for Ubuntu system (python version must be 3.9+):
 ```bash
 python3 -m pip install tox
 python3 -m pip install .[tests]
