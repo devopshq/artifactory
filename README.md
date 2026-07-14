@@ -1178,11 +1178,11 @@ if permission is None:
     permission = PermissionTarget(
         artifactory_,
         "rule",
-        repositories=Object, # <RepositiryLocal repo1>, <RepositiryLocal repo2>
-        users=Object, # <User user1>, <User user2>
-        groups=Object, # <Group group1>, <Group group2>
-        includes_pattern="com.mycompany.myproject1.**,com.othercompany.**"
-        excludes_pattern="com.othercompany.projectX.**,com.othercompany.projectY.**"
+        repositories=Object,  # <RepositiryLocal repo1>, <RepositiryLocal repo2>
+        users=Object,  # <User user1>, <User user2>
+        groups=Object,  # <Group group1>, <Group group2>
+        includes_pattern="com.mycompany.myproject1.**,com.othercompany.**",
+        excludes_pattern="com.othercompany.projectX.**,com.othercompany.projectY.**",
     )
     permission.create()
 
