@@ -1929,6 +1929,12 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             # based on iterdir() and fnmatch that works with Artifactory's REST API.
             pattern = args[0] if args else kwargs.get("pattern", "*")
             parts = pattern.split("/")
+            # Artifactory paths are posix-like, so matching is case sensitive
+            # unless the caller explicitly asks for case_sensitive=False
+            flags = re.IGNORECASE if kwargs.get("case_sensitive") is False else 0
+
+            def _match(name, part):
+                return re.match(fnmatch.translate(part), name, flags) is not None
 
             def _glob_select(pat_parts, path):
                 if not pat_parts:
@@ -1948,7 +1954,7 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
                 else:
                     try:
                         for child in path.iterdir():
-                            if fnmatch.fnmatch(child.name, part):
+                            if _match(child.name, part):
                                 if rest:
                                     if child.is_dir():
                                         yield from _glob_select(rest, child)
