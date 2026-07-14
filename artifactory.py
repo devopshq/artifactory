@@ -53,7 +53,6 @@ from dohq_artifactory.admin import RepositoryVirtual
 from dohq_artifactory.admin import User
 from dohq_artifactory.auth import XJFrogArtApiAuth
 from dohq_artifactory.auth import XJFrogArtBearerAuth
-from dohq_artifactory.compat import IS_PYTHON_2
 from dohq_artifactory.compat import IS_PYTHON_3_10_OR_NEWER
 from dohq_artifactory.compat import IS_PYTHON_3_12_OR_NEWER
 from dohq_artifactory.compat import IS_PYTHON_3_13_OR_NEWER
@@ -2073,10 +2072,6 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.session = self.session
         obj.timeout = self.timeout
         return obj
-
-    if IS_PYTHON_2:
-        __div__ = __truediv__
-        __rdiv__ = __rtruediv__
 
     def _make_child(self, args):
         obj = super(ArtifactoryPath, self)._make_child(args)

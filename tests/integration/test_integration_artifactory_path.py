@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import copy
+import io
 import tempfile
 
 import pytest
@@ -8,12 +9,6 @@ import pytest
 import artifactory
 from artifactory import sha1sum
 from artifactory import sha256sum
-from dohq_artifactory.compat import *  # noqa: this helper only contains version flags
-
-if IS_PYTHON_2:
-    import StringIO as io
-else:
-    import io
 
 
 @pytest.fixture(autouse=True)
