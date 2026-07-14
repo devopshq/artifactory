@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import configparser
 import os
 
 import pytest
@@ -8,12 +9,6 @@ from dohq_artifactory import Group
 from dohq_artifactory import PermissionTarget
 from dohq_artifactory import RepositoryLocal
 from dohq_artifactory import User
-from dohq_artifactory.compat import *  # noqa: this helper only contains version flags
-
-if IS_PYTHON_2:
-    import ConfigParser as configparser
-else:
-    import configparser
 
 
 def pytest_configure(config):

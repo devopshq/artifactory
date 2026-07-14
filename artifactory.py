@@ -47,16 +47,17 @@ from dohq_artifactory.admin import Group
 from dohq_artifactory.admin import PermissionTarget
 from dohq_artifactory.admin import Project
 from dohq_artifactory.admin import Repository
+from dohq_artifactory.admin import RepositoryFederated
 from dohq_artifactory.admin import RepositoryLocal
 from dohq_artifactory.admin import RepositoryRemote
 from dohq_artifactory.admin import RepositoryVirtual
 from dohq_artifactory.admin import User
 from dohq_artifactory.auth import XJFrogArtApiAuth
 from dohq_artifactory.auth import XJFrogArtBearerAuth
-from dohq_artifactory.compat import IS_PYTHON_2
 from dohq_artifactory.compat import IS_PYTHON_3_10_OR_NEWER
 from dohq_artifactory.compat import IS_PYTHON_3_12_OR_NEWER
 from dohq_artifactory.compat import IS_PYTHON_3_13_OR_NEWER
+from dohq_artifactory.compat import IS_PYTHON_3_14_OR_NEWER
 from dohq_artifactory.exception import ArtifactoryException
 from dohq_artifactory.exception import raise_for_status
 from dohq_artifactory.logger import logger
@@ -1520,7 +1521,11 @@ class ArtifactoryOpensourceAccessor(_ArtifactoryAccessor):
 # strings, and the add_slash() will literally append a slash character to the string
 # path. See the original code in
 # https://github.com/python/cpython/blob/v3.13.2/Lib/glob.py#L448-L510
-class _ArtifactoryGlobber(glob._Globber if IS_PYTHON_3_13_OR_NEWER else object):
+# In Python 3.14+, glob._Globber was removed, so we need to check if it exists
+_HAS_GLOB_GLOBBER = IS_PYTHON_3_13_OR_NEWER and hasattr(glob, "_Globber")
+
+
+class _ArtifactoryGlobber(glob._Globber if _HAS_GLOB_GLOBBER else object):
     def recursive_selector(self, part, parts):
         """Returns a function that selects a given path and all its children,
         recursively, filtering by pattern.
@@ -1599,7 +1604,7 @@ class PureArtifactoryPath(pathlib.PurePath):
     # In Python 3.13, this attribute is accessed by PurePath.glob(), and we need to
     # override it to behave properly for ArtifactoryPaths with a custom subclass of
     # glob._Globber.
-    if IS_PYTHON_3_13_OR_NEWER:
+    if _HAS_GLOB_GLOBBER:
         _globber = _ArtifactoryGlobber
 
     __slots__ = ()
@@ -1713,14 +1718,34 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         if not IS_PYTHON_3_12_OR_NEWER:
             return
 
-        super().__init__(*args, **kwargs)
+        # Extract custom kwargs that are not part of pathlib.Path.__init__
+        # These are ArtifactoryPath-specific parameters
+        custom_kwargs = {}
+        artifactory_params = {
+            "apikey",
+            "token",
+            "auth",
+            "auth_type",
+            "cert",
+            "session",
+            "timeout",
+            "verify",
+        }
+        for key in artifactory_params:
+            if key in kwargs:
+                custom_kwargs[key] = kwargs.pop(key)
+
+        # pathlib.PurePath.__init__ takes only positional arguments. Subclasses
+        # add their own kwargs (e.g. 'project'), which were ignored until 3.13
+        # and are rejected since 3.14
+        super().__init__(*args)
 
         cfg_entry = get_global_config_entry(self.drive)
 
         # Auth section
-        apikey = kwargs.get("apikey")
-        token = kwargs.get("token")
-        auth_type = kwargs.get("auth_type")
+        apikey = custom_kwargs.get("apikey")
+        token = custom_kwargs.get("token")
+        auth_type = custom_kwargs.get("auth_type")
 
         if apikey:
             logger.debug("Use XJFrogApiAuth apikey")
@@ -1729,22 +1754,22 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             logger.debug("Use XJFrogArtBearerAuth token")
             self.auth = XJFrogArtBearerAuth(token=token)
         else:
-            auth = kwargs.get("auth")
+            auth = custom_kwargs.get("auth")
             self.auth = auth if auth_type is None else auth_type(*auth)
 
         if self.auth is None and cfg_entry:
             auth = (cfg_entry["username"], cfg_entry["password"])
             self.auth = auth if auth_type is None else auth_type(*auth)
 
-        self.cert = kwargs.get("cert")
-        self.session = kwargs.get("session")
-        self.timeout = kwargs.get("timeout")
+        self.cert = custom_kwargs.get("cert")
+        self.session = custom_kwargs.get("session")
+        self.timeout = custom_kwargs.get("timeout")
 
         if self.cert is None and cfg_entry:
             self.cert = cfg_entry["cert"]
 
-        if "verify" in kwargs:
-            self.verify = kwargs.get("verify")
+        if "verify" in custom_kwargs:
+            self.verify = custom_kwargs.get("verify")
         elif cfg_entry:
             self.verify = cfg_entry["verify"]
         else:
@@ -1896,12 +1921,53 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         return self._accessor.scandir(self)
 
     def glob(self, *args, **kwargs):
-        if IS_PYTHON_3_13_OR_NEWER:
+        if _HAS_GLOB_GLOBBER:
             # In Python 3.13, the implementation of Path.glob() changed such that it assumes that it
             # works only with real filesystem paths and will try to call real filesystem operations like
             # os.scandir(). In Python 3.13, we explicitly intercept this and call PathBase's glob()
             # implementation, which only depends on methods defined on the Path subclass.
             return pathlib._abc.PathBase.glob(self, *args, **kwargs)
+        elif IS_PYTHON_3_14_OR_NEWER:
+            # In Python 3.14+, glob._Globber was removed but we still need custom glob behavior
+            # that doesn't rely on filesystem operations. We'll use a simplified implementation
+            # based on iterdir() and fnmatch that works with Artifactory's REST API.
+            pattern = args[0] if args else kwargs.get("pattern", "*")
+            parts = pattern.split("/")
+            # Artifactory paths are posix-like, so matching is case sensitive
+            # unless the caller explicitly asks for case_sensitive=False
+            flags = re.IGNORECASE if kwargs.get("case_sensitive") is False else 0
+
+            def _match(name, part):
+                return re.match(fnmatch.translate(part), name, flags) is not None
+
+            def _glob_select(pat_parts, path):
+                if not pat_parts:
+                    yield path
+                    return
+                part = pat_parts[0]
+                rest = pat_parts[1:]
+
+                if part == "**":
+                    yield from _glob_select(rest, path)
+                    try:
+                        for child in path.iterdir():
+                            if child.is_dir():
+                                yield from _glob_select(pat_parts, child)
+                    except (OSError, PermissionError):
+                        pass
+                else:
+                    try:
+                        for child in path.iterdir():
+                            if _match(child.name, part):
+                                if rest:
+                                    if child.is_dir():
+                                        yield from _glob_select(rest, child)
+                                else:
+                                    yield child
+                    except (OSError, PermissionError):
+                        pass
+
+            return _glob_select(parts, self)
         return super().glob(*args, **kwargs)
 
     def download_stats(self, pathobj=None):
@@ -2017,10 +2083,6 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         obj.session = self.session
         obj.timeout = self.timeout
         return obj
-
-    if IS_PYTHON_2:
-        __div__ = __truediv__
-        __rdiv__ = __rtruediv__
 
     def _make_child(self, args):
         obj = super(ArtifactoryPath, self)._make_child(args)
@@ -2633,6 +2695,12 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             return obj
         return None
 
+    def find_repository_federated(self, name):
+        obj = RepositoryFederated(self, name)
+        if obj.read():
+            return obj
+        return None
+
     def find_repository_virtual(self, name):
         obj = RepositoryVirtual(self, name)
         if obj.read():
@@ -2648,6 +2716,11 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
     def find_repository(self, name):
         try:
             return self.find_repository_local(name)
+        except ArtifactoryException:
+            pass
+
+        try:
+            return self.find_repository_federated(name)
         except ArtifactoryException:
             pass
 

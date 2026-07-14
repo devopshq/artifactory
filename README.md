@@ -2,7 +2,7 @@
 
 
 [![docs](https://img.shields.io/readthedocs/pip.svg)][1]
-[![dohq-artifactory build Status](https://github.com/devopshq/artifactory/workflows/CI/badge.svg?branch=master)][2]
+[![dohq-artifactory build Status](https://github.com/devopshq/artifactory/actions/workflows/ci.yml/badge.svg)][2]
 [![dohq-artifactory on PyPI](https://img.shields.io/pypi/v/dohq-artifactory.svg)][3] 
 [![dohq-artifactory license](https://img.shields.io/pypi/l/dohq-artifactory.svg)][4]
 
@@ -1178,11 +1178,11 @@ if permission is None:
     permission = PermissionTarget(
         artifactory_,
         "rule",
-        repositories=Object, # <RepositiryLocal repo1>, <RepositiryLocal repo2>
-        users=Object, # <User user1>, <User user2>
-        groups=Object, # <Group group1>, <Group group2>
-        includes_pattern="com.mycompany.myproject1.**,com.othercompany.**"
-        excludes_pattern="com.othercompany.projectX.**,com.othercompany.projectY.**"
+        repositories=Object,  # <RepositiryLocal repo1>, <RepositiryLocal repo2>
+        users=Object,  # <User user1>, <User user2>
+        groups=Object,  # <Group group1>, <Group group2>
+        includes_pattern="com.mycompany.myproject1.**,com.othercompany.**",
+        excludes_pattern="com.othercompany.projectX.**,com.othercompany.projectY.**",
     )
     permission.create()
 
