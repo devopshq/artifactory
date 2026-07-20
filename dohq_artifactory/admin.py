@@ -8,8 +8,7 @@ import warnings
 import jwt
 from dateutil.parser import isoparse
 
-from dohq_artifactory.exception import ArtifactoryException
-from dohq_artifactory.exception import raise_for_status
+from dohq_artifactory.exception import ArtifactoryException, raise_for_status
 from dohq_artifactory.logger import logger
 
 
