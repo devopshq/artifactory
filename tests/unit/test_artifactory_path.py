@@ -7,18 +7,17 @@ import unittest
 
 import dateutil
 import responses
-from responses.matchers import json_params_matcher
-from responses.matchers import query_param_matcher
-from responses.matchers import query_string_matcher
+from responses.matchers import (
+    json_params_matcher,
+    query_param_matcher,
+    query_string_matcher,
+)
 from urllib3.util import parse_url
 
 import artifactory
-from artifactory import ArtifactoryPath
-from artifactory import quote_url
+from artifactory import ArtifactoryPath, quote_url
 from dohq_artifactory import ArtifactoryException
-from dohq_artifactory.admin import Group
-from dohq_artifactory.admin import Project
-from dohq_artifactory.admin import User
+from dohq_artifactory.admin import Group, Project, User
 
 # Pathlib.Path changed significantly in 3.12, so we will not need several
 # parts of the code once python3.11 is no longer supported. This constant helps
