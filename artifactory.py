@@ -1702,6 +1702,10 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         if "verify" in kwargs:
             obj.verify = kwargs.get("verify")
+        elif obj.session is not None and hasattr(obj.session, "verify"):
+            # Use session's verify attribute if session was provided
+            # and verify was not explicitly passed
+            obj.verify = obj.session.verify
         elif cfg_entry:
             obj.verify = cfg_entry["verify"]
         else:
@@ -1780,6 +1784,10 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
 
         if "verify" in custom_kwargs:
             self.verify = custom_kwargs.get("verify")
+        elif self.session is not None and hasattr(self.session, "verify"):
+            # Use session's verify attribute if session was provided
+            # and verify was not explicitly passed
+            self.verify = self.session.verify
         elif cfg_entry:
             self.verify = cfg_entry["verify"]
         else:
@@ -1890,6 +1898,19 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         """
         pathobj = pathobj or self
         return self._accessor.stat(pathobj=pathobj)
+
+    def stat_json(self, pathobj=None):
+        """
+        Request remote file/directory status info
+        Returns the raw json object as specified by Artifactory REST API,
+        with all the fields the server provides, eg 'downloadUri' or 'path'.
+        Unlike stat(), the fields are not parsed and depend on the Artifactory version
+        and on the kind of the artifact, so prefer stat() whenever it exposes the field
+        :param pathobj: (Optional) path like object for which to get stats.
+            if None is provided then applied to ArtifactoryPath itself
+        """
+        pathobj = pathobj or self
+        return self._accessor.get_stat_json(pathobj=pathobj)
 
     def exists(self):
         try:
