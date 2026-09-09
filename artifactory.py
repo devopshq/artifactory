@@ -2617,7 +2617,9 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
         aql_query_url = "{}/api/search/aql".format(self.drive.rstrip("/"))
         aql_query_text = self.create_aql_text(*args)
         logger.debug(f"AQL query request text: {aql_query_text}")
-        response = self.session.post(aql_query_url, data=aql_query_text)
+        response = self.session.post(
+            aql_query_url, data=aql_query_text, timeout=self.timeout
+        )
         raise_for_status(response)
         content = response.json()
         return content["results"]
