@@ -11,6 +11,7 @@ import responses
 from responses.matchers import json_params_matcher
 from responses.matchers import query_param_matcher
 from responses.matchers import query_string_matcher
+from responses.matchers import request_kwargs_matcher
 from urllib3.util import parse_url
 
 import artifactory
@@ -1651,6 +1652,22 @@ class TestArtifactoryConfig(unittest.TestCase):
 class TestArtifactoryAql(unittest.TestCase):
     def setUp(self):
         self.aql = ArtifactoryPath("http://b/artifactory")
+
+    def test_aql_request_timeout(self):
+        for timeout in (None, 5, (2, 5)):
+            with self.subTest(timeout=timeout), responses.RequestsMock() as mocked:
+                path = ArtifactoryPath("http://b/artifactory", timeout=timeout)
+                results = [{"repo": "myrepo", "name": "file.txt"}]
+                mocked.add(
+                    responses.POST,
+                    "http://b/artifactory/api/search/aql",
+                    json={"results": results},
+                    match=[request_kwargs_matcher({"timeout": timeout})],
+                )
+                self.assertEqual(path.aql("items.find", {"repo": "myrepo"}), results)
+                self.assertEqual(
+                    mocked.calls[0].request.body, 'items.find({"repo": "myrepo"})'
+                )
 
     def test_create_aql_text_simple(self):
         args = ["items.find", {"repo": "myrepo"}]
