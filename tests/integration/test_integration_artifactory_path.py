@@ -7,8 +7,7 @@ import tempfile
 import pytest
 
 import artifactory
-from artifactory import sha1sum
-from artifactory import sha256sum
+from artifactory import sha1sum, sha256sum
 
 
 @pytest.fixture(autouse=True)
