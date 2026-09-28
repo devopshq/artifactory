@@ -5,10 +5,7 @@ import os
 import pytest
 
 from artifactory import ArtifactoryPath
-from dohq_artifactory import Group
-from dohq_artifactory import PermissionTarget
-from dohq_artifactory import RepositoryLocal
-from dohq_artifactory import User
+from dohq_artifactory import Group, PermissionTarget, RepositoryLocal, User
 
 
 def pytest_configure(config):
