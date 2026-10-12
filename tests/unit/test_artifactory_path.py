@@ -2078,6 +2078,18 @@ class ArtifactoryBuildManagerTest(unittest.TestCase):
             f"{self.base_url}/api/build/promote/my-build/456",
         )
 
+    @responses.activate
+    def test_promote_build_quoted_name(self):
+        # the build name must be percent-encoded exactly once
+        quoted_url = f"{self.base_url}/api/build/promote/my%3A%3Abuild%2Fx%20y/456"
+        responses.add(responses.POST, quoted_url, status=200)
+
+        self.build_manager_without_project.promote_build(
+            "my::build/x y", "456", ci_user="admin", properties={"release": ["1.0"]}
+        )
+
+        self.assertEqual(responses.calls[0].request.url, quoted_url)
+
 
 if __name__ == "__main__":
     unittest.main()
