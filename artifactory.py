@@ -765,11 +765,13 @@ class _ArtifactoryAccessor:
         cert=None,
         timeout=None,
         json_data=None,
+        quote=True,
     ):
         """
         Perform a POST request to url with requests.session
         """
-        url = quote_url(url)
+        if quote:
+            url = quote_url(url)
         response = session.post(
             url,
             json=json_data,
@@ -3165,10 +3167,10 @@ class ArtifactoryBuildManager(ArtifactoryPath):
 
             json_data["scopes"] = scopes
 
-        # the url is percent-encoded by rest_post, so the project has to be passed
-        # as a request parameter instead of being appended to the url
         params = {"project": self.project} if self.project else None
 
+        # build_name and build_number are already percent-encoded above,
+        # so do not let rest_post encode the url a second time
         self._accessor.rest_post(
             url,
             params=params,
@@ -3177,6 +3179,7 @@ class ArtifactoryBuildManager(ArtifactoryPath):
             verify=self.verify,
             cert=self.cert,
             timeout=self.timeout,
+            quote=False,
         )
 
 
