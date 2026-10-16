@@ -326,12 +326,13 @@ class HTTPResponseWrapper(object):
         return int(self.getheader("content-length"))
 
 
-def encode_matrix_parameters(parameters, quote_parameters):
+def encode_matrix_parameters(parameters, quote_parameters=False):
     """
     Performs encoding of url matrix parameters from dictionary to
     a string.
     See http://www.w3.org/DesignIssues/MatrixURIs.html for specs.
     If quote_parameters is true, then apply URL quoting to the values and the parameter names.
+    By default, parameter names and values are left unquoted.
     """
     result = []
 

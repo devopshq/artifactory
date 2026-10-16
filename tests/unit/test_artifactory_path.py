@@ -48,6 +48,17 @@ class UtilTest(unittest.TestCase):
 
         self.assertEqual(s, "b%3Faz=b%25ar;b%3Faz=quux;foo%3F%250=a/s%26d%25f%3F")
 
+    def test_matrix_encode_default_quoting(self):
+        cases = [
+            ({}, ""),
+            ({"foo?%0": "a/s&d%f?"}, "foo?%0=a/s&d%f?"),
+            ({"baz": ["b%ar", "quux"]}, "baz=b%ar;baz=quux"),
+            ({"baz": ("b%ar", "quux")}, "baz=b%ar;baz=quux"),
+        ]
+        for params, expected in cases:
+            with self.subTest(params=params):
+                self.assertEqual(artifactory.encode_matrix_parameters(params), expected)
+
     def test_escape_chars(self):
         s = artifactory.escape_chars("a,b|c=d")
         self.assertEqual(s, r"a\,b\|c\=d")
