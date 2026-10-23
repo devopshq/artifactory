@@ -218,6 +218,23 @@ class ArtifactoryFlavorTest(unittest.TestCase):
         check("https://a/b/>", ("https://a", "/", "b/>"))
         check("https://a/b/?", ("https://a", "/", "b/?"))
 
+    def test_splitroot_relative_paths_with_spaces(self):
+        for part in (
+            "folder one/subfolder",
+            "folder one/",
+            "/folder one/subfolder",
+            "folder one/artifactory/subfolder",
+            "folder one/artifactoryish/subfolder",
+        ):
+            with self.subTest(part=part):
+                self._check_splitroot(part, ("", "", part))
+
+    def test_splitroot_protocol_relative_url(self):
+        self._check_splitroot(
+            "//example.com/artifactory/repo",
+            ("//example.com/artifactory", "/", "repo"),
+        )
+
     def test_splitroot_custom_drv(self):
         """https://github.com/devopshq/artifactory/issues/31 and
         https://github.com/devopshq/artifactory/issues/108
@@ -449,6 +466,36 @@ class PureArtifactoryPathTest(unittest.TestCase):
             str(c),
             "http://c/artifactory/repo2/path/with/multiple/subdir/and/artifactory/path.txt",
         )
+
+    def test_join_relative_paths_with_spaces(self):
+        for base in (
+            "https://example.com/artifactory/repo",
+            "https://example.com/repo",
+        ):
+            for part in (
+                "folder one/subfolder",
+                "folder one/",
+                "folder one/deeper path/file",
+            ):
+                with self.subTest(base=base, part=part):
+                    path = self.cls(base)
+                    expected = base + "/" + part.rstrip("/")
+                    self.assertEqual(str(path / part), expected)
+                    self.assertEqual(str(path.joinpath(part)), expected)
+
+    def test_join_protocol_relative_url(self):
+        path = self.cls("https://original.com/artifactory/repo")
+        self.assertEqual(
+            str(path / "//example.com/artifactory/other"),
+            "//example.com/artifactory/other",
+        )
+
+    def test_join_explicit_url_schemes(self):
+        path = self.cls("https://original.com/artifactory/repo")
+        for scheme in ("HTTP", "HTTPS", "ftp"):
+            url = scheme + "://example.com/artifactory/other"
+            with self.subTest(scheme=scheme):
+                self.assertEqual(str(path / url), url)
 
 
 class ClassSetup(unittest.TestCase):
