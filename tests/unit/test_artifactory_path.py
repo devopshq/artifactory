@@ -218,6 +218,11 @@ class ArtifactoryFlavorTest(unittest.TestCase):
         check("https://a/b/>", ("https://a", "/", "b/>"))
         check("https://a/b/?", ("https://a", "/", "b/?"))
 
+    def test_splitroot_relative_paths_with_spaces(self):
+        for part in ("folder one/subfolder", "folder one/", "/folder one/subfolder"):
+            with self.subTest(part=part):
+                self._check_splitroot(part, ("", "", part))
+
     def test_splitroot_custom_drv(self):
         """https://github.com/devopshq/artifactory/issues/31 and
         https://github.com/devopshq/artifactory/issues/108
@@ -449,6 +454,22 @@ class PureArtifactoryPathTest(unittest.TestCase):
             str(c),
             "http://c/artifactory/repo2/path/with/multiple/subdir/and/artifactory/path.txt",
         )
+
+    def test_join_relative_paths_with_spaces(self):
+        for base in (
+            "https://example.com/artifactory/repo",
+            "https://example.com/repo",
+        ):
+            for part in (
+                "folder one/subfolder",
+                "folder one/",
+                "folder one/deeper path/file",
+            ):
+                with self.subTest(base=base, part=part):
+                    path = self.cls(base)
+                    expected = base + "/" + part.rstrip("/")
+                    self.assertEqual(str(path / part), expected)
+                    self.assertEqual(str(path.joinpath(part)), expected)
 
 
 class ClassSetup(unittest.TestCase):

@@ -491,14 +491,12 @@ class _ArtifactoryFlavour(object if IS_PYTHON_3_12_OR_NEWER else pathlib._Flavou
         elif sep not in part:
             return "", "", part
         else:
-            url = urllib3.util.parse_url(part)
+            if without_http_prefix(part) == part:
+                path = part if part.startswith(sep) else part.partition(sep)[2]
+                if not path.lstrip(sep).startswith("artifactory"):
+                    return "", "", part
 
-            if (
-                without_http_prefix(part).strip("/") == part.strip("/")
-                and url.path
-                and not url.path.strip("/").startswith("artifactory")
-            ):
-                return "", "", part
+            url = urllib3.util.parse_url(part)
 
             if url.path is None or url.path == sep:
                 if url.scheme:
