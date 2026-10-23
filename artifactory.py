@@ -491,9 +491,9 @@ class _ArtifactoryFlavour(object if IS_PYTHON_3_12_OR_NEWER else pathlib._Flavou
         elif sep not in part:
             return "", "", part
         else:
-            has_authority = without_http_prefix(part) != part or part.startswith(
-                sep * 2
-            )
+            has_authority = bool(
+                re.match(r"[a-zA-Z][a-zA-Z0-9+.-]*://", part)
+            ) or part.startswith(sep * 2)
             if not has_authority:
                 path = part if part.startswith(sep) else part.partition(sep)[2]
                 if not path.lstrip(sep).startswith("artifactory"):
@@ -505,6 +505,13 @@ class _ArtifactoryFlavour(object if IS_PYTHON_3_12_OR_NEWER else pathlib._Flavou
                 if not has_authority:
                     return "", "", part
                 raise
+
+            if (
+                without_http_prefix(part).strip("/") == part.strip("/")
+                and url.path
+                and not url.path.strip("/").startswith("artifactory")
+            ):
+                return "", "", part
 
             if url.path is None or url.path == sep:
                 if url.scheme:

@@ -490,6 +490,13 @@ class PureArtifactoryPathTest(unittest.TestCase):
             "//example.com/artifactory/other",
         )
 
+    def test_join_explicit_url_schemes(self):
+        path = self.cls("https://original.com/artifactory/repo")
+        for scheme in ("HTTP", "HTTPS", "ftp"):
+            url = scheme + "://example.com/artifactory/other"
+            with self.subTest(scheme=scheme):
+                self.assertEqual(str(path / url), url)
+
 
 class ClassSetup(unittest.TestCase):
     def setUp(self):
