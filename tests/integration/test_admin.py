@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
-from dohq_artifactory.admin import Group
-from dohq_artifactory.admin import PermissionTarget
-from dohq_artifactory.admin import Project
-from dohq_artifactory.admin import RepositoryLocal
-from dohq_artifactory.admin import User
+from dohq_artifactory.admin import (
+    Group,
+    PermissionTarget,
+    Project,
+    RepositoryLocal,
+    User,
+)
 
 
 class TestUser:
