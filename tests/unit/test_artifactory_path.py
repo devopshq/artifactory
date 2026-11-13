@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import copy
 import json
 import os
 import pathlib
@@ -967,6 +968,18 @@ class ArtifactoryPathTest(ClassSetup):
     def test_basic(self):
         P = self.cls
         a = P("http://a/artifactory/")
+
+    def test_deepcopy(self):
+        """
+        Regression test: deepcopy must not fail on Python 3.13, where
+        pathlib._local.PurePath exposes `_raw_path` as a read-only property.
+        """
+        p = self.cls("http://a/artifactory/repo/path/to/file.txt")
+        p2 = copy.deepcopy(p)
+
+        self.assertEqual(p2, p)
+        # different object, same value
+        self.assertIsNot(p2, p)
 
     def test_auth(self):
         P = self.cls
