@@ -1830,6 +1830,10 @@ class ArtifactoryPath(pathlib.Path, PureArtifactoryPath):
             # Since we process the whole inheritance chain from __mro__, there might be some attributes from parent
             # classes missing in the current object. Marking these attributes as "undefined-attribute" to skip assigning
             if getattr(self, var, "undefined-attribute") != "undefined-attribute":
+                attr = getattr(self.__class__, var, None)
+                if isinstance(attr, property) and attr.fset is None:
+                    # Read-only properties (e.g. pathlib._raw_path on Python 3.13) cannot be set.
+                    continue
                 setattr(result, var, copy.deepcopy(getattr(self, var), memo))
 
         # Return updated instance
