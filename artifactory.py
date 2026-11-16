@@ -10,7 +10,7 @@
 # ==================================================================
 #
 # pylint: disable=no-self-use, maybe-no-member
-""" artifactory: a python module for interfacing with JFrog Artifactory
+"""artifactory: a python module for interfacing with JFrog Artifactory
 
 This module is intended to serve as a logical descendant of pathlib
 (https://docs.python.org/3/library/pathlib.html), a Python 3 module
@@ -22,6 +22,7 @@ There are PureArtifactoryPath and ArtifactoryPath that can be used
 to manipulate artifactory paths. See pathlib docs for details how
 pure paths can be used.
 """
+
 import collections
 import copy
 import datetime
@@ -37,29 +38,30 @@ import platform
 import posixpath
 import re
 import urllib.parse
-from itertools import chain
-from itertools import islice
+from itertools import chain, islice
 
 import dateutil.parser
 import requests
 
-from dohq_artifactory.admin import Group
-from dohq_artifactory.admin import PermissionTarget
-from dohq_artifactory.admin import Project
-from dohq_artifactory.admin import Repository
-from dohq_artifactory.admin import RepositoryFederated
-from dohq_artifactory.admin import RepositoryLocal
-from dohq_artifactory.admin import RepositoryRemote
-from dohq_artifactory.admin import RepositoryVirtual
-from dohq_artifactory.admin import User
-from dohq_artifactory.auth import XJFrogArtApiAuth
-from dohq_artifactory.auth import XJFrogArtBearerAuth
-from dohq_artifactory.compat import IS_PYTHON_3_10_OR_NEWER
-from dohq_artifactory.compat import IS_PYTHON_3_12_OR_NEWER
-from dohq_artifactory.compat import IS_PYTHON_3_13_OR_NEWER
-from dohq_artifactory.compat import IS_PYTHON_3_14_OR_NEWER
-from dohq_artifactory.exception import ArtifactoryException
-from dohq_artifactory.exception import raise_for_status
+from dohq_artifactory.admin import (
+    Group,
+    PermissionTarget,
+    Project,
+    Repository,
+    RepositoryFederated,
+    RepositoryLocal,
+    RepositoryRemote,
+    RepositoryVirtual,
+    User,
+)
+from dohq_artifactory.auth import XJFrogArtApiAuth, XJFrogArtBearerAuth
+from dohq_artifactory.compat import (
+    IS_PYTHON_3_10_OR_NEWER,
+    IS_PYTHON_3_12_OR_NEWER,
+    IS_PYTHON_3_13_OR_NEWER,
+    IS_PYTHON_3_14_OR_NEWER,
+)
+from dohq_artifactory.exception import ArtifactoryException, raise_for_status
 from dohq_artifactory.logger import logger
 
 try:
